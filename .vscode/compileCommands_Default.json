@@ -1,0 +1,394 @@
+[
+	{
+		"file": "C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\Source\\Kruger_Conclusion\\Kruger_Conclusion.Build.cs",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\cl.exe",
+			"@C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\.vscode\\compileCommands_Default\\Kruger_Conclusion.1.rsp"
+		],
+		"directory": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Source"
+	},
+	{
+		"file": "C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\Source\\Kruger_Conclusion\\Kruger_Conclusion.cpp",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\cl.exe",
+			"@C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\.vscode\\compileCommands_Default\\Kruger_Conclusion.1.rsp"
+		],
+		"directory": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Source"
+	},
+	{
+		"file": "C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\Source\\Kruger_Conclusion\\Kruger_Conclusion.h",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\cl.exe",
+			"@C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\.vscode\\compileCommands_Default\\Kruger_Conclusion.1.rsp"
+		],
+		"directory": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Source"
+	},
+	{
+		"file": "C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\Source\\Kruger_Conclusion\\Kruger_ConclusionCameraManager.cpp",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\cl.exe",
+			"@C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\.vscode\\compileCommands_Default\\Kruger_Conclusion.1.rsp"
+		],
+		"directory": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Source"
+	},
+	{
+		"file": "C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\Source\\Kruger_Conclusion\\Kruger_ConclusionCameraManager.h",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\cl.exe",
+			"@C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\.vscode\\compileCommands_Default\\Kruger_Conclusion.1.rsp"
+		],
+		"directory": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Source"
+	},
+	{
+		"file": "C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\Source\\Kruger_Conclusion\\Kruger_ConclusionCharacter.cpp",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\cl.exe",
+			"@C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\.vscode\\compileCommands_Default\\Kruger_Conclusion.1.rsp"
+		],
+		"directory": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Source"
+	},
+	{
+		"file": "C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\Source\\Kruger_Conclusion\\Kruger_ConclusionCharacter.h",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\cl.exe",
+			"@C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\.vscode\\compileCommands_Default\\Kruger_Conclusion.1.rsp"
+		],
+		"directory": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Source"
+	},
+	{
+		"file": "C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\Source\\Kruger_Conclusion\\Kruger_ConclusionGameMode.cpp",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\cl.exe",
+			"@C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\.vscode\\compileCommands_Default\\Kruger_Conclusion.1.rsp"
+		],
+		"directory": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Source"
+	},
+	{
+		"file": "C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\Source\\Kruger_Conclusion\\Kruger_ConclusionGameMode.h",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\cl.exe",
+			"@C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\.vscode\\compileCommands_Default\\Kruger_Conclusion.1.rsp"
+		],
+		"directory": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Source"
+	},
+	{
+		"file": "C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\Source\\Kruger_Conclusion\\Kruger_ConclusionPlayerController.cpp",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\cl.exe",
+			"@C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\.vscode\\compileCommands_Default\\Kruger_Conclusion.1.rsp"
+		],
+		"directory": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Source"
+	},
+	{
+		"file": "C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\Source\\Kruger_Conclusion\\Kruger_ConclusionPlayerController.h",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\cl.exe",
+			"@C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\.vscode\\compileCommands_Default\\Kruger_Conclusion.1.rsp"
+		],
+		"directory": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Source"
+	},
+	{
+		"file": "C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\Source\\Kruger_Conclusion\\Private\\Ranger_Character_Controller.cpp",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\cl.exe",
+			"@C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\.vscode\\compileCommands_Default\\Kruger_Conclusion.1.rsp"
+		],
+		"directory": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Source"
+	},
+	{
+		"file": "C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\Source\\Kruger_Conclusion\\Public\\Ranger_Character_Controller.h",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\cl.exe",
+			"@C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\.vscode\\compileCommands_Default\\Kruger_Conclusion.1.rsp"
+		],
+		"directory": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Source"
+	},
+	{
+		"file": "C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\Source\\Kruger_Conclusion\\Variant_Horror\\HorrorCharacter.cpp",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\cl.exe",
+			"@C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\.vscode\\compileCommands_Default\\Kruger_Conclusion.1.rsp"
+		],
+		"directory": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Source"
+	},
+	{
+		"file": "C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\Source\\Kruger_Conclusion\\Variant_Horror\\HorrorCharacter.h",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\cl.exe",
+			"@C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\.vscode\\compileCommands_Default\\Kruger_Conclusion.1.rsp"
+		],
+		"directory": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Source"
+	},
+	{
+		"file": "C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\Source\\Kruger_Conclusion\\Variant_Horror\\HorrorGameMode.cpp",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\cl.exe",
+			"@C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\.vscode\\compileCommands_Default\\Kruger_Conclusion.1.rsp"
+		],
+		"directory": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Source"
+	},
+	{
+		"file": "C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\Source\\Kruger_Conclusion\\Variant_Horror\\HorrorGameMode.h",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\cl.exe",
+			"@C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\.vscode\\compileCommands_Default\\Kruger_Conclusion.1.rsp"
+		],
+		"directory": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Source"
+	},
+	{
+		"file": "C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\Source\\Kruger_Conclusion\\Variant_Horror\\HorrorPlayerController.cpp",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\cl.exe",
+			"@C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\.vscode\\compileCommands_Default\\Kruger_Conclusion.1.rsp"
+		],
+		"directory": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Source"
+	},
+	{
+		"file": "C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\Source\\Kruger_Conclusion\\Variant_Horror\\HorrorPlayerController.h",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\cl.exe",
+			"@C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\.vscode\\compileCommands_Default\\Kruger_Conclusion.1.rsp"
+		],
+		"directory": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Source"
+	},
+	{
+		"file": "C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\Source\\Kruger_Conclusion\\Variant_Horror\\UI\\HorrorUI.cpp",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\cl.exe",
+			"@C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\.vscode\\compileCommands_Default\\Kruger_Conclusion.1.rsp"
+		],
+		"directory": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Source"
+	},
+	{
+		"file": "C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\Source\\Kruger_Conclusion\\Variant_Horror\\UI\\HorrorUI.h",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\cl.exe",
+			"@C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\.vscode\\compileCommands_Default\\Kruger_Conclusion.1.rsp"
+		],
+		"directory": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Source"
+	},
+	{
+		"file": "C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\Source\\Kruger_Conclusion\\Variant_Shooter\\AI\\EnvQueryContext_Target.cpp",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\cl.exe",
+			"@C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\.vscode\\compileCommands_Default\\Kruger_Conclusion.1.rsp"
+		],
+		"directory": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Source"
+	},
+	{
+		"file": "C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\Source\\Kruger_Conclusion\\Variant_Shooter\\AI\\EnvQueryContext_Target.h",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\cl.exe",
+			"@C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\.vscode\\compileCommands_Default\\Kruger_Conclusion.1.rsp"
+		],
+		"directory": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Source"
+	},
+	{
+		"file": "C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\Source\\Kruger_Conclusion\\Variant_Shooter\\AI\\ShooterAIController.cpp",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\cl.exe",
+			"@C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\.vscode\\compileCommands_Default\\Kruger_Conclusion.1.rsp"
+		],
+		"directory": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Source"
+	},
+	{
+		"file": "C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\Source\\Kruger_Conclusion\\Variant_Shooter\\AI\\ShooterAIController.h",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\cl.exe",
+			"@C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\.vscode\\compileCommands_Default\\Kruger_Conclusion.1.rsp"
+		],
+		"directory": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Source"
+	},
+	{
+		"file": "C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\Source\\Kruger_Conclusion\\Variant_Shooter\\AI\\ShooterNPC.cpp",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\cl.exe",
+			"@C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\.vscode\\compileCommands_Default\\Kruger_Conclusion.1.rsp"
+		],
+		"directory": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Source"
+	},
+	{
+		"file": "C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\Source\\Kruger_Conclusion\\Variant_Shooter\\AI\\ShooterNPC.h",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\cl.exe",
+			"@C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\.vscode\\compileCommands_Default\\Kruger_Conclusion.1.rsp"
+		],
+		"directory": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Source"
+	},
+	{
+		"file": "C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\Source\\Kruger_Conclusion\\Variant_Shooter\\AI\\ShooterNPCSpawner.cpp",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\cl.exe",
+			"@C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\.vscode\\compileCommands_Default\\Kruger_Conclusion.1.rsp"
+		],
+		"directory": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Source"
+	},
+	{
+		"file": "C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\Source\\Kruger_Conclusion\\Variant_Shooter\\AI\\ShooterNPCSpawner.h",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\cl.exe",
+			"@C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\.vscode\\compileCommands_Default\\Kruger_Conclusion.1.rsp"
+		],
+		"directory": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Source"
+	},
+	{
+		"file": "C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\Source\\Kruger_Conclusion\\Variant_Shooter\\AI\\ShooterStateTreeUtility.cpp",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\cl.exe",
+			"@C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\.vscode\\compileCommands_Default\\Kruger_Conclusion.1.rsp"
+		],
+		"directory": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Source"
+	},
+	{
+		"file": "C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\Source\\Kruger_Conclusion\\Variant_Shooter\\AI\\ShooterStateTreeUtility.h",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\cl.exe",
+			"@C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\.vscode\\compileCommands_Default\\Kruger_Conclusion.1.rsp"
+		],
+		"directory": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Source"
+	},
+	{
+		"file": "C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\Source\\Kruger_Conclusion\\Variant_Shooter\\ShooterCharacter.cpp",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\cl.exe",
+			"@C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\.vscode\\compileCommands_Default\\Kruger_Conclusion.1.rsp"
+		],
+		"directory": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Source"
+	},
+	{
+		"file": "C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\Source\\Kruger_Conclusion\\Variant_Shooter\\ShooterCharacter.h",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\cl.exe",
+			"@C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\.vscode\\compileCommands_Default\\Kruger_Conclusion.1.rsp"
+		],
+		"directory": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Source"
+	},
+	{
+		"file": "C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\Source\\Kruger_Conclusion\\Variant_Shooter\\ShooterGameMode.cpp",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\cl.exe",
+			"@C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\.vscode\\compileCommands_Default\\Kruger_Conclusion.1.rsp"
+		],
+		"directory": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Source"
+	},
+	{
+		"file": "C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\Source\\Kruger_Conclusion\\Variant_Shooter\\ShooterGameMode.h",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\cl.exe",
+			"@C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\.vscode\\compileCommands_Default\\Kruger_Conclusion.1.rsp"
+		],
+		"directory": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Source"
+	},
+	{
+		"file": "C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\Source\\Kruger_Conclusion\\Variant_Shooter\\ShooterPlayerController.cpp",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\cl.exe",
+			"@C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\.vscode\\compileCommands_Default\\Kruger_Conclusion.1.rsp"
+		],
+		"directory": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Source"
+	},
+	{
+		"file": "C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\Source\\Kruger_Conclusion\\Variant_Shooter\\ShooterPlayerController.h",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\cl.exe",
+			"@C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\.vscode\\compileCommands_Default\\Kruger_Conclusion.1.rsp"
+		],
+		"directory": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Source"
+	},
+	{
+		"file": "C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\Source\\Kruger_Conclusion\\Variant_Shooter\\UI\\ShooterBulletCounterUI.cpp",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\cl.exe",
+			"@C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\.vscode\\compileCommands_Default\\Kruger_Conclusion.1.rsp"
+		],
+		"directory": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Source"
+	},
+	{
+		"file": "C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\Source\\Kruger_Conclusion\\Variant_Shooter\\UI\\ShooterBulletCounterUI.h",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\cl.exe",
+			"@C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\.vscode\\compileCommands_Default\\Kruger_Conclusion.1.rsp"
+		],
+		"directory": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Source"
+	},
+	{
+		"file": "C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\Source\\Kruger_Conclusion\\Variant_Shooter\\UI\\ShooterUI.cpp",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\cl.exe",
+			"@C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\.vscode\\compileCommands_Default\\Kruger_Conclusion.1.rsp"
+		],
+		"directory": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Source"
+	},
+	{
+		"file": "C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\Source\\Kruger_Conclusion\\Variant_Shooter\\UI\\ShooterUI.h",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\cl.exe",
+			"@C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\.vscode\\compileCommands_Default\\Kruger_Conclusion.1.rsp"
+		],
+		"directory": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Source"
+	},
+	{
+		"file": "C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\Source\\Kruger_Conclusion\\Variant_Shooter\\Weapons\\ShooterPickup.cpp",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\cl.exe",
+			"@C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\.vscode\\compileCommands_Default\\Kruger_Conclusion.1.rsp"
+		],
+		"directory": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Source"
+	},
+	{
+		"file": "C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\Source\\Kruger_Conclusion\\Variant_Shooter\\Weapons\\ShooterPickup.h",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\cl.exe",
+			"@C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\.vscode\\compileCommands_Default\\Kruger_Conclusion.1.rsp"
+		],
+		"directory": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Source"
+	},
+	{
+		"file": "C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\Source\\Kruger_Conclusion\\Variant_Shooter\\Weapons\\ShooterProjectile.cpp",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\cl.exe",
+			"@C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\.vscode\\compileCommands_Default\\Kruger_Conclusion.1.rsp"
+		],
+		"directory": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Source"
+	},
+	{
+		"file": "C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\Source\\Kruger_Conclusion\\Variant_Shooter\\Weapons\\ShooterProjectile.h",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\cl.exe",
+			"@C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\.vscode\\compileCommands_Default\\Kruger_Conclusion.1.rsp"
+		],
+		"directory": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Source"
+	},
+	{
+		"file": "C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\Source\\Kruger_Conclusion\\Variant_Shooter\\Weapons\\ShooterWeapon.cpp",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\cl.exe",
+			"@C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\.vscode\\compileCommands_Default\\Kruger_Conclusion.1.rsp"
+		],
+		"directory": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Source"
+	},
+	{
+		"file": "C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\Source\\Kruger_Conclusion\\Variant_Shooter\\Weapons\\ShooterWeapon.h",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\cl.exe",
+			"@C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\.vscode\\compileCommands_Default\\Kruger_Conclusion.1.rsp"
+		],
+		"directory": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Source"
+	},
+	{
+		"file": "C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\Source\\Kruger_Conclusion\\Variant_Shooter\\Weapons\\ShooterWeaponHolder.cpp",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\cl.exe",
+			"@C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\.vscode\\compileCommands_Default\\Kruger_Conclusion.1.rsp"
+		],
+		"directory": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Source"
+	},
+	{
+		"file": "C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\Source\\Kruger_Conclusion\\Variant_Shooter\\Weapons\\ShooterWeaponHolder.h",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\cl.exe",
+			"@C:\\Users\\xande\\OneDrive - ADvTECH Ltd\\2026\\Work Integrated Learning\\The Kruger Conclusion\\Kruger_Conclusion\\.vscode\\compileCommands_Default\\Kruger_Conclusion.1.rsp"
+		],
+		"directory": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Source"
+	}
+]

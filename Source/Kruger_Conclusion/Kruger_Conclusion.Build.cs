@@ -15,6 +15,7 @@ public class Kruger_Conclusion : ModuleRules
 			"InputCore",
 			"EnhancedInput",
 			"AIModule",
+			"NavigationSystem",
 			"StateTreeModule",
 			"GameplayStateTreeModule",
 			"UMG",
@@ -25,6 +26,10 @@ public class Kruger_Conclusion : ModuleRules
 
 		PublicIncludePaths.AddRange(new string[] {
 			"Kruger_Conclusion",
+			"Kruger_Conclusion/Poaching Patrol",
+			"Kruger_Conclusion/Poaching Patrol/AI",
+			"Kruger_Conclusion/Poaching Patrol/Characters",
+			"Kruger_Conclusion/Poaching Patrol/Data",
 			"Kruger_Conclusion/Variant_Horror",
 			"Kruger_Conclusion/Variant_Horror/UI",
 			"Kruger_Conclusion/Variant_Shooter",
