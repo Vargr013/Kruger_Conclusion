@@ -5,6 +5,7 @@
 #include "Data/PPGameTypes.h"
 #include "PPAnimalCharacter.generated.h"
 
+class AActor;
 class UPPHealthComponent;
 
 UCLASS()
@@ -24,8 +25,11 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
 	EAnimalState CurrentState = EAnimalState::Wandering;
 
-	UFUNCTION()
-	void HandleDeath();
+	UPROPERTY(BlueprintReadWrite, Category = "AI")
+	AActor* CurrentThreatActor = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
+	bool bCanStalk = false;
 
 public:
 	UFUNCTION(BlueprintCallable, Category = "AI")
@@ -33,4 +37,22 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "AI")
 	EAnimalState GetAnimalState() const { return CurrentState; }
+
+	UFUNCTION(BlueprintCallable, Category = "AI")
+	void SetThreatActor(AActor* NewThreat);
+
+	UFUNCTION(BlueprintPure, Category = "AI")
+	AActor* GetThreatActor() const { return CurrentThreatActor; }
+
+	UFUNCTION(BlueprintPure, Category = "AI")
+	bool HasThreat() const { return CurrentThreatActor != nullptr; }
+
+	UFUNCTION(BlueprintPure, Category = "AI")
+	bool CanStalk() const { return bCanStalk; }
+
+	UFUNCTION(BlueprintPure, Category = "AI")
+	bool IsHealthLow() const;
+
+	UFUNCTION(BlueprintPure, Category = "AI")
+	FVector GetFleeLocation(float Distance = 1000.0f) const;
 };

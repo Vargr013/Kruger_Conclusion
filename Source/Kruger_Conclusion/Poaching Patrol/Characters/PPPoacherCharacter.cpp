@@ -13,12 +13,18 @@ void APPPoacherCharacter::BeginPlay()
 
 void APPPoacherCharacter::SetPoacherState(EPoacherState NewState)
 {
-	if (bCaptured)
-	{
-		return;
-	}
-
+	if (bCaptured) return;
 	CurrentState = NewState;
+}
+
+void APPPoacherCharacter::SetTargetActor(AActor* NewTarget)
+{
+	CurrentTargetActor = NewTarget;
+}
+
+void APPPoacherCharacter::SetThreatActor(AActor* NewThreat)
+{
+	CurrentThreatActor = NewThreat;
 }
 
 void APPPoacherCharacter::CapturePoacher()

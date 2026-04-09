@@ -1,46 +1,77 @@
 #include "AI/PPAnimalAIController.h"
+#include "Characters/PPAnimalCharacter.h"
 #include "NavigationSystem.h"
-#include "GameFramework/Pawn.h"
 
 void APPAnimalAIController::OnPossess(APawn* InPawn)
 {
 	Super::OnPossess(InPawn);
-
-	if (UWorld* World = GetWorld())
-	{
-		World->GetTimerManager().SetTimer(
-			WanderTimer,
-			this,
-			&APPAnimalAIController::MoveToRandomLocation,
-			3.0f,
-			true);
-	}
 }
 
-void APPAnimalAIController::MoveToRandomLocation()
+APPAnimalCharacter* APPAnimalAIController::GetAnimalCharacter() const
+{
+	return Cast<APPAnimalCharacter>(GetPawn());
+}
+
+bool APPAnimalAIController::GetRandomWanderLocation(FVector& OutLocation, float Radius) const
 {
 	APawn* ControlledPawn = GetPawn();
 	if (!ControlledPawn)
 	{
-		return;
+		return false;
 	}
 
-	UWorld* World = GetWorld();
-	if (!World)
-	{
-		return;
-	}
-
-	UNavigationSystemV1* NavSys = UNavigationSystemV1::GetCurrent(World);
+	UNavigationSystemV1* NavSys = UNavigationSystemV1::GetCurrent(GetWorld());
 	if (!NavSys)
 	{
-		return;
+		return false;
 	}
 
 	FNavLocation Result;
-	const FVector Origin = ControlledPawn->GetActorLocation();
-	if (NavSys->GetRandomReachablePointInRadius(Origin, 1000.0f, Result))
+	if (NavSys->GetRandomReachablePointInRadius(ControlledPawn->GetActorLocation(), Radius, Result))
 	{
-		MoveToLocation(Result.Location);
+		OutLocation = Result.Location;
+		return true;
 	}
+
+	return false;
+}
+
+bool APPAnimalAIController::MoveToWanderLocation(float Radius)
+{
+	FVector WanderLocation;
+	if (!GetRandomWanderLocation(WanderLocation, Radius))
+	{
+		return false;
+	}
+
+	MoveToLocation(WanderLocation);
+	return true;
+}
+
+bool APPAnimalAIController::MoveToFleeLocation(float Distance)
+{
+	APPAnimalCharacter* Animal = GetAnimalCharacter();
+	if (!Animal || !Animal->HasThreat())
+	{
+		return false;
+	}
+
+	FVector RawFleeLocation = Animal->GetFleeLocation(Distance);
+
+	UNavigationSystemV1* NavSys = UNavigationSystemV1::GetCurrent(GetWorld());
+	if (!NavSys) return false;
+
+	FNavLocation NavLocation;
+	if (NavSys->ProjectPointToNavigation(RawFleeLocation, NavLocation))
+	{
+		MoveToLocation(NavLocation.Location);
+		return true;
+	}
+
+	return false;
+}
+
+void APPAnimalAIController::StopAIMovement()
+{
+	StopMovement();
 }

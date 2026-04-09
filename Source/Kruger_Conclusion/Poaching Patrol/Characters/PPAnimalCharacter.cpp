@@ -10,11 +10,6 @@ APPAnimalCharacter::APPAnimalCharacter()
 void APPAnimalCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-
-	if (HealthComponent)
-	{
-		HealthComponent->OnDeath.AddDynamic(this, &APPAnimalCharacter::HandleDeath);
-	}
 }
 
 void APPAnimalCharacter::SetAnimalState(EAnimalState NewState)
@@ -22,7 +17,31 @@ void APPAnimalCharacter::SetAnimalState(EAnimalState NewState)
 	CurrentState = NewState;
 }
 
-void APPAnimalCharacter::HandleDeath()
+void APPAnimalCharacter::SetThreatActor(AActor* NewThreat)
 {
-	Destroy();
+	CurrentThreatActor = NewThreat;
+}
+
+bool APPAnimalCharacter::IsHealthLow() const
+{
+	if (!HealthComponent)
+	{
+		return false;
+	}
+
+	return HealthComponent->GetCurrentHealth() <= (HealthComponent->GetMaxHealth() * 0.3f);
+}
+
+FVector APPAnimalCharacter::GetFleeLocation(float Distance) const
+{
+	if (!CurrentThreatActor)
+	{
+		return GetActorLocation();
+	}
+
+	FVector AwayDirection = GetActorLocation() - CurrentThreatActor->GetActorLocation();
+	AwayDirection.Z = 0.0f;
+	AwayDirection.Normalize();
+
+	return GetActorLocation() + (AwayDirection * Distance);
 }
