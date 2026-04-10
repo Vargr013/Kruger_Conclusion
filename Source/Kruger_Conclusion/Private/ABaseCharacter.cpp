@@ -99,13 +99,12 @@ void ABaseCharacter::ToggleCrouch()
         GetCharacterMovement()->MaxWalkSpeed = 600.0f;
         Crouch();
     }
-
-    OnMovementStateChanged();
+    GetWorldTimerManager().SetTimerForNextTick(this, &ABaseCharacter::OnMovementStateChanged);
 }
 
 void ABaseCharacter::UpdateNoiseRadius()
 {
-    float CurrentNoiseRadius = 600.0f;   // Default for walking noise
+    float CurrentNoiseRadius;
 
     if (bIsCrouched)
     {
@@ -114,6 +113,10 @@ void ABaseCharacter::UpdateNoiseRadius()
     else if (bIsSprinting)
     {
         CurrentNoiseRadius = 1200.0f;
+    }
+    else
+    {
+        CurrentNoiseRadius = 600.0f;   // Default for walking noise
     }
 
     OnNoiseRadiusChanged.Broadcast(CurrentNoiseRadius);
