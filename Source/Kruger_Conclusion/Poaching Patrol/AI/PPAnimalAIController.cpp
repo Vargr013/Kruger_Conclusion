@@ -1,10 +1,34 @@
 #include "AI/PPAnimalAIController.h"
 #include "Characters/PPAnimalCharacter.h"
 #include "NavigationSystem.h"
+#include "Navigation/PathFollowingComponent.h"
 
 void APPAnimalAIController::OnPossess(APawn* InPawn)
 {
 	Super::OnPossess(InPawn);
+	ScheduleNextWander();
+}
+
+void APPAnimalAIController::OnUnPossess()
+{
+	GetWorldTimerManager().ClearTimer(WanderTimerHandle);
+	Super::OnUnPossess();
+}
+
+void APPAnimalAIController::OnMoveCompleted(FAIRequestID RequestID, const FPathFollowingResult& Result)
+{
+	Super::OnMoveCompleted(RequestID, Result);
+
+	if (!bAutoWanderEnabled || Result.IsFailure())
+	{
+		return;
+	}
+
+	APPAnimalCharacter* Animal = GetAnimalCharacter();
+	if (Animal && Animal->GetAnimalState() == EAnimalState::Wandering && !Animal->HasThreat())
+	{
+		ScheduleNextWander();
+	}
 }
 
 APPAnimalCharacter* APPAnimalAIController::GetAnimalCharacter() const
@@ -38,14 +62,20 @@ bool APPAnimalAIController::GetRandomWanderLocation(FVector& OutLocation, float 
 
 bool APPAnimalAIController::MoveToWanderLocation(float Radius)
 {
+	APPAnimalCharacter* Animal = GetAnimalCharacter();
+	if (!Animal || Animal->GetAnimalState() != EAnimalState::Wandering || Animal->HasThreat())
+	{
+		return false;
+	}
+
 	FVector WanderLocation;
 	if (!GetRandomWanderLocation(WanderLocation, Radius))
 	{
 		return false;
 	}
 
-	MoveToLocation(WanderLocation);
-	return true;
+	const EPathFollowingRequestResult::Type MoveResult = MoveToLocation(WanderLocation);
+	return MoveResult != EPathFollowingRequestResult::Failed;
 }
 
 bool APPAnimalAIController::MoveToFleeLocation(float Distance)
@@ -73,5 +103,35 @@ bool APPAnimalAIController::MoveToFleeLocation(float Distance)
 
 void APPAnimalAIController::StopAIMovement()
 {
+	GetWorldTimerManager().ClearTimer(WanderTimerHandle);
 	StopMovement();
+}
+
+void APPAnimalAIController::ScheduleNextWander()
+{
+	if (!bAutoWanderEnabled || !GetPawn())
+	{
+		return;
+	}
+
+	float Delay = MinWanderDelay;
+	if (MaxWanderDelay > MinWanderDelay)
+	{
+		Delay = FMath::FRandRange(MinWanderDelay, MaxWanderDelay);
+	}
+
+	GetWorldTimerManager().SetTimer(
+		WanderTimerHandle,
+		this,
+		&APPAnimalAIController::TryWander,
+		Delay,
+		false);
+}
+
+void APPAnimalAIController::TryWander()
+{
+	if (!MoveToWanderLocation(WanderRadius))
+	{
+		ScheduleNextWander();
+	}
 }

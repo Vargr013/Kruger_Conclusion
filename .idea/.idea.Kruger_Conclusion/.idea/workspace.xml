@@ -19,7 +19,10 @@
   <component name="ChangeListManager">
     <list default="true" id="c7c81508-1090-4aff-b6d8-ce25fd1ccfed" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/.idea.Kruger_Conclusion/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.Kruger_Conclusion/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/Poaching_Patrol/Characters/Animals/BP_AnimalCharacter.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/Poaching_Patrol/Characters/Animals/BP_AnimalCharacter.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/Poaching_Patrol/Levels/Lvl_FirstPerson.umap" beforeDir="false" afterPath="$PROJECT_DIR$/Content/Poaching_Patrol/Levels/Lvl_FirstPerson.umap" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Kruger_Conclusion/Poaching Patrol/AI/PPAnimalAIController.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Kruger_Conclusion/Poaching Patrol/AI/PPAnimalAIController.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Kruger_Conclusion/Poaching Patrol/AI/PPAnimalAIController.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Kruger_Conclusion/Poaching Patrol/AI/PPAnimalAIController.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Kruger_Conclusion/Poaching Patrol/Characters/PPAnimalCharacter.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Kruger_Conclusion/Poaching Patrol/Characters/PPAnimalCharacter.cpp" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -188,6 +191,7 @@
       <workItem from="1776196467837" duration="191000" />
       <workItem from="1776197027380" duration="1012000" />
       <workItem from="1776357980078" duration="1616000" />
+      <workItem from="1776424689976" duration="935000" />
     </task>
     <servers />
   </component>

@@ -1,10 +1,13 @@
 #include "Characters/PPAnimalCharacter.h"
+#include "AI/PPAnimalAIController.h"
 #include "Data/PPHealthComponent.h"
 
 APPAnimalCharacter::APPAnimalCharacter()
 {
 	PrimaryActorTick.bCanEverTick = false;
 	HealthComponent = CreateDefaultSubobject<UPPHealthComponent>(TEXT("HealthComponent"));
+	AIControllerClass = APPAnimalAIController::StaticClass();
+	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
 }
 
 void APPAnimalCharacter::BeginPlay()
