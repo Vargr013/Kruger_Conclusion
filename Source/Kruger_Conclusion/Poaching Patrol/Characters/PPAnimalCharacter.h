@@ -1,15 +1,14 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/Character.h"
+#include "Characters/PPCreatureBase.h"
 #include "Data/PPGameTypes.h"
 #include "PPAnimalCharacter.generated.h"
 
 class AActor;
-class UPPHealthComponent;
 
 UCLASS()
-class KRUGER_CONCLUSION_API APPAnimalCharacter : public ACharacter
+class KRUGER_CONCLUSION_API APPAnimalCharacter : public APPCreatureBase
 {
 	GENERATED_BODY()
 
@@ -19,40 +18,42 @@ public:
 protected:
 	virtual void BeginPlay() override;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	UPPHealthComponent* HealthComponent;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Animal|State")
+	EPPAnimalState CurrentAnimalState = EPPAnimalState::Idle;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
-	EAnimalState CurrentState = EAnimalState::Wandering;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Animal|Timing")
+	float IdleTimeMin = 1.5f;
 
-	UPROPERTY(BlueprintReadWrite, Category = "AI")
-	AActor* CurrentThreatActor = nullptr;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Animal|Timing")
+	float IdleTimeMax = 4.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
-	bool bCanStalk = false;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Animal|Flee")
+	float FleeDuration = 3.0f;
+
+	float IdleEndTime = 0.0f;
+	float FleeEndTime = 0.0f;
 
 public:
-	UFUNCTION(BlueprintCallable, Category = "AI")
-	void SetAnimalState(EAnimalState NewState);
+	virtual void UpdateCreatureAI() override;
 
-	UFUNCTION(BlueprintPure, Category = "AI")
-	EAnimalState GetAnimalState() const { return CurrentState; }
+	UFUNCTION(BlueprintCallable, Category="Animal|State")
+	void SetAnimalState(EPPAnimalState NewState);
 
-	UFUNCTION(BlueprintCallable, Category = "AI")
+	UFUNCTION(BlueprintPure, Category="Animal|State")
+	EPPAnimalState GetAnimalState() const { return CurrentAnimalState; }
+
+	UFUNCTION(BlueprintCallable, Category="Animal|Behaviour")
+	void StartRoaming();
+
+	UFUNCTION(BlueprintCallable, Category="Animal|Behaviour")
+	void StartFleeing(AActor* ThreatActor);
+
+	UFUNCTION(BlueprintCallable, Category="Animal|Behaviour")
+	void StartIdle();
+
+	UFUNCTION(BlueprintCallable, Category="Animal|State")
 	void SetThreatActor(AActor* NewThreat);
 
-	UFUNCTION(BlueprintPure, Category = "AI")
-	AActor* GetThreatActor() const { return CurrentThreatActor; }
-
-	UFUNCTION(BlueprintPure, Category = "AI")
-	bool HasThreat() const { return CurrentThreatActor != nullptr; }
-
-	UFUNCTION(BlueprintPure, Category = "AI")
-	bool CanStalk() const { return bCanStalk; }
-
-	UFUNCTION(BlueprintPure, Category = "AI")
-	bool IsHealthLow() const;
-
-	UFUNCTION(BlueprintPure, Category = "AI")
+	UFUNCTION(BlueprintPure, Category="Animal|AI")
 	FVector GetFleeLocation(float Distance = 1000.0f) const;
 };

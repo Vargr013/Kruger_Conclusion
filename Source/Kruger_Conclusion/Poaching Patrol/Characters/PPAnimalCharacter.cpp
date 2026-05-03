@@ -1,38 +1,110 @@
 #include "Characters/PPAnimalCharacter.h"
-#include "AI/PPAnimalAIController.h"
-#include "Data/PPHealthComponent.h"
 
 APPAnimalCharacter::APPAnimalCharacter()
 {
 	PrimaryActorTick.bCanEverTick = false;
-	HealthComponent = CreateDefaultSubobject<UPPHealthComponent>(TEXT("HealthComponent"));
-	AIControllerClass = APPAnimalAIController::StaticClass();
-	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
 }
 
 void APPAnimalCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+	StartIdle();
 }
 
-void APPAnimalCharacter::SetAnimalState(EAnimalState NewState)
+void APPAnimalCharacter::UpdateCreatureAI()
 {
-	CurrentState = NewState;
+	AActor* PlayerActor = FindPlayerActor();
+	if (PlayerActor && ShouldFleeFromThreat(PlayerActor))
+	{
+		StartFleeing(PlayerActor);
+		return;
+	}
+
+	const float CurrentTime = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0f;
+
+	if (CurrentAnimalState == EPPAnimalState::Fleeing)
+	{
+		if (CurrentTime >= FleeEndTime || !ShouldFleeFromThreat(CurrentThreatActor))
+		{
+			StartIdle();
+		}
+		return;
+	}
+
+	if (CurrentAnimalState == EPPAnimalState::Idle)
+	{
+		if (CurrentTime >= IdleEndTime)
+		{
+			StartRoaming();
+		}
+		return;
+	}
+
+	if (CurrentAnimalState == EPPAnimalState::Roaming && IsCloseToCurrentMoveTarget(RoamAcceptanceRadius))
+	{
+		StartIdle();
+	}
+}
+
+void APPAnimalCharacter::SetAnimalState(EPPAnimalState NewState)
+{
+	CurrentAnimalState = NewState;
+
+	if (bDrawDebug)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("%s animal state changed"), *GetName());
+	}
+}
+
+void APPAnimalCharacter::StartRoaming()
+{
+	EnterRoamState();
+	SetAnimalState(EPPAnimalState::Roaming);
+
+	FVector RoamLocation;
+	if (GetRandomRoamLocation(RoamLocation))
+	{
+		if (!MoveToLocation(RoamLocation, RoamAcceptanceRadius))
+		{
+			StartIdle();
+		}
+	}
+	else
+	{
+		StartIdle();
+	}
+}
+
+void APPAnimalCharacter::StartFleeing(AActor* ThreatActor)
+{
+	if (!ThreatActor)
+	{
+		return;
+	}
+
+	EnterFleeState(ThreatActor);
+	SetAnimalState(EPPAnimalState::Fleeing);
+	FleeEndTime = GetWorld() ? GetWorld()->GetTimeSeconds() + FleeDuration : 0.0f;
+
+	if (!MoveToLocation(GetFleeDestination(ThreatActor), RoamAcceptanceRadius))
+	{
+		StartIdle();
+	}
+}
+
+void APPAnimalCharacter::StartIdle()
+{
+	StopMovement();
+	EnterRoamState();
+	SetAnimalState(EPPAnimalState::Idle);
+
+	const float IdleDuration = FMath::FRandRange(IdleTimeMin, IdleTimeMax);
+	IdleEndTime = GetWorld() ? GetWorld()->GetTimeSeconds() + IdleDuration : 0.0f;
 }
 
 void APPAnimalCharacter::SetThreatActor(AActor* NewThreat)
 {
 	CurrentThreatActor = NewThreat;
-}
-
-bool APPAnimalCharacter::IsHealthLow() const
-{
-	if (!HealthComponent)
-	{
-		return false;
-	}
-
-	return HealthComponent->GetCurrentHealth() <= (HealthComponent->GetMaxHealth() * 0.3f);
 }
 
 FVector APPAnimalCharacter::GetFleeLocation(float Distance) const
@@ -42,9 +114,7 @@ FVector APPAnimalCharacter::GetFleeLocation(float Distance) const
 		return GetActorLocation();
 	}
 
-	FVector AwayDirection = GetActorLocation() - CurrentThreatActor->GetActorLocation();
-	AwayDirection.Z = 0.0f;
-	AwayDirection.Normalize();
-
-	return GetActorLocation() + (AwayDirection * Distance);
+	const float PreviousFleeDistance = FleeDistance;
+	const FVector FleeLocation = GetActorLocation() + (GetDirectionAwayFromActor(CurrentThreatActor) * Distance);
+	return Distance == PreviousFleeDistance ? GetFleeDestination(CurrentThreatActor) : FleeLocation;
 }

@@ -1,5 +1,6 @@
 #include "ABaseCharacter.h"
 #include "InteractInterface.h"
+#include "Interfaces/PPInteractableInterface.h"
 
 ABaseCharacter::ABaseCharacter()
 {
@@ -148,14 +149,31 @@ void ABaseCharacter::Interact()
         Params
     );
 
+    if (!bHit || !HitResult.GetActor() || !HitResult.GetActor()->GetClass()->ImplementsInterface(UPPInteractableInterface::StaticClass()))
+    {
+        FCollisionObjectQueryParams ObjectParams;
+        ObjectParams.AddObjectTypesToQuery(ECC_Pawn);
+        bHit = GetWorld()->LineTraceSingleByObjectType(
+            HitResult,
+            StartLocation,
+            EndLocation,
+            ObjectParams,
+            Params
+        );
+    }
+
     if (bHit && HitResult.GetActor())
     {
         AActor* HitActor = HitResult.GetActor();
 
-        // Check if the actor implements the interface
-        if (HitActor->GetClass()->ImplementsInterface(UInteractInterface::StaticClass()))
+        if (HitActor->GetClass()->ImplementsInterface(UPPInteractableInterface::StaticClass()))
         {
-            // Use the 'Execute_' prefix. This is the magic Unreal way to call interfaces safely.
+            IPPInteractableInterface::Execute_Interact(HitActor, this);
+            UE_LOG(LogTemp, Log, TEXT("Interacted with %s"), *GetNameSafe(HitActor));
+        }
+        // Keep the older generic interaction interface working for existing actors.
+        else if (HitActor->GetClass()->ImplementsInterface(UInteractInterface::StaticClass()))
+        {
             IInteractInterface::Execute_Interact(HitActor, this);
         }
     }

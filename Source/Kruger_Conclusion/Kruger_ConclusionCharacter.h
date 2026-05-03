@@ -48,6 +48,10 @@ protected:
 	/** Mouse Look Input Action */
 	UPROPERTY(EditAnywhere, Category ="Input")
 	class UInputAction* MouseLookAction;
+
+	/** Optional Enhanced Input action for interaction */
+	UPROPERTY(EditAnywhere, Category ="Input")
+	class UInputAction* InteractAction;
 	
 public:
 	AKruger_ConclusionCharacter();
@@ -75,6 +79,10 @@ protected:
 	/** Handles jump end inputs from either controls or UI interfaces */
 	UFUNCTION(BlueprintCallable, Category="Input")
 	virtual void DoJumpEnd();
+
+	/** Performs a camera raycast and interacts with Poaching Patrol actors */
+	UFUNCTION(BlueprintCallable, Category="Interaction")
+	virtual void DoInteract();
 
 protected:
 

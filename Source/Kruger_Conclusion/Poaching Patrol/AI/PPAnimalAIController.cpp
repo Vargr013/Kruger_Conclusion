@@ -25,7 +25,7 @@ void APPAnimalAIController::OnMoveCompleted(FAIRequestID RequestID, const FPathF
 	}
 
 	APPAnimalCharacter* Animal = GetAnimalCharacter();
-	if (Animal && Animal->GetAnimalState() == EAnimalState::Wandering && !Animal->HasThreat())
+	if (Animal && Animal->GetAnimalState() == EPPAnimalState::Roaming && !Animal->HasThreat())
 	{
 		ScheduleNextWander();
 	}
@@ -63,7 +63,7 @@ bool APPAnimalAIController::GetRandomWanderLocation(FVector& OutLocation, float 
 bool APPAnimalAIController::MoveToWanderLocation(float Radius)
 {
 	APPAnimalCharacter* Animal = GetAnimalCharacter();
-	if (!Animal || Animal->GetAnimalState() != EAnimalState::Wandering || Animal->HasThreat())
+	if (!Animal || Animal->GetAnimalState() != EPPAnimalState::Roaming || Animal->HasThreat())
 	{
 		return false;
 	}

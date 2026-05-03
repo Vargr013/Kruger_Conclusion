@@ -1,14 +1,15 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/Character.h"
+#include "Characters/PPCreatureBase.h"
 #include "Data/PPGameTypes.h"
+#include "Interfaces/PPInteractableInterface.h"
 #include "PPPoacherCharacter.generated.h"
 
 class AActor;
 
 UCLASS()
-class KRUGER_CONCLUSION_API APPPoacherCharacter : public ACharacter
+class KRUGER_CONCLUSION_API APPPoacherCharacter : public APPCreatureBase, public IPPInteractableInterface
 {
 	GENERATED_BODY()
 
@@ -18,46 +19,66 @@ public:
 protected:
 	virtual void BeginPlay() override;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
-	EPoacherState CurrentState = EPoacherState::Waiting;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Poacher|State")
+	EPPPoacherState CurrentPoacherState = EPPPoacherState::DisguisedRoaming;
 
-	UPROPERTY(BlueprintReadWrite, Category = "AI")
+	UPROPERTY(BlueprintReadWrite, Category="Poacher|Runtime")
 	AActor* CurrentTargetActor = nullptr;
 
-	UPROPERTY(BlueprintReadWrite, Category = "AI")
-	AActor* CurrentThreatActor = nullptr;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Poacher|Capture")
+	float FollowDistance = 250.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Poacher")
-	bool bCaptured = false;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Poacher|Capture")
+	float FollowAcceptanceRadius = 120.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Poacher|Capture")
+	float CapturedMoveSpeed = 220.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Poacher|Capture")
+	bool bIsCaptured = false;
+
+	UPROPERTY(BlueprintReadOnly, Category="Poacher|Capture")
+	AActor* CaptorActor = nullptr;
 
 public:
-	UFUNCTION(BlueprintCallable, Category = "AI")
-	void SetPoacherState(EPoacherState NewState);
+	virtual void UpdateCreatureAI() override;
 
-	UFUNCTION(BlueprintPure, Category = "AI")
-	EPoacherState GetPoacherState() const { return CurrentState; }
+	UFUNCTION(BlueprintCallable, Category="Poacher|State")
+	void SetPoacherState(EPPPoacherState NewState);
 
-	UFUNCTION(BlueprintCallable, Category = "AI")
+	UFUNCTION(BlueprintPure, Category="Poacher|State")
+	EPPPoacherState GetPoacherState() const { return CurrentPoacherState; }
+
+	UFUNCTION(BlueprintCallable, Category="Poacher|Behaviour")
+	void StartDisguisedRoaming();
+
+	UFUNCTION(BlueprintCallable, Category="Poacher|Behaviour")
+	void StartFleeing(AActor* ThreatActor);
+
+	UFUNCTION(BlueprintCallable, Category="Poacher|Capture")
+	void CapturePoacher(AActor* NewCaptor);
+
+	UFUNCTION(BlueprintCallable, Category="Poacher|Capture")
+	void FollowCaptor();
+
+	UFUNCTION(BlueprintCallable, Category="Poacher|Capture")
+	void MarkArrested();
+
+	virtual void Interact_Implementation(AActor* Interactor) override;
+	virtual FText GetInteractionPrompt_Implementation() const override;
+
+	UFUNCTION(BlueprintCallable, Category="Poacher|AI")
 	void SetTargetActor(AActor* NewTarget);
 
-	UFUNCTION(BlueprintPure, Category = "AI")
+	UFUNCTION(BlueprintPure, Category="Poacher|AI")
 	AActor* GetTargetActor() const { return CurrentTargetActor; }
 
-	UFUNCTION(BlueprintPure, Category = "AI")
+	UFUNCTION(BlueprintPure, Category="Poacher|AI")
 	bool HasTarget() const { return CurrentTargetActor != nullptr; }
 
-	UFUNCTION(BlueprintCallable, Category = "AI")
+	UFUNCTION(BlueprintCallable, Category="Poacher|AI")
 	void SetThreatActor(AActor* NewThreat);
 
-	UFUNCTION(BlueprintPure, Category = "AI")
-	AActor* GetThreatActor() const { return CurrentThreatActor; }
-
-	UFUNCTION(BlueprintPure, Category = "AI")
-	bool HasThreat() const { return CurrentThreatActor != nullptr; }
-
-	UFUNCTION(BlueprintCallable, Category = "Poacher")
-	void CapturePoacher();
-
-	UFUNCTION(BlueprintPure, Category = "Poacher")
-	bool IsCaptured() const { return bCaptured; }
+	UFUNCTION(BlueprintPure, Category="Poacher|Capture")
+	bool IsCaptured() const { return bIsCaptured; }
 };

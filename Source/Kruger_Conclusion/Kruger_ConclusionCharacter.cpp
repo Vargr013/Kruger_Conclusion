@@ -9,6 +9,7 @@
 #include "InputActionValue.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kruger_Conclusion.h"
+#include "Interfaces/PPInteractableInterface.h"
 
 AKruger_ConclusionCharacter::AKruger_ConclusionCharacter()
 {
@@ -59,11 +60,18 @@ void AKruger_ConclusionCharacter::SetupPlayerInputComponent(UInputComponent* Pla
 		// Looking/Aiming
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &AKruger_ConclusionCharacter::LookInput);
 		EnhancedInputComponent->BindAction(MouseLookAction, ETriggerEvent::Triggered, this, &AKruger_ConclusionCharacter::LookInput);
+
+		if (InteractAction)
+		{
+			EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Started, this, &AKruger_ConclusionCharacter::DoInteract);
+		}
 	}
 	else
 	{
 		UE_LOG(LogKruger_Conclusion, Error, TEXT("'%s' Failed to find an Enhanced Input Component! This template is built to use the Enhanced Input system. If you intend to use the legacy system, then you will need to update this C++ file."), *GetNameSafe(this));
 	}
+
+	PlayerInputComponent->BindKey(EKeys::E, IE_Pressed, this, &AKruger_ConclusionCharacter::DoInteract);
 }
 
 
@@ -117,4 +125,34 @@ void AKruger_ConclusionCharacter::DoJumpEnd()
 {
 	// pass StopJumping to the character
 	StopJumping();
+}
+
+void AKruger_ConclusionCharacter::DoInteract()
+{
+	if (!FirstPersonCameraComponent || !GetWorld())
+	{
+		return;
+	}
+
+	const FVector StartLocation = FirstPersonCameraComponent->GetComponentLocation();
+	const FVector EndLocation = StartLocation + (FirstPersonCameraComponent->GetForwardVector() * 500.0f);
+
+	FHitResult HitResult;
+	FCollisionQueryParams Params;
+	Params.AddIgnoredActor(this);
+
+	const bool bVisibilityHit = GetWorld()->LineTraceSingleByChannel(HitResult, StartLocation, EndLocation, ECC_Visibility, Params);
+	if (!bVisibilityHit || !HitResult.GetActor() || !HitResult.GetActor()->GetClass()->ImplementsInterface(UPPInteractableInterface::StaticClass()))
+	{
+		FCollisionObjectQueryParams ObjectParams;
+		ObjectParams.AddObjectTypesToQuery(ECC_Pawn);
+		GetWorld()->LineTraceSingleByObjectType(HitResult, StartLocation, EndLocation, ObjectParams, Params);
+	}
+
+	AActor* HitActor = HitResult.GetActor();
+	if (HitActor && HitActor->GetClass()->ImplementsInterface(UPPInteractableInterface::StaticClass()))
+	{
+		IPPInteractableInterface::Execute_Interact(HitActor, this);
+		UE_LOG(LogKruger_Conclusion, Log, TEXT("Interacted with %s"), *GetNameSafe(HitActor));
+	}
 }

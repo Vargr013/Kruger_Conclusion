@@ -4,21 +4,22 @@
 #include "PPGameTypes.generated.h"
 
 UENUM(BlueprintType)
-enum class EAnimalState : uint8
+enum class EPPAnimalState : uint8
 {
-    Wandering UMETA(DisplayName="Wandering"),
-    Alert UMETA(DisplayName="Alert"),
-    Fleeing UMETA(DisplayName="Fleeing"),
-    Stalk UMETA(DisplayName="Stalk")
+	Idle UMETA(DisplayName="Idle"),
+	Roaming UMETA(DisplayName="Roaming"),
+	Alert UMETA(DisplayName="Alert"),
+	Fleeing UMETA(DisplayName="Fleeing")
 };
 
 UENUM(BlueprintType)
-enum class EPoacherState : uint8
+enum class EPPPoacherState : uint8
 {
-    Tracking UMETA(DisplayName="Tracking"),
-    Engaging UMETA(DisplayName="Engaging"),
-    Attacking UMETA(DisplayName="Attacking"),
-    Fleeing UMETA(DisplayName="Fleeing"),
-    Waiting UMETA(DisplayName="Waiting"),
-    Captured UMETA(DisplayName="Captured")
+	DisguisedRoaming UMETA(DisplayName="Disguised Roaming"),
+	Alert UMETA(DisplayName="Alert"),
+	Fleeing UMETA(DisplayName="Fleeing"),
+	Captured UMETA(DisplayName="Captured"),
+	FollowingPlayer UMETA(DisplayName="Following Player"),
+	Arrested UMETA(DisplayName="Arrested"),
+	Escaped UMETA(DisplayName="Escaped")
 };
