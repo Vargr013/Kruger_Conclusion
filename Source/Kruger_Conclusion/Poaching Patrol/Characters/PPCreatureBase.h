@@ -20,13 +20,13 @@ protected:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Creature|Movement")
-	float WalkSpeed = 180.0f;
+	float WalkSpeed = 240.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Creature|Movement")
 	float FleeSpeed = 420.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Creature|Roaming")
-	float RoamRadius = 1200.0f;
+	float RoamRadius = 650.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Creature|Roaming")
 	float RoamAcceptanceRadius = 80.0f;
@@ -43,6 +43,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Creature|Timing")
 	float AIUpdateInterval = 0.25f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Creature|Timing")
+	float MoveRequestCooldown = 0.75f;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Creature|Debug")
 	bool bDrawDebug = false;
 
@@ -57,6 +60,9 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly, Category="Creature|Runtime")
 	bool bHasActiveMoveTarget = false;
+
+	UPROPERTY(BlueprintReadOnly, Category="Creature|Runtime")
+	float LastMoveRequestTime = -1000.0f;
 
 	FTimerHandle AIUpdateTimerHandle;
 
@@ -122,5 +128,6 @@ protected:
 	AAIController* GetCreatureAIController() const;
 	AAIController* EnsureCreatureAIController();
 	bool IsCloseToCurrentMoveTarget(float AcceptanceRadius) const;
+	bool CanRequestMoveTo(const FVector& TargetLocation) const;
 	void DrawThreatDebug(AActor* ThreatActor, bool bInRange, bool bInCone) const;
 };

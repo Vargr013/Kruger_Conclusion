@@ -22,10 +22,10 @@ protected:
 	EPPAnimalState CurrentAnimalState = EPPAnimalState::Idle;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Animal|Timing")
-	float IdleTimeMin = 1.5f;
+	float IdleTimeMin = 0.5f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Animal|Timing")
-	float IdleTimeMax = 4.0f;
+	float IdleTimeMax = 1.5f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Animal|Flee")
 	float FleeDuration = 3.0f;

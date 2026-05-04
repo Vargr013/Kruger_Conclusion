@@ -16,7 +16,10 @@ void APPAnimalCharacter::UpdateCreatureAI()
 	AActor* PlayerActor = FindPlayerActor();
 	if (PlayerActor && ShouldFleeFromThreat(PlayerActor))
 	{
-		StartFleeing(PlayerActor);
+		if (CurrentAnimalState != EPPAnimalState::Fleeing || CurrentThreatActor != PlayerActor)
+		{
+			StartFleeing(PlayerActor);
+		}
 		return;
 	}
 
@@ -48,6 +51,11 @@ void APPAnimalCharacter::UpdateCreatureAI()
 
 void APPAnimalCharacter::SetAnimalState(EPPAnimalState NewState)
 {
+	if (CurrentAnimalState == NewState)
+	{
+		return;
+	}
+
 	CurrentAnimalState = NewState;
 
 	if (bDrawDebug)

@@ -163,6 +163,11 @@ bool APPCreatureBase::GetRandomRoamLocation(FVector& OutLocation) const
 
 bool APPCreatureBase::MoveToLocation(const FVector& TargetLocation, float AcceptanceRadius)
 {
+	if (!CanRequestMoveTo(TargetLocation))
+	{
+		return true;
+	}
+
 	AAIController* AIController = EnsureCreatureAIController();
 	if (!AIController)
 	{
@@ -171,6 +176,7 @@ bool APPCreatureBase::MoveToLocation(const FVector& TargetLocation, float Accept
 	}
 
 	CurrentMoveTarget = TargetLocation;
+	LastMoveRequestTime = GetWorld() ? GetWorld()->GetTimeSeconds() : LastMoveRequestTime;
 	const EPathFollowingRequestResult::Type Result = AIController->MoveToLocation(TargetLocation, AcceptanceRadius);
 	bHasActiveMoveTarget = Result != EPathFollowingRequestResult::Failed;
 	return bHasActiveMoveTarget;
@@ -234,6 +240,19 @@ bool APPCreatureBase::IsCloseToCurrentMoveTarget(float AcceptanceRadius) const
 	}
 
 	return FVector::DistSquared(GetActorLocation(), CurrentMoveTarget) <= FMath::Square(AcceptanceRadius);
+}
+
+bool APPCreatureBase::CanRequestMoveTo(const FVector& TargetLocation) const
+{
+	if (!bHasActiveMoveTarget || MoveRequestCooldown <= 0.0f)
+	{
+		return true;
+	}
+
+	const float CurrentTime = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0f;
+	const bool bCooldownFinished = CurrentTime - LastMoveRequestTime >= MoveRequestCooldown;
+	const bool bTargetChanged = FVector::DistSquared(CurrentMoveTarget, TargetLocation) > FMath::Square(RoamAcceptanceRadius);
+	return bCooldownFinished || bTargetChanged;
 }
 
 void APPCreatureBase::DrawThreatDebug(AActor* ThreatActor, bool bInRange, bool bInCone) const

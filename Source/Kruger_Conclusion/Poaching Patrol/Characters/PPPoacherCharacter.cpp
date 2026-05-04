@@ -3,7 +3,7 @@
 APPPoacherCharacter::APPPoacherCharacter()
 {
 	PrimaryActorTick.bCanEverTick = false;
-	WalkSpeed = 190.0f;
+	WalkSpeed = 260.0f;
 	FleeSpeed = 460.0f;
 	FleeDistance = 1400.0f;
 }
@@ -11,7 +11,7 @@ APPPoacherCharacter::APPPoacherCharacter()
 void APPPoacherCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-	StartDisguisedRoaming();
+	StartDisguisedIdle();
 }
 
 void APPPoacherCharacter::UpdateCreatureAI()
@@ -30,15 +30,20 @@ void APPPoacherCharacter::UpdateCreatureAI()
 	AActor* PlayerActor = FindPlayerActor();
 	if (PlayerActor && ShouldFleeFromThreat(PlayerActor))
 	{
-		StartFleeing(PlayerActor);
+		if (CurrentPoacherState != EPPPoacherState::Fleeing || CurrentThreatActor != PlayerActor)
+		{
+			StartFleeing(PlayerActor);
+		}
 		return;
 	}
 
+	const float CurrentTime = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0f;
+
 	if (CurrentPoacherState == EPPPoacherState::Fleeing)
 	{
-		if (!ShouldFleeFromThreat(CurrentThreatActor))
+		if (CurrentTime >= FleeEndTime || !ShouldFleeFromThreat(CurrentThreatActor))
 		{
-			StartDisguisedRoaming();
+			StartDisguisedIdle();
 		}
 		else
 		{
@@ -47,14 +52,28 @@ void APPPoacherCharacter::UpdateCreatureAI()
 		return;
 	}
 
+	if (CurrentPoacherState == EPPPoacherState::Alert)
+	{
+		if (CurrentTime >= IdleEndTime)
+		{
+			StartDisguisedRoaming();
+		}
+		return;
+	}
+
 	if (CurrentPoacherState == EPPPoacherState::DisguisedRoaming && IsCloseToCurrentMoveTarget(RoamAcceptanceRadius))
 	{
-		StartDisguisedRoaming();
+		StartDisguisedIdle();
 	}
 }
 
 void APPPoacherCharacter::SetPoacherState(EPPPoacherState NewState)
 {
+	if (CurrentPoacherState == NewState)
+	{
+		return;
+	}
+
 	CurrentPoacherState = NewState;
 
 	if (bDrawDebug)
@@ -76,8 +95,30 @@ void APPPoacherCharacter::StartDisguisedRoaming()
 	FVector RoamLocation;
 	if (GetRandomRoamLocation(RoamLocation))
 	{
-		MoveToLocation(RoamLocation, RoamAcceptanceRadius);
+		if (!MoveToLocation(RoamLocation, RoamAcceptanceRadius))
+		{
+			StartDisguisedIdle();
+		}
 	}
+	else
+	{
+		StartDisguisedIdle();
+	}
+}
+
+void APPPoacherCharacter::StartDisguisedIdle()
+{
+	if (bIsCaptured)
+	{
+		return;
+	}
+
+	StopMovement();
+	EnterRoamState();
+	SetPoacherState(EPPPoacherState::Alert);
+
+	const float IdleDuration = FMath::FRandRange(IdleTimeMin, IdleTimeMax);
+	IdleEndTime = GetWorld() ? GetWorld()->GetTimeSeconds() + IdleDuration : 0.0f;
 }
 
 void APPPoacherCharacter::StartFleeing(AActor* ThreatActor)
@@ -89,7 +130,12 @@ void APPPoacherCharacter::StartFleeing(AActor* ThreatActor)
 
 	EnterFleeState(ThreatActor);
 	SetPoacherState(EPPPoacherState::Fleeing);
-	MoveToLocation(GetFleeDestination(ThreatActor), RoamAcceptanceRadius);
+	FleeEndTime = GetWorld() ? GetWorld()->GetTimeSeconds() + FleeDuration : 0.0f;
+
+	if (!MoveToLocation(GetFleeDestination(ThreatActor), RoamAcceptanceRadius))
+	{
+		StartDisguisedIdle();
+	}
 }
 
 void APPPoacherCharacter::CapturePoacher(AActor* NewCaptor)

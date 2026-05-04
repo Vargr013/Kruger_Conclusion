@@ -40,6 +40,18 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Category="Poacher|Capture")
 	AActor* CaptorActor = nullptr;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Poacher|Timing")
+	float IdleTimeMin = 0.4f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Poacher|Timing")
+	float IdleTimeMax = 1.2f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Poacher|Flee")
+	float FleeDuration = 3.0f;
+
+	float IdleEndTime = 0.0f;
+	float FleeEndTime = 0.0f;
+
 public:
 	virtual void UpdateCreatureAI() override;
 
@@ -51,6 +63,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category="Poacher|Behaviour")
 	void StartDisguisedRoaming();
+
+	UFUNCTION(BlueprintCallable, Category="Poacher|Behaviour")
+	void StartDisguisedIdle();
 
 	UFUNCTION(BlueprintCallable, Category="Poacher|Behaviour")
 	void StartFleeing(AActor* ThreatActor);
