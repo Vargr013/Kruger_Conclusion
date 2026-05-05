@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Characters/PPCreatureBase.h"
 #include "Data/PPGameTypes.h"
+#include "GameplayTagContainer.h"
 #include "PPAnimalCharacter.generated.h"
 
 class AActor;
@@ -21,20 +22,22 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Animal|State")
 	EPPAnimalState CurrentAnimalState = EPPAnimalState::Idle;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Animal|Timing")
-	float IdleTimeMin = 0.5f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Animal|Identity")
+	FGameplayTag AnimalSpeciesTag;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Animal|Timing")
-	float IdleTimeMax = 1.5f;
+	float IdleTimeMin = 4.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Animal|Flee")
-	float FleeDuration = 3.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Animal|Timing")
+	float IdleTimeMax = 7.0f;
 
 	float IdleEndTime = 0.0f;
 	float FleeEndTime = 0.0f;
+	float NextIdleLocalWanderTime = 0.0f;
 
 public:
 	virtual void UpdateCreatureAI() override;
+	virtual bool IsValidThreatActor_Implementation(AActor* PotentialThreat) const override;
 
 	UFUNCTION(BlueprintCallable, Category="Animal|State")
 	void SetAnimalState(EPPAnimalState NewState);
@@ -56,4 +59,10 @@ public:
 
 	UFUNCTION(BlueprintPure, Category="Animal|AI")
 	FVector GetFleeLocation(float Distance = 1000.0f) const;
+
+	UFUNCTION(BlueprintPure, Category="Animal|Identity")
+	FGameplayTag GetAnimalSpeciesTag() const { return AnimalSpeciesTag; }
+
+protected:
+	void UpdateIdleLocalWander(float CurrentTime);
 };

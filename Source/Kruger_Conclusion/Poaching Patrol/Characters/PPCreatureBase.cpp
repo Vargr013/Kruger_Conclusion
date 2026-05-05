@@ -3,8 +3,10 @@
 #include "AIController.h"
 #include "DrawDebugHelpers.h"
 #include "Engine/Engine.h"
+#include "EngineUtils.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "NavigationSystem.h"
+#include "Navigation/PathFollowingComponent.h"
 
 APPCreatureBase::APPCreatureBase()
 {
@@ -77,7 +79,7 @@ bool APPCreatureBase::IsThreatInRange(AActor* ThreatActor) const
 		return false;
 	}
 
-	return FVector::DistSquared(GetActorLocation(), ThreatActor->GetActorLocation()) <= FMath::Square(ThreatDetectionRadius);
+	return FVector::DistSquared(GetActorLocation(), ThreatActor->GetActorLocation()) <= FMath::Square(SightThreatRadius);
 }
 
 bool APPCreatureBase::IsThreatInForwardCone(AActor* ThreatActor) const
@@ -102,17 +104,106 @@ bool APPCreatureBase::IsThreatInForwardCone(AActor* ThreatActor) const
 	}
 
 	const float Dot = FVector::DotProduct(Forward, DirectionToThreat);
-	const float HalfConeDegrees = ForwardThreatAngleDegrees * 0.5f;
+	const float HalfConeDegrees = SightThreatAngleDegrees * 0.5f;
 	const float MinimumDot = FMath::Cos(FMath::DegreesToRadians(HalfConeDegrees));
 	return Dot >= MinimumDot;
 }
 
 bool APPCreatureBase::ShouldFleeFromThreat(AActor* ThreatActor) const
 {
+	EPPThreatDetectionType DetectionType = EPPThreatDetectionType::None;
+	const bool bDetected = CanDetectThreat(ThreatActor, DetectionType);
 	const bool bInRange = IsThreatInRange(ThreatActor);
 	const bool bInCone = IsThreatInForwardCone(ThreatActor);
 	const_cast<APPCreatureBase*>(this)->DrawThreatDebug(ThreatActor, bInRange, bInCone);
-	return bInRange && bInCone;
+	return bDetected;
+}
+
+AActor* APPCreatureBase::FindBestThreatActor()
+{
+	AActor* BestThreat = nullptr;
+	EPPThreatDetectionType BestDetectionType = EPPThreatDetectionType::None;
+	float BestDistanceSquared = TNumericLimits<float>::Max();
+
+	auto ConsiderThreat = [this, &BestThreat, &BestDetectionType, &BestDistanceSquared](AActor* Candidate)
+	{
+		if (!Candidate || Candidate == this)
+		{
+			return;
+		}
+
+		if (!IsValidThreatActor(Candidate))
+		{
+			return;
+		}
+
+		EPPThreatDetectionType DetectionType = EPPThreatDetectionType::None;
+		if (!CanDetectThreat(Candidate, DetectionType))
+		{
+			return;
+		}
+
+		const float DistanceSquared = FVector::DistSquared(GetActorLocation(), Candidate->GetActorLocation());
+		if (DistanceSquared < BestDistanceSquared)
+		{
+			BestDistanceSquared = DistanceSquared;
+			BestThreat = Candidate;
+			BestDetectionType = DetectionType;
+		}
+	};
+
+	ConsiderThreat(FindPlayerActor());
+
+	if (UWorld* World = GetWorld())
+	{
+		for (TActorIterator<APPCreatureBase> It(World); It; ++It)
+		{
+			ConsiderThreat(*It);
+		}
+	}
+
+	if (BestThreat && CanPrintDebugStatus())
+	{
+		DebugMessage(FString::Printf(
+			TEXT("Selected threat: %s by %s at %.0fcm"),
+			*GetNameSafe(BestThreat),
+			*GetThreatDetectionName(BestDetectionType),
+			FMath::Sqrt(BestDistanceSquared)),
+			FColor::Red,
+			1.0f);
+	}
+
+	return BestThreat;
+}
+
+bool APPCreatureBase::IsValidThreatActor_Implementation(AActor* PotentialThreat) const
+{
+	return PotentialThreat != nullptr && PotentialThreat != this;
+}
+
+bool APPCreatureBase::CanDetectThreat(AActor* PotentialThreat, EPPThreatDetectionType& OutDetectionType) const
+{
+	OutDetectionType = EPPThreatDetectionType::None;
+	if (!PotentialThreat)
+	{
+		return false;
+	}
+
+	const float DistanceSquared = FVector::DistSquared(GetActorLocation(), PotentialThreat->GetActorLocation());
+
+	if (bUseSoundThreats && DistanceSquared <= FMath::Square(SoundThreatRadius))
+	{
+		OutDetectionType = EPPThreatDetectionType::Sound;
+		return true;
+	}
+
+	if (bUseSightThreats && DistanceSquared <= FMath::Square(SightThreatRadius) && IsThreatInForwardCone(PotentialThreat))
+	{
+		OutDetectionType = EPPThreatDetectionType::Sight;
+		return true;
+	}
+
+	return false;
 }
 
 FVector APPCreatureBase::GetDirectionAwayFromActor(AActor* ThreatActor) const
@@ -146,6 +237,13 @@ FVector APPCreatureBase::GetFleeDestination(AActor* ThreatActor) const
 	return NavSys->ProjectPointToNavigation(RawDestination, NavLocation) ? NavLocation.Location : RawDestination;
 }
 
+float APPCreatureBase::GetRandomFleeDuration() const
+{
+	const float MinDuration = FMath::Max(0.0f, FMath::Min(FleeDurationMin, FleeDurationMax));
+	const float MaxDuration = FMath::Max(MinDuration, FMath::Max(FleeDurationMin, FleeDurationMax));
+	return FMath::FRandRange(MinDuration, MaxDuration);
+}
+
 bool APPCreatureBase::GetRandomRoamLocation(FVector& OutLocation) const
 {
 	UNavigationSystemV1* NavSys = UNavigationSystemV1::GetCurrent(GetWorld());
@@ -165,10 +263,37 @@ bool APPCreatureBase::GetRandomRoamLocation(FVector& OutLocation) const
 	return false;
 }
 
+bool APPCreatureBase::GetRandomIdleLocalWanderLocation(FVector& OutLocation) const
+{
+	UNavigationSystemV1* NavSys = UNavigationSystemV1::GetCurrent(GetWorld());
+	if (!NavSys)
+	{
+		DebugMessage(TEXT("No navigation system found for idle wandering"), FColor::Red);
+		return false;
+	}
+
+	FNavLocation NavLocation;
+	if (NavSys->GetRandomReachablePointInRadius(GetActorLocation(), IdleLocalWanderRadius, NavLocation))
+	{
+		OutLocation = NavLocation.Location;
+		return true;
+	}
+
+	return false;
+}
+
+float APPCreatureBase::GetRandomIdleStandDuration() const
+{
+	const float MinDuration = FMath::Max(0.0f, FMath::Min(IdleStandTimeMin, IdleStandTimeMax));
+	const float MaxDuration = FMath::Max(MinDuration, FMath::Max(IdleStandTimeMin, IdleStandTimeMax));
+	return FMath::FRandRange(MinDuration, MaxDuration);
+}
+
 bool APPCreatureBase::MoveToLocation(const FVector& TargetLocation, float AcceptanceRadius)
 {
 	if (!CanRequestMoveTo(TargetLocation))
 	{
+		DebugMessage(TEXT("Move request skipped: cooldown"), FColor::Silver, 0.75f);
 		return true;
 	}
 
@@ -176,6 +301,7 @@ bool APPCreatureBase::MoveToLocation(const FVector& TargetLocation, float Accept
 	if (!AIController)
 	{
 		bHasActiveMoveTarget = false;
+		RegisterMoveRequestFailure(TargetLocation);
 		DebugMessage(TEXT("Move request failed: no AI controller"), FColor::Red);
 		return false;
 	}
@@ -183,9 +309,24 @@ bool APPCreatureBase::MoveToLocation(const FVector& TargetLocation, float Accept
 	CurrentMoveTarget = TargetLocation;
 	LastMoveRequestTime = GetWorld() ? GetWorld()->GetTimeSeconds() : LastMoveRequestTime;
 	const EPathFollowingRequestResult::Type Result = AIController->MoveToLocation(TargetLocation, AcceptanceRadius);
-	bHasActiveMoveTarget = Result != EPathFollowingRequestResult::Failed;
-	DebugMessage(FString::Printf(TEXT("MoveTo %s result=%s"), *TargetLocation.ToCompactString(), bHasActiveMoveTarget ? TEXT("ok") : TEXT("failed")), bHasActiveMoveTarget ? FColor::Cyan : FColor::Red);
-	return bHasActiveMoveTarget;
+
+	if (Result == EPathFollowingRequestResult::Failed)
+	{
+		bHasActiveMoveTarget = false;
+		RegisterMoveRequestFailure(TargetLocation);
+	}
+	else
+	{
+		bHasActiveMoveTarget = Result == EPathFollowingRequestResult::RequestSuccessful;
+		ResetMoveRequestFailures();
+	}
+
+	const bool bMoveRequestHandled = Result != EPathFollowingRequestResult::Failed;
+	const TCHAR* ResultName = Result == EPathFollowingRequestResult::RequestSuccessful
+		? TEXT("ok")
+		: (Result == EPathFollowingRequestResult::AlreadyAtGoal ? TEXT("already at goal") : TEXT("failed"));
+	DebugMessage(FString::Printf(TEXT("MoveTo %s result=%s"), *TargetLocation.ToCompactString(), ResultName), bMoveRequestHandled ? FColor::Cyan : FColor::Red);
+	return bMoveRequestHandled;
 }
 
 void APPCreatureBase::StopMovement()
@@ -245,6 +386,14 @@ bool APPCreatureBase::IsCloseToCurrentMoveTarget(float AcceptanceRadius) const
 		return true;
 	}
 
+	if (const AAIController* AIController = GetCreatureAIController())
+	{
+		if (AIController->GetMoveStatus() == EPathFollowingStatus::Idle)
+		{
+			return true;
+		}
+	}
+
 	return FVector::DistSquared(GetActorLocation(), CurrentMoveTarget) <= FMath::Square(AcceptanceRadius);
 }
 
@@ -259,6 +408,33 @@ bool APPCreatureBase::CanRequestMoveTo(const FVector& TargetLocation) const
 	const bool bCooldownFinished = CurrentTime - LastMoveRequestTime >= MoveRequestCooldown;
 	const bool bTargetChanged = FVector::DistSquared(CurrentMoveTarget, TargetLocation) > FMath::Square(RoamAcceptanceRadius);
 	return bCooldownFinished || bTargetChanged;
+}
+
+void APPCreatureBase::RegisterMoveRequestFailure(const FVector& FailedTargetLocation)
+{
+	++ConsecutiveMoveFailures;
+
+	DebugMessage(FString::Printf(
+		TEXT("Move request failed %d / %d at %s"),
+		ConsecutiveMoveFailures,
+		MaxConsecutiveMoveFailures,
+		*FailedTargetLocation.ToCompactString()),
+		FColor::Red,
+		1.5f);
+
+	if (MaxConsecutiveMoveFailures > 0 && ConsecutiveMoveFailures >= MaxConsecutiveMoveFailures)
+	{
+		bHasActiveMoveTarget = false;
+		CurrentMoveTarget = FVector::ZeroVector;
+		LastMoveRequestTime = -1000.0f;
+		ConsecutiveMoveFailures = 0;
+		DebugMessage(TEXT("Move failed too often, clearing target for a fresh location"), FColor::Orange, 2.0f);
+	}
+}
+
+void APPCreatureBase::ResetMoveRequestFailures()
+{
+	ConsecutiveMoveFailures = 0;
 }
 
 void APPCreatureBase::DebugMessage(const FString& Message, const FColor& Color, float Duration) const
@@ -277,7 +453,7 @@ void APPCreatureBase::DebugMessage(const FString& Message, const FColor& Color, 
 	}
 }
 
-bool APPCreatureBase::CanPrintDebugStatus()
+bool APPCreatureBase::CanPrintDebugStatus() const
 {
 	if (!bDrawDebug)
 	{
@@ -301,19 +477,36 @@ void APPCreatureBase::DrawThreatDebug(AActor* ThreatActor, bool bInRange, bool b
 		return;
 	}
 
-	DrawDebugSphere(GetWorld(), GetActorLocation(), ThreatDetectionRadius, 24, bInRange ? FColor::Yellow : FColor::Silver, false, AIUpdateInterval);
+	const FVector DebugOrigin = GetActorLocation() + FVector(0.0f, 0.0f, DebugVerticalOffset);
+	const float DrawDuration = FMath::Max(DebugDrawDuration, AIUpdateInterval);
+	const float LineThickness = FMath::Max(DebugLineThickness, 1.0f);
+	const int32 SphereSegments = FMath::Max(DebugSphereSegments, 12);
+	const FColor SightColor = bInRange ? FColor::Yellow : FColor::Silver;
+
+	DrawDebugSphere(GetWorld(), DebugOrigin, SightThreatRadius, SphereSegments, SightColor, false, DrawDuration, 0, LineThickness);
+	DrawDebugSphere(GetWorld(), DebugOrigin, SoundThreatRadius, SphereSegments, FColor::Blue, false, DrawDuration, 0, LineThickness);
+
+	const float HalfSightAngle = SightThreatAngleDegrees * 0.5f;
+	const FVector Forward = GetActorForwardVector();
+	const FVector LeftSightEdge = Forward.RotateAngleAxis(-HalfSightAngle, FVector::UpVector);
+	const FVector RightSightEdge = Forward.RotateAngleAxis(HalfSightAngle, FVector::UpVector);
+
+	DrawDebugLine(GetWorld(), DebugOrigin, DebugOrigin + (LeftSightEdge * SightThreatRadius), SightColor, false, DrawDuration, 0, LineThickness);
+	DrawDebugLine(GetWorld(), DebugOrigin, DebugOrigin + (RightSightEdge * SightThreatRadius), SightColor, false, DrawDuration, 0, LineThickness);
+	DrawDebugDirectionalArrow(GetWorld(), DebugOrigin, DebugOrigin + (Forward * SightThreatRadius), 120.0f, FColor::Orange, false, DrawDuration, 0, LineThickness);
 
 	if (ThreatActor)
 	{
+		const FVector ThreatDebugLocation = ThreatActor->GetActorLocation() + FVector(0.0f, 0.0f, DebugVerticalOffset);
 		DrawDebugLine(
 			GetWorld(),
-			GetActorLocation(),
-			ThreatActor->GetActorLocation(),
+			DebugOrigin,
+			ThreatDebugLocation,
 			(bInRange && bInCone) ? FColor::Red : FColor::Green,
 			false,
-			AIUpdateInterval,
+			DrawDuration,
 			0,
-			2.0f);
+			LineThickness);
 	}
 
 	if (ThreatActor && CanPrintDebugStatus())
@@ -323,10 +516,23 @@ void APPCreatureBase::DrawThreatDebug(AActor* ThreatActor, bool bInRange, bool b
 			TEXT("Threat check: %s distance %.0f / %.0f, in range=%s, in cone=%s"),
 			*GetNameSafe(ThreatActor),
 			Distance,
-			ThreatDetectionRadius,
+			SightThreatRadius,
 			bInRange ? TEXT("yes") : TEXT("no"),
 			bInCone ? TEXT("yes") : TEXT("no")),
 			(bInRange && bInCone) ? FColor::Red : FColor::Yellow,
 			1.0f);
+	}
+}
+
+FString APPCreatureBase::GetThreatDetectionName(EPPThreatDetectionType DetectionType) const
+{
+	switch (DetectionType)
+	{
+	case EPPThreatDetectionType::Sight:
+		return TEXT("sight");
+	case EPPThreatDetectionType::Sound:
+		return TEXT("sound");
+	default:
+		return TEXT("none");
 	}
 }

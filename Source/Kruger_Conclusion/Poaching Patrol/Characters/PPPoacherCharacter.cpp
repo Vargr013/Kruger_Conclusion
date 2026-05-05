@@ -1,5 +1,7 @@
 #include "Characters/PPPoacherCharacter.h"
 
+#include "Characters/PPAnimalCharacter.h"
+
 namespace
 {
 const TCHAR* GetPoacherStateName(EPPPoacherState State)
@@ -54,21 +56,12 @@ void APPPoacherCharacter::UpdateCreatureAI()
 		return;
 	}
 
-	AActor* PlayerActor = FindPlayerActor();
-	if (PlayerActor && ShouldFleeFromThreat(PlayerActor))
-	{
-		if (CurrentPoacherState != EPPPoacherState::Fleeing || CurrentThreatActor != PlayerActor)
-		{
-			StartFleeing(PlayerActor);
-		}
-		return;
-	}
-
+	AActor* ThreatActor = FindBestThreatActor();
 	const float CurrentTime = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0f;
 
 	if (CurrentPoacherState == EPPPoacherState::Escaped)
 	{
-		if (CurrentTime >= FleeEndTime || IsCloseToCurrentMoveTarget(RoamAcceptanceRadius))
+		if (CurrentTime >= FleeEndTime)
 		{
 			DebugMessage(TEXT("Escape burst finished, returning to disguised roaming"), FColor::Green, 2.0f);
 			CurrentThreatActor = nullptr;
@@ -83,7 +76,13 @@ void APPPoacherCharacter::UpdateCreatureAI()
 
 	if (CurrentPoacherState == EPPPoacherState::Fleeing)
 	{
-		if (CurrentTime >= FleeEndTime || !ShouldFleeFromThreat(CurrentThreatActor))
+		if (ThreatActor && CurrentThreatActor != ThreatActor)
+		{
+			StartFleeing(ThreatActor);
+			return;
+		}
+
+		if (CurrentTime >= FleeEndTime)
 		{
 			StartDisguisedIdle();
 		}
@@ -94,11 +93,21 @@ void APPPoacherCharacter::UpdateCreatureAI()
 		return;
 	}
 
+	if (ThreatActor)
+	{
+		StartFleeing(ThreatActor);
+		return;
+	}
+
 	if (CurrentPoacherState == EPPPoacherState::Alert)
 	{
 		if (CurrentTime >= IdleEndTime)
 		{
 			StartDisguisedRoaming();
+		}
+		else
+		{
+			UpdateIdleLocalWander(CurrentTime);
 		}
 		return;
 	}
@@ -107,6 +116,35 @@ void APPPoacherCharacter::UpdateCreatureAI()
 	{
 		StartDisguisedIdle();
 	}
+}
+
+bool APPPoacherCharacter::IsValidThreatActor_Implementation(AActor* PotentialThreat) const
+{
+	if (!Super::IsValidThreatActor_Implementation(PotentialThreat))
+	{
+		return false;
+	}
+
+	if (PotentialThreat == FindPlayerActor())
+	{
+		return true;
+	}
+
+	if (Cast<APPAnimalCharacter>(PotentialThreat))
+	{
+		return true;
+	}
+
+	if (Cast<APPPoacherCharacter>(PotentialThreat))
+	{
+		if (CanPrintDebugStatus())
+		{
+			DebugMessage(FString::Printf(TEXT("Ignoring other poacher as threat: %s"), *GetNameSafe(PotentialThreat)), FColor::Green, 1.0f);
+		}
+		return false;
+	}
+
+	return false;
 }
 
 void APPPoacherCharacter::SetPoacherState(EPPPoacherState NewState)
@@ -160,8 +198,30 @@ void APPPoacherCharacter::StartDisguisedIdle()
 	SetPoacherState(EPPPoacherState::Alert);
 
 	const float IdleDuration = FMath::FRandRange(IdleTimeMin, IdleTimeMax);
-	IdleEndTime = GetWorld() ? GetWorld()->GetTimeSeconds() + IdleDuration : 0.0f;
+	const float CurrentTime = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0f;
+	IdleEndTime = CurrentTime + IdleDuration;
+	NextIdleLocalWanderTime = CurrentTime + GetRandomIdleStandDuration();
 	DebugMessage(FString::Printf(TEXT("Disguised idle for %.1fs"), IdleDuration), FColor::Silver);
+}
+
+void APPPoacherCharacter::UpdateIdleLocalWander(float CurrentTime)
+{
+	if (CurrentTime < NextIdleLocalWanderTime)
+	{
+		return;
+	}
+
+	if (!bHasActiveMoveTarget || IsCloseToCurrentMoveTarget(IdleLocalWanderAcceptanceRadius))
+	{
+		FVector LocalWanderLocation;
+		if (GetRandomIdleLocalWanderLocation(LocalWanderLocation))
+		{
+			DebugMessage(FString::Printf(TEXT("Disguised local wander to %s"), *LocalWanderLocation.ToCompactString()), FColor::Silver);
+			MoveToLocation(LocalWanderLocation, IdleLocalWanderAcceptanceRadius);
+		}
+	}
+
+	NextIdleLocalWanderTime = CurrentTime + GetRandomIdleStandDuration();
 }
 
 void APPPoacherCharacter::StartFleeing(AActor* ThreatActor)
@@ -173,6 +233,7 @@ void APPPoacherCharacter::StartFleeing(AActor* ThreatActor)
 
 	EnterFleeState(ThreatActor);
 	SetPoacherState(EPPPoacherState::Fleeing);
+	const float FleeDuration = GetRandomFleeDuration();
 	FleeEndTime = GetWorld() ? GetWorld()->GetTimeSeconds() + FleeDuration : 0.0f;
 	DebugMessage(FString::Printf(TEXT("Fleeing from %s for %.1fs"), *GetNameSafe(ThreatActor), FleeDuration), FColor::Orange);
 
@@ -252,6 +313,7 @@ void APPPoacherCharacter::EscapePoacher()
 	EscapeProgress = 0.0f;
 	SetCreatureMoveSpeed(FleeSpeed);
 	SetPoacherState(EPPPoacherState::Escaped);
+	const float FleeDuration = GetRandomFleeDuration();
 	FleeEndTime = GetWorld() ? GetWorld()->GetTimeSeconds() + FleeDuration : 0.0f;
 
 	if (PreviousCaptor)
@@ -264,7 +326,7 @@ void APPPoacherCharacter::EscapePoacher()
 		StopMovement();
 	}
 
-	DebugMessage(TEXT("Escaped capture and fleeing"), FColor::Red, 3.0f);
+	DebugMessage(FString::Printf(TEXT("Escaped capture and fleeing for %.1fs"), FleeDuration), FColor::Red, 3.0f);
 }
 
 bool APPPoacherCharacter::IsEscortTooFarFromCaptor() const

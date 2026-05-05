@@ -7,6 +7,14 @@
 
 class AAIController;
 
+UENUM(BlueprintType)
+enum class EPPThreatDetectionType : uint8
+{
+	None UMETA(DisplayName="None"),
+	Sight UMETA(DisplayName="Sight"),
+	Sound UMETA(DisplayName="Sound")
+};
+
 UCLASS(Abstract)
 class KRUGER_CONCLUSION_API APPCreatureBase : public ACharacter
 {
@@ -31,6 +39,18 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Creature|Roaming")
 	float RoamAcceptanceRadius = 80.0f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Creature|Idle")
+	float IdleLocalWanderRadius = 220.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Creature|Idle")
+	float IdleLocalWanderAcceptanceRadius = 70.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Creature|Idle")
+	float IdleStandTimeMin = 1.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Creature|Idle")
+	float IdleStandTimeMax = 2.25f;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Creature|Threat")
 	float ThreatDetectionRadius = 900.0f;
 
@@ -38,13 +58,37 @@ protected:
 	float ForwardThreatAngleDegrees = 90.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Creature|Threat")
+	float SightThreatRadius = 900.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Creature|Threat")
+	float SightThreatAngleDegrees = 90.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Creature|Threat")
+	float SoundThreatRadius = 350.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Creature|Threat")
+	bool bUseSightThreats = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Creature|Threat")
+	bool bUseSoundThreats = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Creature|Threat")
 	float FleeDistance = 1200.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Creature|Flee")
+	float FleeDurationMin = 5.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Creature|Flee")
+	float FleeDurationMax = 10.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Creature|Timing")
 	float AIUpdateInterval = 0.25f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Creature|Timing")
 	float MoveRequestCooldown = 0.75f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Creature|Movement")
+	int32 MaxConsecutiveMoveFailures = 3;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Creature|Debug")
 	bool bDrawDebug = false;
@@ -54,6 +98,18 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Creature|Debug")
 	float DebugStatusInterval = 1.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Creature|Debug")
+	float DebugDrawDuration = 1.25f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Creature|Debug")
+	float DebugLineThickness = 5.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Creature|Debug")
+	float DebugVerticalOffset = 80.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Creature|Debug")
+	int32 DebugSphereSegments = 32;
 
 	UPROPERTY(BlueprintReadOnly, Category="Creature|Runtime")
 	FVector HomeLocation = FVector::ZeroVector;
@@ -70,7 +126,10 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Category="Creature|Runtime")
 	float LastMoveRequestTime = -1000.0f;
 
-	float LastDebugStatusTime = -1000.0f;
+	UPROPERTY(BlueprintReadOnly, Category="Creature|Runtime")
+	int32 ConsecutiveMoveFailures = 0;
+
+	mutable float LastDebugStatusTime = -1000.0f;
 
 	FTimerHandle AIUpdateTimerHandle;
 
@@ -96,14 +155,32 @@ public:
 	UFUNCTION(BlueprintPure, Category="Creature|Threat")
 	bool ShouldFleeFromThreat(AActor* ThreatActor) const;
 
+	UFUNCTION(BlueprintCallable, Category="Creature|Threat")
+	AActor* FindBestThreatActor();
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category="Creature|Threat")
+	bool IsValidThreatActor(AActor* PotentialThreat) const;
+
+	UFUNCTION(BlueprintCallable, Category="Creature|Threat")
+	bool CanDetectThreat(AActor* PotentialThreat, EPPThreatDetectionType& OutDetectionType) const;
+
 	UFUNCTION(BlueprintPure, Category="Creature|Movement")
 	FVector GetDirectionAwayFromActor(AActor* ThreatActor) const;
 
 	UFUNCTION(BlueprintPure, Category="Creature|Movement")
 	FVector GetFleeDestination(AActor* ThreatActor) const;
 
+	UFUNCTION(BlueprintPure, Category="Creature|Flee")
+	float GetRandomFleeDuration() const;
+
 	UFUNCTION(BlueprintCallable, Category="Creature|Movement")
 	bool GetRandomRoamLocation(FVector& OutLocation) const;
+
+	UFUNCTION(BlueprintCallable, Category="Creature|Idle")
+	bool GetRandomIdleLocalWanderLocation(FVector& OutLocation) const;
+
+	UFUNCTION(BlueprintPure, Category="Creature|Idle")
+	float GetRandomIdleStandDuration() const;
 
 	UFUNCTION(BlueprintCallable, Category="Creature|Movement")
 	bool MoveToLocation(const FVector& TargetLocation, float AcceptanceRadius);
@@ -137,7 +214,10 @@ protected:
 	AAIController* EnsureCreatureAIController();
 	bool IsCloseToCurrentMoveTarget(float AcceptanceRadius) const;
 	bool CanRequestMoveTo(const FVector& TargetLocation) const;
+	void RegisterMoveRequestFailure(const FVector& FailedTargetLocation);
+	void ResetMoveRequestFailures();
 	void DrawThreatDebug(AActor* ThreatActor, bool bInRange, bool bInCone);
 	void DebugMessage(const FString& Message, const FColor& Color = FColor::Cyan, float Duration = 2.0f) const;
-	bool CanPrintDebugStatus();
+	bool CanPrintDebugStatus() const;
+	FString GetThreatDetectionName(EPPThreatDetectionType DetectionType) const;
 };

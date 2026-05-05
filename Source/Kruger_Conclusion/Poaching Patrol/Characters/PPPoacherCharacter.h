@@ -41,13 +41,10 @@ protected:
 	AActor* CaptorActor = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Poacher|Timing")
-	float IdleTimeMin = 0.4f;
+	float IdleTimeMin = 3.5f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Poacher|Timing")
-	float IdleTimeMax = 1.2f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Poacher|Flee")
-	float FleeDuration = 3.0f;
+	float IdleTimeMax = 6.5f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Poacher|Escape")
 	float EscapeDistance = 900.0f;
@@ -64,9 +61,11 @@ protected:
 	float IdleEndTime = 0.0f;
 	float FleeEndTime = 0.0f;
 	float LastEscapeUpdateTime = 0.0f;
+	float NextIdleLocalWanderTime = 0.0f;
 
 public:
 	virtual void UpdateCreatureAI() override;
+	virtual bool IsValidThreatActor_Implementation(AActor* PotentialThreat) const override;
 
 	UFUNCTION(BlueprintCallable, Category="Poacher|State")
 	void SetPoacherState(EPPPoacherState NewState);
@@ -121,4 +120,7 @@ public:
 
 	UFUNCTION(BlueprintPure, Category="Poacher|Escape")
 	float GetEscapeProgress() const { return EscapeProgress; }
+
+protected:
+	void UpdateIdleLocalWander(float CurrentTime);
 };

@@ -1,5 +1,7 @@
 #include "Characters/PPAnimalCharacter.h"
 
+#include "Characters/PPPoacherCharacter.h"
+
 namespace
 {
 const TCHAR* GetAnimalStateName(EPPAnimalState State)
@@ -33,24 +35,33 @@ void APPAnimalCharacter::BeginPlay()
 
 void APPAnimalCharacter::UpdateCreatureAI()
 {
-	AActor* PlayerActor = FindPlayerActor();
-	if (PlayerActor && ShouldFleeFromThreat(PlayerActor))
-	{
-		if (CurrentAnimalState != EPPAnimalState::Fleeing || CurrentThreatActor != PlayerActor)
-		{
-			StartFleeing(PlayerActor);
-		}
-		return;
-	}
-
+	AActor* ThreatActor = FindBestThreatActor();
 	const float CurrentTime = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0f;
 
 	if (CurrentAnimalState == EPPAnimalState::Fleeing)
 	{
-		if (CurrentTime >= FleeEndTime || !ShouldFleeFromThreat(CurrentThreatActor))
+		if (ThreatActor && CurrentThreatActor != ThreatActor)
+		{
+			StartFleeing(ThreatActor);
+			return;
+		}
+
+		if (CurrentTime >= FleeEndTime)
 		{
 			StartIdle();
+			return;
 		}
+
+		if (CurrentThreatActor)
+		{
+			MoveToLocation(GetFleeDestination(CurrentThreatActor), RoamAcceptanceRadius);
+		}
+		return;
+	}
+
+	if (ThreatActor)
+	{
+		StartFleeing(ThreatActor);
 		return;
 	}
 
@@ -60,6 +71,10 @@ void APPAnimalCharacter::UpdateCreatureAI()
 		{
 			StartRoaming();
 		}
+		else
+		{
+			UpdateIdleLocalWander(CurrentTime);
+		}
 		return;
 	}
 
@@ -67,6 +82,43 @@ void APPAnimalCharacter::UpdateCreatureAI()
 	{
 		StartIdle();
 	}
+}
+
+bool APPAnimalCharacter::IsValidThreatActor_Implementation(AActor* PotentialThreat) const
+{
+	if (!Super::IsValidThreatActor_Implementation(PotentialThreat))
+	{
+		return false;
+	}
+
+	if (PotentialThreat == FindPlayerActor())
+	{
+		return true;
+	}
+
+	if (Cast<APPPoacherCharacter>(PotentialThreat))
+	{
+		return true;
+	}
+
+	const APPAnimalCharacter* OtherAnimal = Cast<APPAnimalCharacter>(PotentialThreat);
+	if (!OtherAnimal)
+	{
+		return false;
+	}
+
+	const FGameplayTag OtherSpeciesTag = OtherAnimal->GetAnimalSpeciesTag();
+	const bool bSameSpecies = AnimalSpeciesTag.IsValid() && OtherSpeciesTag.IsValid() && AnimalSpeciesTag == OtherSpeciesTag;
+	if (bSameSpecies)
+	{
+		if (CanPrintDebugStatus())
+		{
+			DebugMessage(FString::Printf(TEXT("Ignoring same species animal: %s (%s)"), *GetNameSafe(PotentialThreat), *AnimalSpeciesTag.ToString()), FColor::Green, 1.0f);
+		}
+		return false;
+	}
+
+	return true;
 }
 
 void APPAnimalCharacter::SetAnimalState(EPPAnimalState NewState)
@@ -112,6 +164,7 @@ void APPAnimalCharacter::StartFleeing(AActor* ThreatActor)
 
 	EnterFleeState(ThreatActor);
 	SetAnimalState(EPPAnimalState::Fleeing);
+	const float FleeDuration = GetRandomFleeDuration();
 	FleeEndTime = GetWorld() ? GetWorld()->GetTimeSeconds() + FleeDuration : 0.0f;
 	DebugMessage(FString::Printf(TEXT("Fleeing from %s for %.1fs"), *GetNameSafe(ThreatActor), FleeDuration), FColor::Orange);
 
@@ -129,8 +182,30 @@ void APPAnimalCharacter::StartIdle()
 	SetAnimalState(EPPAnimalState::Idle);
 
 	const float IdleDuration = FMath::FRandRange(IdleTimeMin, IdleTimeMax);
-	IdleEndTime = GetWorld() ? GetWorld()->GetTimeSeconds() + IdleDuration : 0.0f;
+	const float CurrentTime = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0f;
+	IdleEndTime = CurrentTime + IdleDuration;
+	NextIdleLocalWanderTime = CurrentTime + GetRandomIdleStandDuration();
 	DebugMessage(FString::Printf(TEXT("Idling for %.1fs"), IdleDuration), FColor::Silver);
+}
+
+void APPAnimalCharacter::UpdateIdleLocalWander(float CurrentTime)
+{
+	if (CurrentTime < NextIdleLocalWanderTime)
+	{
+		return;
+	}
+
+	if (!bHasActiveMoveTarget || IsCloseToCurrentMoveTarget(IdleLocalWanderAcceptanceRadius))
+	{
+		FVector LocalWanderLocation;
+		if (GetRandomIdleLocalWanderLocation(LocalWanderLocation))
+		{
+			DebugMessage(FString::Printf(TEXT("Idle local wander to %s"), *LocalWanderLocation.ToCompactString()), FColor::Silver);
+			MoveToLocation(LocalWanderLocation, IdleLocalWanderAcceptanceRadius);
+		}
+	}
+
+	NextIdleLocalWanderTime = CurrentTime + GetRandomIdleStandDuration();
 }
 
 void APPAnimalCharacter::SetThreatActor(AActor* NewThreat)
