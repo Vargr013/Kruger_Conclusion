@@ -16,6 +16,7 @@ public class Kruger_Conclusion : ModuleRules
 			"EnhancedInput",
 			"AIModule",
 			"NavigationSystem",
+			"Niagara",
 			"GameplayTags",
 			"StateTreeModule",
 			"GameplayStateTreeModule",

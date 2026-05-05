@@ -295,9 +295,44 @@ void APPPoacherCharacter::MarkArrested()
 	EscapeProgress = 0.0f;
 	CaptorActor = nullptr;
 	CurrentThreatActor = nullptr;
+	CurrentTargetActor = nullptr;
 	SetPoacherState(EPPPoacherState::Arrested);
 	StopMovement();
+	StopAIUpdates();
+	SetActorEnableCollision(false);
 	DebugMessage(TEXT("Arrested: escort complete"), FColor::Green, 3.0f);
+}
+
+void APPPoacherCharacter::RemoveFromLevelAfterArrest(float Delay)
+{
+	if (CurrentPoacherState != EPPPoacherState::Arrested)
+	{
+		return;
+	}
+
+	bPendingRemovalAfterArrest = true;
+
+	const float SafeDelay = FMath::Max(0.0f, Delay);
+	if (SafeDelay <= 0.0f || !GetWorld())
+	{
+		FinalizeArrestRemoval();
+		return;
+	}
+
+	DebugMessage(FString::Printf(TEXT("Removing arrested poacher in %.1fs"), SafeDelay), FColor::Green, SafeDelay);
+	GetWorldTimerManager().SetTimer(ArrestRemovalTimerHandle, this, &APPPoacherCharacter::FinalizeArrestRemoval, SafeDelay, false);
+}
+
+void APPPoacherCharacter::FinalizeArrestRemoval()
+{
+	if (CurrentPoacherState != EPPPoacherState::Arrested)
+	{
+		return;
+	}
+
+	bPendingRemovalAfterArrest = false;
+	SetActorHiddenInGame(true);
+	Destroy();
 }
 
 void APPPoacherCharacter::EscapePoacher()
@@ -377,7 +412,7 @@ void APPPoacherCharacter::UpdateEscapePressure()
 
 void APPPoacherCharacter::Interact_Implementation(AActor* Interactor)
 {
-	if (!bIsCaptured && CurrentPoacherState != EPPPoacherState::Arrested)
+	if (!bIsCaptured && CurrentPoacherState != EPPPoacherState::Arrested && !bPendingRemovalAfterArrest)
 	{
 		CapturePoacher(Interactor);
 	}
@@ -385,6 +420,11 @@ void APPPoacherCharacter::Interact_Implementation(AActor* Interactor)
 
 FText APPPoacherCharacter::GetInteractionPrompt_Implementation() const
 {
+	if (CurrentPoacherState == EPPPoacherState::Arrested || bPendingRemovalAfterArrest)
+	{
+		return FText::FromString(TEXT("Arrested"));
+	}
+
 	return bIsCaptured
 		? FText::FromString(TEXT("Captured"))
 		: FText::FromString(TEXT("Capture Poacher"));

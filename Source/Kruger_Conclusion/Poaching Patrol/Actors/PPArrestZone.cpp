@@ -2,7 +2,10 @@
 
 #include "Characters/PPPoacherCharacter.h"
 #include "Components/BoxComponent.h"
+#include "Components/PointLightComponent.h"
 #include "DrawDebugHelpers.h"
+#include "Engine/Engine.h"
+#include "NiagaraComponent.h"
 
 APPArrestZone::APPArrestZone()
 {
@@ -17,6 +20,18 @@ APPArrestZone::APPArrestZone()
 	ArrestBounds->SetCollisionResponseToAllChannels(ECR_Ignore);
 	ArrestBounds->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
 	ArrestBounds->SetGenerateOverlapEvents(true);
+
+	FlareLight = CreateDefaultSubobject<UPointLightComponent>(TEXT("FlareLight"));
+	FlareLight->SetupAttachment(ArrestBounds);
+	FlareLight->SetLightColor(FlareColor);
+	FlareLight->SetIntensity(FlareLightIntensity);
+	FlareLight->SetAttenuationRadius(FlareLightRadius);
+	FlareLight->SetRelativeLocation(FVector(0.0f, 0.0f, FlareHeight));
+
+	FlareEffectComponent = CreateDefaultSubobject<UNiagaraComponent>(TEXT("FlareEffect"));
+	FlareEffectComponent->SetupAttachment(ArrestBounds);
+	FlareEffectComponent->SetRelativeLocation(FVector(0.0f, 0.0f, FlareHeight));
+	FlareEffectComponent->SetAutoActivate(true);
 }
 
 void APPArrestZone::BeginPlay()
@@ -32,6 +47,24 @@ void APPArrestZone::OnConstruction(const FTransform& Transform)
 	if (ArrestBounds)
 	{
 		ArrestBounds->SetBoxExtent(ZoneExtent);
+	}
+
+	if (FlareLight)
+	{
+		FlareLight->SetVisibility(bShowZoneMarker);
+		FlareLight->SetHiddenInGame(!bShowZoneMarker);
+		FlareLight->SetRelativeLocation(FVector(0.0f, 0.0f, FlareHeight));
+		FlareLight->SetLightColor(FlareColor);
+		FlareLight->SetIntensity(FlareLightIntensity);
+		FlareLight->SetAttenuationRadius(FlareLightRadius);
+	}
+
+	if (FlareEffectComponent)
+	{
+		FlareEffectComponent->SetAsset(FlareEffect);
+		FlareEffectComponent->SetVisibility(bShowZoneMarker && FlareEffect != nullptr);
+		FlareEffectComponent->SetHiddenInGame(!bShowZoneMarker || FlareEffect == nullptr);
+		FlareEffectComponent->SetRelativeLocation(FVector(0.0f, 0.0f, FlareHeight));
 	}
 }
 
@@ -50,20 +83,31 @@ void APPArrestZone::OnArrestBoundsBeginOverlap(
 	}
 
 	const EPPPoacherState PoacherState = Poacher->GetPoacherState();
-	const bool bCanArrest = Poacher->IsCaptured()
-		|| PoacherState == EPPPoacherState::Captured
+	const bool bCanArrest = PoacherState == EPPPoacherState::Captured
 		|| PoacherState == EPPPoacherState::FollowingPlayer;
 
 	if (!bCanArrest)
 	{
+		if (bPlayZoneDebugMessages && bDrawDebug)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("%s entered %s but is not capturable/following"), *Poacher->GetName(), *GetName());
+		}
 		return;
 	}
 
 	Poacher->MarkArrested();
+	if (bRemovePoacherAfterArrest)
+	{
+		Poacher->RemoveFromLevelAfterArrest(PoacherRemovalDelay);
+	}
 
-	if (bDrawDebug)
+	if (bPlayZoneDebugMessages && bDrawDebug)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("%s arrested in %s"), *Poacher->GetName(), *GetName());
+		if (GEngine)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Green, FString::Printf(TEXT("%s arrested"), *Poacher->GetName()));
+		}
 		DrawDebugBox(GetWorld(), GetActorLocation(), ZoneExtent, GetActorQuat(), FColor::Green, false, 3.0f, 0, 5.0f);
 	}
 }

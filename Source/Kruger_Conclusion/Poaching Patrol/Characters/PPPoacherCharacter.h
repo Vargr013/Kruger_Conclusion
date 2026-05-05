@@ -58,10 +58,14 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Category="Poacher|Escape")
 	float EscapeProgress = 0.0f;
 
+	UPROPERTY(BlueprintReadOnly, Category="Poacher|Arrest")
+	bool bPendingRemovalAfterArrest = false;
+
 	float IdleEndTime = 0.0f;
 	float FleeEndTime = 0.0f;
 	float LastEscapeUpdateTime = 0.0f;
 	float NextIdleLocalWanderTime = 0.0f;
+	FTimerHandle ArrestRemovalTimerHandle;
 
 public:
 	virtual void UpdateCreatureAI() override;
@@ -90,6 +94,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category="Poacher|Capture")
 	void MarkArrested();
+
+	UFUNCTION(BlueprintCallable, Category="Poacher|Arrest")
+	void RemoveFromLevelAfterArrest(float Delay);
 
 	UFUNCTION(BlueprintCallable, Category="Poacher|Escape")
 	void EscapePoacher();
@@ -123,4 +130,7 @@ public:
 
 protected:
 	void UpdateIdleLocalWander(float CurrentTime);
+
+	UFUNCTION()
+	void FinalizeArrestRemoval();
 };
