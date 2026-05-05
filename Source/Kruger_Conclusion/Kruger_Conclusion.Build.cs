@@ -28,6 +28,7 @@ public class Kruger_Conclusion : ModuleRules
 			"Kruger_Conclusion",
 			"Kruger_Conclusion/Poaching Patrol",
 			"Kruger_Conclusion/Poaching Patrol/AI",
+			"Kruger_Conclusion/Poaching Patrol/Actors",
 			"Kruger_Conclusion/Poaching Patrol/Characters",
 			"Kruger_Conclusion/Poaching Patrol/Data",
 			"Kruger_Conclusion/Variant_Horror",

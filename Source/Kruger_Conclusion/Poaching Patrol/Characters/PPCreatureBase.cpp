@@ -2,6 +2,7 @@
 
 #include "AIController.h"
 #include "DrawDebugHelpers.h"
+#include "Engine/Engine.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "NavigationSystem.h"
 
@@ -20,6 +21,7 @@ void APPCreatureBase::BeginPlay()
 	SetCreatureMoveSpeed(WalkSpeed);
 	EnsureCreatureAIController();
 	StartAIUpdates();
+	DebugMessage(FString::Printf(TEXT("AI started at home %s"), *HomeLocation.ToCompactString()));
 }
 
 void APPCreatureBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -32,6 +34,7 @@ void APPCreatureBase::StartAIUpdates()
 {
 	if (!GetWorld() || AIUpdateInterval <= 0.0f)
 	{
+		DebugMessage(TEXT("AI updates not started: invalid world or interval"), FColor::Red);
 		return;
 	}
 
@@ -108,7 +111,7 @@ bool APPCreatureBase::ShouldFleeFromThreat(AActor* ThreatActor) const
 {
 	const bool bInRange = IsThreatInRange(ThreatActor);
 	const bool bInCone = IsThreatInForwardCone(ThreatActor);
-	DrawThreatDebug(ThreatActor, bInRange, bInCone);
+	const_cast<APPCreatureBase*>(this)->DrawThreatDebug(ThreatActor, bInRange, bInCone);
 	return bInRange && bInCone;
 }
 
@@ -148,6 +151,7 @@ bool APPCreatureBase::GetRandomRoamLocation(FVector& OutLocation) const
 	UNavigationSystemV1* NavSys = UNavigationSystemV1::GetCurrent(GetWorld());
 	if (!NavSys)
 	{
+		DebugMessage(TEXT("No navigation system found for roaming"), FColor::Red);
 		return false;
 	}
 
@@ -172,6 +176,7 @@ bool APPCreatureBase::MoveToLocation(const FVector& TargetLocation, float Accept
 	if (!AIController)
 	{
 		bHasActiveMoveTarget = false;
+		DebugMessage(TEXT("Move request failed: no AI controller"), FColor::Red);
 		return false;
 	}
 
@@ -179,6 +184,7 @@ bool APPCreatureBase::MoveToLocation(const FVector& TargetLocation, float Accept
 	LastMoveRequestTime = GetWorld() ? GetWorld()->GetTimeSeconds() : LastMoveRequestTime;
 	const EPathFollowingRequestResult::Type Result = AIController->MoveToLocation(TargetLocation, AcceptanceRadius);
 	bHasActiveMoveTarget = Result != EPathFollowingRequestResult::Failed;
+	DebugMessage(FString::Printf(TEXT("MoveTo %s result=%s"), *TargetLocation.ToCompactString(), bHasActiveMoveTarget ? TEXT("ok") : TEXT("failed")), bHasActiveMoveTarget ? FColor::Cyan : FColor::Red);
 	return bHasActiveMoveTarget;
 }
 
@@ -255,7 +261,40 @@ bool APPCreatureBase::CanRequestMoveTo(const FVector& TargetLocation) const
 	return bCooldownFinished || bTargetChanged;
 }
 
-void APPCreatureBase::DrawThreatDebug(AActor* ThreatActor, bool bInRange, bool bInCone) const
+void APPCreatureBase::DebugMessage(const FString& Message, const FColor& Color, float Duration) const
+{
+	if (!bDrawDebug)
+	{
+		return;
+	}
+
+	const FString FullMessage = FString::Printf(TEXT("[%s] %s"), *GetName(), *Message);
+	UE_LOG(LogTemp, Warning, TEXT("%s"), *FullMessage);
+
+	if (bDebugOnScreen && GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, Duration, Color, FullMessage);
+	}
+}
+
+bool APPCreatureBase::CanPrintDebugStatus()
+{
+	if (!bDrawDebug)
+	{
+		return false;
+	}
+
+	const float CurrentTime = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0f;
+	if (CurrentTime - LastDebugStatusTime < DebugStatusInterval)
+	{
+		return false;
+	}
+
+	LastDebugStatusTime = CurrentTime;
+	return true;
+}
+
+void APPCreatureBase::DrawThreatDebug(AActor* ThreatActor, bool bInRange, bool bInCone)
 {
 	if (!bDrawDebug || !GetWorld())
 	{
@@ -275,5 +314,19 @@ void APPCreatureBase::DrawThreatDebug(AActor* ThreatActor, bool bInRange, bool b
 			AIUpdateInterval,
 			0,
 			2.0f);
+	}
+
+	if (ThreatActor && CanPrintDebugStatus())
+	{
+		const float Distance = FVector::Dist(GetActorLocation(), ThreatActor->GetActorLocation());
+		DebugMessage(FString::Printf(
+			TEXT("Threat check: %s distance %.0f / %.0f, in range=%s, in cone=%s"),
+			*GetNameSafe(ThreatActor),
+			Distance,
+			ThreatDetectionRadius,
+			bInRange ? TEXT("yes") : TEXT("no"),
+			bInCone ? TEXT("yes") : TEXT("no")),
+			(bInRange && bInCone) ? FColor::Red : FColor::Yellow,
+			1.0f);
 	}
 }

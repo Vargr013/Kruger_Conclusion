@@ -49,8 +49,21 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Poacher|Flee")
 	float FleeDuration = 3.0f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Poacher|Escape")
+	float EscapeDistance = 900.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Poacher|Escape")
+	float EscapeGraceTime = 5.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Poacher|Escape")
+	bool bCanEscapeAfterCapture = true;
+
+	UPROPERTY(BlueprintReadOnly, Category="Poacher|Escape")
+	float EscapeProgress = 0.0f;
+
 	float IdleEndTime = 0.0f;
 	float FleeEndTime = 0.0f;
+	float LastEscapeUpdateTime = 0.0f;
 
 public:
 	virtual void UpdateCreatureAI() override;
@@ -79,6 +92,15 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Poacher|Capture")
 	void MarkArrested();
 
+	UFUNCTION(BlueprintCallable, Category="Poacher|Escape")
+	void EscapePoacher();
+
+	UFUNCTION(BlueprintPure, Category="Poacher|Escape")
+	bool IsEscortTooFarFromCaptor() const;
+
+	UFUNCTION(BlueprintCallable, Category="Poacher|Escape")
+	void UpdateEscapePressure();
+
 	virtual void Interact_Implementation(AActor* Interactor) override;
 	virtual FText GetInteractionPrompt_Implementation() const override;
 
@@ -96,4 +118,7 @@ public:
 
 	UFUNCTION(BlueprintPure, Category="Poacher|Capture")
 	bool IsCaptured() const { return bIsCaptured; }
+
+	UFUNCTION(BlueprintPure, Category="Poacher|Escape")
+	float GetEscapeProgress() const { return EscapeProgress; }
 };

@@ -49,6 +49,12 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Creature|Debug")
 	bool bDrawDebug = false;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Creature|Debug")
+	bool bDebugOnScreen = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Creature|Debug")
+	float DebugStatusInterval = 1.0f;
+
 	UPROPERTY(BlueprintReadOnly, Category="Creature|Runtime")
 	FVector HomeLocation = FVector::ZeroVector;
 
@@ -63,6 +69,8 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly, Category="Creature|Runtime")
 	float LastMoveRequestTime = -1000.0f;
+
+	float LastDebugStatusTime = -1000.0f;
 
 	FTimerHandle AIUpdateTimerHandle;
 
@@ -129,5 +137,7 @@ protected:
 	AAIController* EnsureCreatureAIController();
 	bool IsCloseToCurrentMoveTarget(float AcceptanceRadius) const;
 	bool CanRequestMoveTo(const FVector& TargetLocation) const;
-	void DrawThreatDebug(AActor* ThreatActor, bool bInRange, bool bInCone) const;
+	void DrawThreatDebug(AActor* ThreatActor, bool bInRange, bool bInCone);
+	void DebugMessage(const FString& Message, const FColor& Color = FColor::Cyan, float Duration = 2.0f) const;
+	bool CanPrintDebugStatus();
 };
