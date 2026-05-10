@@ -5,6 +5,8 @@
 #include "InputActionValue.h"
 #include "ARangerCharacter.generated.h"
 
+class ABaseGun;
+
 UCLASS()
 class KRUGER_CONCLUSION_API ARangerCharacter : public ABaseCharacter
 {
@@ -25,7 +27,7 @@ protected:
     class UInputAction* MoveAction;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
-    class UInputAction* LookAction;                
+    class UInputAction* LookAction;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
     class UInputAction* JumpAction;
@@ -39,6 +41,17 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
     class UInputAction* InteractAction;
 
+    // NEW: Fire Action
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+    class UInputAction* FireAction;
+
+    // NEW: Gun Properties
+    UPROPERTY(EditAnywhere, Category = "Weapon")
+    TSubclassOf<ABaseGun> GunClass;
+
+    UPROPERTY(BlueprintReadOnly, Category = "Weapon")
+    ABaseGun* CurrentGun;
+
 private:
     void Move(const FInputActionValue& Value);
     void Look(const FInputActionValue& Value);
@@ -46,4 +59,6 @@ private:
     void StartSprint(const FInputActionValue& Value);
     void StopSprint(const FInputActionValue& Value);
     void StartCrouch(const FInputActionValue& Value);
+
+    void Fire();
 };
