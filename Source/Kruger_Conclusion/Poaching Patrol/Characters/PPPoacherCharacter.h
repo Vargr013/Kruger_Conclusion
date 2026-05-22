@@ -61,15 +61,30 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Category="Poacher|Arrest")
 	bool bPendingRemovalAfterArrest = false;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Poacher|Status Effects")
+	float PepperSprayDuration = 4.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Poacher|Status Effects")
+	float PepperSpraySpeedMultiplier = 0.35f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Poacher|Status Effects")
+	float MinimumPepperSprayedSpeed = 100.0f;
+
+	UPROPERTY(BlueprintReadOnly, Category="Poacher|Status Effects")
+	bool bIsPepperSprayed = false;
+
 	float IdleEndTime = 0.0f;
 	float FleeEndTime = 0.0f;
 	float LastEscapeUpdateTime = 0.0f;
 	float NextIdleLocalWanderTime = 0.0f;
 	FTimerHandle ArrestRemovalTimerHandle;
+	FTimerHandle PepperSprayTimerHandle;
 
 public:
 	virtual void UpdateCreatureAI() override;
 	virtual bool IsValidThreatActor_Implementation(AActor* PotentialThreat) const override;
+	virtual void EnterFleeState(AActor* ThreatActor) override;
+	virtual void EnterRoamState() override;
 
 	UFUNCTION(BlueprintCallable, Category="Poacher|State")
 	void SetPoacherState(EPPPoacherState NewState);
@@ -107,6 +122,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Poacher|Escape")
 	void UpdateEscapePressure();
 
+	UFUNCTION(BlueprintCallable, Category="Poacher|Status Effects")
+	void ApplyPepperSpraySlow(float Duration = -1.0f);
+
+	UFUNCTION(BlueprintPure, Category="Poacher|Status Effects")
+	bool IsPepperSprayed() const { return bIsPepperSprayed; }
+
 	virtual void Interact_Implementation(AActor* Interactor) override;
 	virtual FText GetInteractionPrompt_Implementation() const override;
 
@@ -130,7 +151,12 @@ public:
 
 protected:
 	void UpdateIdleLocalWander(float CurrentTime);
+	float GetAdjustedPoacherMoveSpeed(float BaseSpeed) const;
+	void RefreshPoacherMoveSpeed();
 
 	UFUNCTION()
 	void FinalizeArrestRemoval();
+
+	UFUNCTION()
+	void ClearPepperSpraySlow();
 };

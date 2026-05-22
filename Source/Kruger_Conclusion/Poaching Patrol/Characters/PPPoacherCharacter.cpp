@@ -147,6 +147,18 @@ bool APPPoacherCharacter::IsValidThreatActor_Implementation(AActor* PotentialThr
 	return false;
 }
 
+void APPPoacherCharacter::EnterFleeState(AActor* ThreatActor)
+{
+	CurrentThreatActor = ThreatActor;
+	SetCreatureMoveSpeed(GetAdjustedPoacherMoveSpeed(FleeSpeed));
+}
+
+void APPPoacherCharacter::EnterRoamState()
+{
+	CurrentThreatActor = nullptr;
+	SetCreatureMoveSpeed(GetAdjustedPoacherMoveSpeed(WalkSpeed));
+}
+
 void APPPoacherCharacter::SetPoacherState(EPPPoacherState NewState)
 {
 	if (CurrentPoacherState == NewState)
@@ -155,6 +167,7 @@ void APPPoacherCharacter::SetPoacherState(EPPPoacherState NewState)
 	}
 
 	CurrentPoacherState = NewState;
+	RefreshPoacherMoveSpeed();
 
 	DebugMessage(FString::Printf(TEXT("Poacher state -> %s"), GetPoacherStateName(CurrentPoacherState)), FColor::Green);
 }
@@ -256,7 +269,7 @@ void APPPoacherCharacter::CapturePoacher(AActor* NewCaptor)
 	CurrentThreatActor = nullptr;
 	EscapeProgress = 0.0f;
 	LastEscapeUpdateTime = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0f;
-	SetCreatureMoveSpeed(CapturedMoveSpeed);
+	SetCreatureMoveSpeed(GetAdjustedPoacherMoveSpeed(CapturedMoveSpeed));
 	StopMovement();
 	SetPoacherState(EPPPoacherState::FollowingPlayer);
 	DebugMessage(FString::Printf(TEXT("Captured by %s"), *GetNameSafe(NewCaptor)), FColor::Yellow, 3.0f);
@@ -297,6 +310,8 @@ void APPPoacherCharacter::MarkArrested()
 	CurrentThreatActor = nullptr;
 	CurrentTargetActor = nullptr;
 	SetPoacherState(EPPPoacherState::Arrested);
+	bIsPepperSprayed = false;
+	GetWorldTimerManager().ClearTimer(PepperSprayTimerHandle);
 	StopMovement();
 	StopAIUpdates();
 	SetActorEnableCollision(false);
@@ -346,7 +361,7 @@ void APPPoacherCharacter::EscapePoacher()
 	bIsCaptured = false;
 	CaptorActor = nullptr;
 	EscapeProgress = 0.0f;
-	SetCreatureMoveSpeed(FleeSpeed);
+	SetCreatureMoveSpeed(GetAdjustedPoacherMoveSpeed(FleeSpeed));
 	SetPoacherState(EPPPoacherState::Escaped);
 	const float FleeDuration = GetRandomFleeDuration();
 	FleeEndTime = GetWorld() ? GetWorld()->GetTimeSeconds() + FleeDuration : 0.0f;
@@ -408,6 +423,68 @@ void APPPoacherCharacter::UpdateEscapePressure()
 	{
 		EscapePoacher();
 	}
+}
+
+void APPPoacherCharacter::ApplyPepperSpraySlow(float Duration)
+{
+	if (CurrentPoacherState == EPPPoacherState::Arrested || bPendingRemovalAfterArrest || !GetWorld())
+	{
+		return;
+	}
+
+	const float RequestedDuration = Duration > 0.0f ? Duration : PepperSprayDuration;
+	const float SafeDuration = FMath::Max(0.0f, RequestedDuration);
+	if (SafeDuration <= 0.0f)
+	{
+		return;
+	}
+
+	bIsPepperSprayed = true;
+	RefreshPoacherMoveSpeed();
+
+	GetWorldTimerManager().ClearTimer(PepperSprayTimerHandle);
+	GetWorldTimerManager().SetTimer(PepperSprayTimerHandle, this, &APPPoacherCharacter::ClearPepperSpraySlow, SafeDuration, false);
+	DebugMessage(FString::Printf(TEXT("Pepper sprayed: slowed for %.1fs"), SafeDuration), FColor::Purple, 2.0f);
+}
+
+float APPPoacherCharacter::GetAdjustedPoacherMoveSpeed(float BaseSpeed) const
+{
+	if (!bIsPepperSprayed)
+	{
+		return BaseSpeed;
+	}
+
+	const float SlowedSpeed = BaseSpeed * FMath::Max(0.0f, PepperSpraySpeedMultiplier);
+	return FMath::Max(MinimumPepperSprayedSpeed, SlowedSpeed);
+}
+
+void APPPoacherCharacter::RefreshPoacherMoveSpeed()
+{
+	if (CurrentPoacherState == EPPPoacherState::Arrested || bPendingRemovalAfterArrest)
+	{
+		return;
+	}
+
+	if (bIsCaptured || CurrentPoacherState == EPPPoacherState::Captured || CurrentPoacherState == EPPPoacherState::FollowingPlayer)
+	{
+		SetCreatureMoveSpeed(GetAdjustedPoacherMoveSpeed(CapturedMoveSpeed));
+		return;
+	}
+
+	if (CurrentPoacherState == EPPPoacherState::Fleeing || CurrentPoacherState == EPPPoacherState::Escaped)
+	{
+		SetCreatureMoveSpeed(GetAdjustedPoacherMoveSpeed(FleeSpeed));
+		return;
+	}
+
+	SetCreatureMoveSpeed(GetAdjustedPoacherMoveSpeed(WalkSpeed));
+}
+
+void APPPoacherCharacter::ClearPepperSpraySlow()
+{
+	bIsPepperSprayed = false;
+	RefreshPoacherMoveSpeed();
+	DebugMessage(TEXT("Pepper spray slow ended"), FColor::Green, 2.0f);
 }
 
 void APPPoacherCharacter::Interact_Implementation(AActor* Interactor)
