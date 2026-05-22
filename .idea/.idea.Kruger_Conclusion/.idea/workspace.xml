@@ -18,8 +18,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="c7c81508-1090-4aff-b6d8-ce25fd1ccfed" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/.idea.Kruger_Conclusion/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.Kruger_Conclusion/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/__ExternalActors__/Poaching_Patrol/Levels/Lvl_FirstPerson/9/SJ/2S1DE0IUBPJ031A4TQTKO7.uasset" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/Poaching_Patrol/Characters/Poachers/MyPPPoacherCharacter_Test.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/Poaching_Patrol/Characters/Poachers/MyPPPoacherCharacter_Test.uasset" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -189,6 +188,7 @@
       <workItem from="1776197027380" duration="1012000" />
       <workItem from="1776357980078" duration="1616000" />
       <workItem from="1776424689976" duration="1742000" />
+      <workItem from="1779453630045" duration="557000" />
     </task>
     <servers />
   </component>
