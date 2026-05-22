@@ -8,6 +8,7 @@
 
 class UInputMappingContext;
 class UUserWidget;
+class UPPPatrolHUDWidget;
 
 /**
  *  Simple first person Player Controller
@@ -45,6 +46,15 @@ protected:
 	/** If true, the player will use UMG touch controls even if not playing on mobile platforms */
 	UPROPERTY(EditAnywhere, Config, Category = "Input|Touch Controls")
 	bool bForceTouchControls = false;
+
+	UPROPERTY(EditAnywhere, Category="HUD|Poaching Patrol")
+	bool bShowPoachingPatrolHUD = true;
+
+	UPROPERTY(EditAnywhere, Category="HUD|Poaching Patrol")
+	TSubclassOf<UPPPatrolHUDWidget> PoachingPatrolHUDWidgetClass;
+
+	UPROPERTY()
+	TObjectPtr<UPPPatrolHUDWidget> PoachingPatrolHUDWidget;
 
 	/** Gameplay initialization */
 	virtual void BeginPlay() override;

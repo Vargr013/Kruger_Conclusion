@@ -43,13 +43,36 @@ public:
     UPROPERTY(EditDefaultsOnly, Category = "Weapon Setup|Raycast")
     float DamagePerShot = 10.0f;
 
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon Setup|HUD")
+    FText ToolDisplayName;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon Setup|HUD", meta = (ClampMin = 0))
+    int32 MaxUses = 8;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon Setup|HUD")
+    bool bConsumesUses = true;
+
     void Shoot();
+
+    UFUNCTION(BlueprintPure, Category = "Weapon Setup|HUD")
+    int32 GetRemainingUses() const { return CurrentUses; }
+
+    UFUNCTION(BlueprintPure, Category = "Weapon Setup|HUD")
+    int32 GetMaxUses() const { return MaxUses; }
+
+    UFUNCTION(BlueprintPure, Category = "Weapon Setup|HUD")
+    FText GetToolDisplayName() const;
 
 private:
     void FireProjectile();
     void FireRaycast();
 
+    UPROPERTY(VisibleInstanceOnly, Category = "Weapon Setup|HUD")
+    int32 CurrentUses = 0;
+
 protected:
+    virtual void BeginPlay() override;
+
     UFUNCTION(BlueprintImplementableEvent, Category = "Weapon")
     void OnRaycastHit(AActor* HitActor, FVector HitLocation);
 };

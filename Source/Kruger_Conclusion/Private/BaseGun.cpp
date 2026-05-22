@@ -13,10 +13,17 @@ ABaseGun::ABaseGun()
 
     MuzzleLocation = CreateDefaultSubobject<USceneComponent>(TEXT("Muzzle"));
     MuzzleLocation->SetupAttachment(SceneRoot);
+
+    CurrentUses = MaxUses;
 }
 
 void ABaseGun::Shoot()
 {
+    if (bConsumesUses && CurrentUses <= 0)
+    {
+        return;
+    }
+
     if (FireMode == EFireMode::Projectile)
     {
         FireProjectile();
@@ -25,6 +32,30 @@ void ABaseGun::Shoot()
     {
         FireRaycast();
     }
+
+    if (bConsumesUses)
+    {
+        CurrentUses = FMath::Max(0, CurrentUses - 1);
+    }
+}
+
+void ABaseGun::BeginPlay()
+{
+    Super::BeginPlay();
+
+    CurrentUses = MaxUses;
+}
+
+FText ABaseGun::GetToolDisplayName() const
+{
+    if (!ToolDisplayName.IsEmpty())
+    {
+        return ToolDisplayName;
+    }
+
+    return FireMode == EFireMode::Raycast
+        ? FText::FromString(TEXT("Pepper Spray"))
+        : FText::FromString(TEXT("Darts"));
 }
 
 void ABaseGun::FireProjectile()

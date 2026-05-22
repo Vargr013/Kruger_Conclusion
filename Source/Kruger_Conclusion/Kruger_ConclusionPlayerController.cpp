@@ -8,6 +8,7 @@
 #include "Kruger_ConclusionCameraManager.h"
 #include "Blueprint/UserWidget.h"
 #include "Kruger_Conclusion.h"
+#include "PPPatrolHUDWidget.h"
 #include "Widgets/Input/SVirtualJoystick.h"
 
 AKruger_ConclusionPlayerController::AKruger_ConclusionPlayerController()
@@ -38,6 +39,21 @@ void AKruger_ConclusionPlayerController::BeginPlay()
 
 		}
 
+	}
+
+	if (bShowPoachingPatrolHUD && IsLocalPlayerController())
+	{
+		TSubclassOf<UPPPatrolHUDWidget> WidgetClass = PoachingPatrolHUDWidgetClass;
+		if (!WidgetClass)
+		{
+			WidgetClass = UPPPatrolHUDWidget::StaticClass();
+		}
+
+		PoachingPatrolHUDWidget = CreateWidget<UPPPatrolHUDWidget>(this, WidgetClass);
+		if (PoachingPatrolHUDWidget)
+		{
+			PoachingPatrolHUDWidget->AddToPlayerScreen(1);
+		}
 	}
 }
 

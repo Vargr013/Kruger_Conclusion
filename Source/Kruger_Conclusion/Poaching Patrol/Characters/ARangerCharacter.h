@@ -52,6 +52,10 @@ protected:
     UPROPERTY(BlueprintReadOnly, Category = "Weapon")
     ABaseGun* CurrentGun;
 
+public:
+    UFUNCTION(BlueprintPure, Category = "Weapon")
+    ABaseGun* GetCurrentGun() const { return CurrentGun; }
+
 private:
     void Move(const FInputActionValue& Value);
     void Look(const FInputActionValue& Value);

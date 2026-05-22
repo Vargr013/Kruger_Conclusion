@@ -33,6 +33,7 @@ public class Kruger_Conclusion : ModuleRules
 			"Kruger_Conclusion/Poaching Patrol/Actors",
 			"Kruger_Conclusion/Poaching Patrol/Characters",
 			"Kruger_Conclusion/Poaching Patrol/Data",
+			"Kruger_Conclusion/Poaching Patrol/UI",
 			"Kruger_Conclusion/Variant_Horror",
 			"Kruger_Conclusion/Variant_Horror/UI",
 			"Kruger_Conclusion/Variant_Shooter",
@@ -41,8 +42,7 @@ public class Kruger_Conclusion : ModuleRules
 			"Kruger_Conclusion/Variant_Shooter/Weapons"
 		});
 
-		// Uncomment if you are using Slate UI
-		// PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore" });
+		PrivateDependencyModuleNames.AddRange(new string[] { "SlateCore" });
 
 		// Uncomment if you are using online features
 		// PrivateDependencyModuleNames.Add("OnlineSubsystem");
