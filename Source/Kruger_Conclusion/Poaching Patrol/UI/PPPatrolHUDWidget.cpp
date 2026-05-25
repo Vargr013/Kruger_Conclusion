@@ -57,7 +57,7 @@ void UPPPatrolHUDWidget::DrawMinimap(const FGeometry& AllottedGeometry, FSlateWi
 	FSlateDrawElement::MakeBox(
 		OutDrawElements,
 		LayerId++,
-		AllottedGeometry.ToPaintGeometry(MapOrigin, MapSize),
+		AllottedGeometry.ToPaintGeometry(MapSize, FSlateLayoutTransform(MapOrigin)),
 		WhiteBrush,
 		ESlateDrawEffect::None,
 		PanelColor);
@@ -101,7 +101,7 @@ void UPPPatrolHUDWidget::DrawMinimap(const FGeometry& AllottedGeometry, FSlateWi
 		FSlateDrawElement::MakeBox(
 			OutDrawElements,
 			LayerId++,
-			AllottedGeometry.ToPaintGeometry(MapCenter + LocalPoint - FVector2D(LocalDotSize * 0.5f), FVector2D(LocalDotSize)),
+			AllottedGeometry.ToPaintGeometry(FVector2D(LocalDotSize), FSlateLayoutTransform(MapCenter + LocalPoint - FVector2D(LocalDotSize * 0.5f))),
 			WhiteBrush,
 			ESlateDrawEffect::None,
 			DotColor);
@@ -111,7 +111,7 @@ void UPPPatrolHUDWidget::DrawMinimap(const FGeometry& AllottedGeometry, FSlateWi
 	FSlateDrawElement::MakeBox(
 		OutDrawElements,
 		LayerId++,
-		AllottedGeometry.ToPaintGeometry(MapCenter - FVector2D(4.0f), FVector2D(8.0f)),
+		AllottedGeometry.ToPaintGeometry(FVector2D(8.0f), FSlateLayoutTransform(MapCenter - FVector2D(4.0f))),
 		WhiteBrush,
 		ESlateDrawEffect::None,
 		PlayerColor);
@@ -135,7 +135,7 @@ void UPPPatrolHUDWidget::DrawCompass(const FGeometry& AllottedGeometry, FSlateWi
 	FSlateDrawElement::MakeBox(
 		OutDrawElements,
 		LayerId++,
-		AllottedGeometry.ToPaintGeometry(Start, FVector2D(CompassWidth, 24.0f)),
+		AllottedGeometry.ToPaintGeometry(FVector2D(CompassWidth, 24.0f), FSlateLayoutTransform(Start)),
 		WhiteBrush,
 		ESlateDrawEffect::None,
 		PanelColor);
@@ -174,7 +174,7 @@ void UPPPatrolHUDWidget::DrawCompass(const FGeometry& AllottedGeometry, FSlateWi
 		FSlateDrawElement::MakeText(
 			OutDrawElements,
 			LayerId++,
-			AllottedGeometry.ToPaintGeometry(FVector2D(X - 4.0f, Center.Y - 8.0f), FVector2D(20.0f, 16.0f)),
+			AllottedGeometry.ToPaintGeometry(FVector2D(20.0f, 16.0f), FSlateLayoutTransform(FVector2D(X - 4.0f, Center.Y - 8.0f))),
 			FString(Mark.Label),
 			Font,
 			ESlateDrawEffect::None,
@@ -200,7 +200,7 @@ void UPPPatrolHUDWidget::DrawToolCount(const FGeometry& AllottedGeometry, FSlate
 	FSlateDrawElement::MakeBox(
 		OutDrawElements,
 		LayerId++,
-		AllottedGeometry.ToPaintGeometry(Origin, Size),
+		AllottedGeometry.ToPaintGeometry(Size, FSlateLayoutTransform(Origin)),
 		WhiteBrush,
 		ESlateDrawEffect::None,
 		PanelColor);
@@ -208,7 +208,7 @@ void UPPPatrolHUDWidget::DrawToolCount(const FGeometry& AllottedGeometry, FSlate
 	FSlateDrawElement::MakeText(
 		OutDrawElements,
 		LayerId++,
-		AllottedGeometry.ToPaintGeometry(Origin + FVector2D(12.0f, 5.0f), FVector2D(Size.X - 24.0f, 14.0f)),
+		AllottedGeometry.ToPaintGeometry(FVector2D(Size.X - 24.0f, 14.0f), FSlateLayoutTransform(Origin + FVector2D(12.0f, 5.0f))),
 		Tool->GetToolDisplayName().ToString().ToUpper(),
 		LabelFont,
 		ESlateDrawEffect::None,
@@ -217,7 +217,7 @@ void UPPPatrolHUDWidget::DrawToolCount(const FGeometry& AllottedGeometry, FSlate
 	FSlateDrawElement::MakeText(
 		OutDrawElements,
 		LayerId++,
-		AllottedGeometry.ToPaintGeometry(Origin + FVector2D(12.0f, 18.0f), FVector2D(Size.X - 24.0f, 22.0f)),
+		AllottedGeometry.ToPaintGeometry(FVector2D(Size.X - 24.0f, 22.0f), FSlateLayoutTransform(Origin + FVector2D(12.0f, 18.0f))),
 		FString::Printf(TEXT("%d / %d"), Tool->GetRemainingUses(), Tool->GetMaxUses()),
 		CountFont,
 		ESlateDrawEffect::None,

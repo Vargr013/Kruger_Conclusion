@@ -58,10 +58,10 @@ protected:
 	FLinearColor FlareColor = FLinearColor::Red;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Arrest Zone|Debug")
-	bool bDrawDebug = true;
+	bool bDrawDebug = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Arrest Zone|Debug")
-	bool bPlayZoneDebugMessages = true;
+	bool bPlayZoneDebugMessages = false;
 
 	UFUNCTION()
 	void OnArrestBoundsBeginOverlap(
