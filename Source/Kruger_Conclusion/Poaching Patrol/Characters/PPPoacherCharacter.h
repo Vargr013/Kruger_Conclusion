@@ -108,7 +108,7 @@ public:
 	void FollowCaptor();
 
 	UFUNCTION(BlueprintCallable, Category="Poacher|Capture")
-	void MarkArrested();
+	bool MarkArrested();
 
 	UFUNCTION(BlueprintCallable, Category="Poacher|Arrest")
 	void RemoveFromLevelAfterArrest(float Delay);

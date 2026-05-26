@@ -1,6 +1,7 @@
 #include "Characters/PPPoacherCharacter.h"
 
 #include "Characters/PPAnimalCharacter.h"
+#include <EnvironmentLevelSubsystem.h>
 
 namespace
 {
@@ -40,6 +41,14 @@ void APPPoacherCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 	StartDisguisedIdle();
+
+	if (UWorld* World = GetWorld())
+	{
+		if (UEnvironmentLevelSubsystem* LevelSubsystem = World->GetSubsystem<UEnvironmentLevelSubsystem>())
+		{
+			LevelSubsystem->RegisterPoacher();
+		}
+	}
 }
 
 void APPPoacherCharacter::UpdateCreatureAI()
@@ -301,8 +310,13 @@ void APPPoacherCharacter::FollowCaptor()
 	}
 }
 
-void APPPoacherCharacter::MarkArrested()
+bool APPPoacherCharacter::MarkArrested()
 {
+	if (CurrentPoacherState == EPPPoacherState::Arrested)
+	{
+		return false;
+	}
+
 	bIsCaptured = true;
 	bCanEscapeAfterCapture = false;
 	EscapeProgress = 0.0f;
@@ -316,6 +330,7 @@ void APPPoacherCharacter::MarkArrested()
 	StopAIUpdates();
 	SetActorEnableCollision(false);
 	DebugMessage(TEXT("Arrested: escort complete"), FColor::Green, 3.0f);
+	return true;
 }
 
 void APPPoacherCharacter::RemoveFromLevelAfterArrest(float Delay)

@@ -1,5 +1,6 @@
 #include "Characters/PPAnimalCharacter.h"
 
+#include "EnvironmentLevelSubsystem.h"
 #include "Characters/PPPoacherCharacter.h"
 
 namespace
@@ -31,6 +32,14 @@ void APPAnimalCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 	StartIdle();
+
+	if (UWorld* World = GetWorld())
+	{
+		if (UEnvironmentLevelSubsystem* LevelSubsystem = World->GetSubsystem<UEnvironmentLevelSubsystem>())
+		{
+			LevelSubsystem->RegisterAnimal();
+		}
+	}
 }
 
 void APPAnimalCharacter::UpdateCreatureAI()

@@ -1,5 +1,6 @@
 #include "Actors/PPArrestZone.h"
 
+#include "EnvironmentLevelSubsystem.h"
 #include "Characters/PPPoacherCharacter.h"
 #include "Components/BoxComponent.h"
 #include "Components/PointLightComponent.h"
@@ -95,7 +96,21 @@ void APPArrestZone::OnArrestBoundsBeginOverlap(
 		return;
 	}
 
-	Poacher->MarkArrested();
+	// Attempt to mark the poacher as arrested. If this returns false, it means the poacher was already marked as arrested, so we can skip the rest of the logic to avoid double counting captures or triggering multiple capture events.
+	const bool bWasArrested = Poacher->MarkArrested();
+	if (!bWasArrested)
+	{
+		return;
+	}
+
+	if (UWorld* World = GetWorld())
+	{
+		if (UEnvironmentLevelSubsystem* LevelSubsystem = World->GetSubsystem<UEnvironmentLevelSubsystem>())
+		{
+			LevelSubsystem->OnPoacherCaptured();
+		}
+	}
+
 	if (bRemovePoacherAfterArrest)
 	{
 		Poacher->RemoveFromLevelAfterArrest(PoacherRemovalDelay);

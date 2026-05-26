@@ -33,6 +33,7 @@ void UEnvironmentLevelSubsystem::OnPoacherCaptured()
     CheckWinCondition();
 }
 
+// Count escaped poachers as they are no longer in the level and factor them into the win condition calculation. Too many escapes = loss.
 void UEnvironmentLevelSubsystem::OnPoacherEscaped()
 {
     PoachersEscaped++;
