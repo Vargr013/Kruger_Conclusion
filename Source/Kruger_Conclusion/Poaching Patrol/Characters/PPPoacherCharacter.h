@@ -151,6 +151,7 @@ public:
 
 protected:
 	void UpdateIdleLocalWander(float CurrentTime);
+	virtual void HandleHealthDepleted() override;
 	float GetAdjustedPoacherMoveSpeed(float BaseSpeed) const;
 	void RefreshPoacherMoveSpeed();
 

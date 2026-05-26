@@ -6,6 +6,8 @@
 #include "PPCreatureBase.generated.h"
 
 class AAIController;
+class AController;
+class UPPHealthComponent;
 
 UENUM(BlueprintType)
 enum class EPPThreatDetectionType : uint8
@@ -26,6 +28,10 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Creature|Health")
+	UPPHealthComponent* HealthComponent;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Creature|Movement")
 	float WalkSpeed = 240.0f;
@@ -133,6 +139,12 @@ protected:
 
 	FTimerHandle AIUpdateTimerHandle;
 
+	UPROPERTY(BlueprintReadOnly, Category="Creature|Health")
+	AController* LastDamageInstigator = nullptr;
+
+	UPROPERTY(BlueprintReadOnly, Category="Creature|Health")
+	AActor* LastDamageCauser = nullptr;
+
 public:
 	UFUNCTION(BlueprintCallable, Category="Creature|AI")
 	virtual void StartAIUpdates();
@@ -209,7 +221,15 @@ public:
 	UFUNCTION(BlueprintPure, Category="Creature|Runtime")
 	bool HasActiveMoveTarget() const { return bHasActiveMoveTarget; }
 
+	UFUNCTION(BlueprintPure, Category="Creature|Health")
+	UPPHealthComponent* GetHealthComponent() const { return HealthComponent; }
+
 protected:
+	UFUNCTION()
+	void OnHealthDepleted();
+
+	virtual void HandleHealthDepleted();
+
 	AAIController* GetCreatureAIController() const;
 	AAIController* EnsureCreatureAIController();
 	bool IsCloseToCurrentMoveTarget(float AcceptanceRadius) const;

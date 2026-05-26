@@ -1,10 +1,13 @@
 #include "ABaseCharacter.h"
+#include "Data/PPHealthComponent.h"
+#include "GameFramework/PlayerController.h"
 #include "InteractInterface.h"
 #include "Interfaces/PPInteractableInterface.h"
 
 ABaseCharacter::ABaseCharacter()
 {
 	PrimaryActorTick.bCanEverTick = true; // Impacts performance, runs code every frame for this actor
+    HealthComponent = CreateDefaultSubobject<UPPHealthComponent>(TEXT("HealthComponent"));
 
     // Camera Setup
     SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
@@ -26,11 +29,30 @@ ABaseCharacter::ABaseCharacter()
 void ABaseCharacter::BeginPlay()
 {
     Super::BeginPlay();
+
+    if (HealthComponent)
+    {
+        HealthComponent->OnHealthChanged.AddDynamic(this, &ABaseCharacter::OnPlayerHealthChanged);
+        HealthComponent->OnDeath.AddDynamic(this, &ABaseCharacter::OnPlayerHealthDepleted);
+        Health = HealthComponent->GetCurrentHealth();
+    }
 }
 
 void ABaseCharacter::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
+}
+
+float ABaseCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
+{
+    const float AppliedDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+    if (DamageAmount <= 0.0f || !HealthComponent || HealthComponent->IsDead())
+    {
+        return AppliedDamage;
+    }
+
+    HealthComponent->ApplyDamage(DamageAmount);
+    return DamageAmount;
 }
 
 // movement functions - called by player character
@@ -127,6 +149,46 @@ void ABaseCharacter::UpdateNoiseRadius()
 void ABaseCharacter::OnMovementStateChanged()
 {
     UpdateNoiseRadius();
+}
+
+void ABaseCharacter::OnPlayerHealthChanged(float CurrentHealth, float MaxHealth)
+{
+    Health = CurrentHealth;
+}
+
+void ABaseCharacter::OnPlayerHealthDepleted()
+{
+    if (bIsDowned)
+    {
+        return;
+    }
+
+    bIsDowned = true;
+    GetCharacterMovement()->DisableMovement();
+
+    if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
+    {
+        DisableInput(PlayerController);
+    }
+
+    BP_OnPlayerDowned();
+}
+
+void ABaseCharacter::ResetPlayerHealth()
+{
+    bIsDowned = false;
+
+    if (HealthComponent)
+    {
+        HealthComponent->ResetHealth();
+    }
+
+    GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+
+    if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
+    {
+        EnableInput(PlayerController);
+    }
 }
 
 void ABaseCharacter::Interact()

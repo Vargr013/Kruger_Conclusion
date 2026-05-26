@@ -22,6 +22,7 @@ public:
 protected:
     virtual void BeginPlay() override;
     virtual void Tick(float DeltaTime) override;
+    virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 
     // components
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
@@ -33,6 +34,12 @@ protected:
     // stats
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
     float Health = 100.0f;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats")
+    class UPPHealthComponent* HealthComponent;
+
+    UPROPERTY(BlueprintReadOnly, Category = "Stats")
+    bool bIsDowned = false;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
     int32 Currency = 0;
@@ -60,6 +67,22 @@ protected:
 
     /** Called whenever sprinting or crouching state changes */
     virtual void OnMovementStateChanged();
+
+    UFUNCTION()
+    virtual void OnPlayerHealthChanged(float CurrentHealth, float MaxHealth);
+
+    UFUNCTION()
+    virtual void OnPlayerHealthDepleted();
+
+    UFUNCTION(BlueprintImplementableEvent, Category = "Stats", meta = (DisplayName = "On Player Downed"))
+    void BP_OnPlayerDowned();
+
+public:
+    UFUNCTION(BlueprintCallable, Category = "Stats")
+    virtual void ResetPlayerHealth();
+
+    UFUNCTION(BlueprintPure, Category = "Stats")
+    class UPPHealthComponent* GetHealthComponent() const { return HealthComponent; }
 
 private:
     void UpdateNoiseRadius();

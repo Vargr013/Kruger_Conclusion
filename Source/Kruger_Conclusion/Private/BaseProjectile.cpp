@@ -1,6 +1,8 @@
 #include "BaseProjectile.h"
+#include "Characters/PPAnimalCharacter.h"
 #include "Components/SphereComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "GameFramework/Controller.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 
@@ -28,7 +30,12 @@ void ABaseProjectile::OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UP
 {
 	if (OtherActor && (OtherActor != this) && (OtherActor != GetOwner()))
 	{
-		UGameplayStatics::ApplyDamage(OtherActor, 20.f, GetInstigatorController(), this, nullptr);
+		const AController* InstigatorController = GetInstigatorController();
+		const bool bPlayerFiredAtAnimal = InstigatorController && InstigatorController->IsPlayerController() && Cast<APPAnimalCharacter>(OtherActor);
+		if (!bPlayerFiredAtAnimal)
+		{
+			UGameplayStatics::ApplyDamage(OtherActor, 20.f, GetInstigatorController(), this, nullptr);
+		}
 		Destroy();
 	}
 }

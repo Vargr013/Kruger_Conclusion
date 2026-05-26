@@ -31,9 +31,19 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Animal|Timing")
 	float IdleTimeMax = 7.0f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Animal|Health")
+	bool bRemoveAfterPoached = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Animal|Health", meta=(ClampMin="0.0"))
+	float PoachedRemovalDelay = 3.0f;
+
+	UPROPERTY(BlueprintReadOnly, Category="Animal|Health")
+	bool bPoached = false;
+
 	float IdleEndTime = 0.0f;
 	float FleeEndTime = 0.0f;
 	float NextIdleLocalWanderTime = 0.0f;
+	FTimerHandle PoachedRemovalTimerHandle;
 
 public:
 	virtual void UpdateCreatureAI() override;
@@ -65,4 +75,8 @@ public:
 
 protected:
 	void UpdateIdleLocalWander(float CurrentTime);
+	virtual void HandleHealthDepleted() override;
+
+	UFUNCTION()
+	void FinalizePoachedRemoval();
 };

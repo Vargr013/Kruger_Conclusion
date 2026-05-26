@@ -9,6 +9,7 @@ void UPPHealthComponent::BeginPlay()
 {
 	Super::BeginPlay();
 	CurrentHealth = MaxHealth;
+	OnHealthChanged.Broadcast(CurrentHealth, MaxHealth);
 }
 
 void UPPHealthComponent::ApplyDamage(float DamageAmount)
@@ -29,5 +30,11 @@ void UPPHealthComponent::Heal(float HealAmount)
 	if (HealAmount <= 0.0f || IsDead()) return;
 
 	CurrentHealth = FMath::Clamp(CurrentHealth + HealAmount, 0.0f, MaxHealth);
+	OnHealthChanged.Broadcast(CurrentHealth, MaxHealth);
+}
+
+void UPPHealthComponent::ResetHealth()
+{
+	CurrentHealth = MaxHealth;
 	OnHealthChanged.Broadcast(CurrentHealth, MaxHealth);
 }

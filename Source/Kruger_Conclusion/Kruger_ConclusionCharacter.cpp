@@ -5,7 +5,9 @@
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "Data/PPHealthComponent.h"
 #include "EnhancedInputComponent.h"
+#include "GameFramework/PlayerController.h"
 #include "InputActionValue.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kruger_Conclusion.h"
@@ -33,6 +35,7 @@ AKruger_ConclusionCharacter::AKruger_ConclusionCharacter()
 	FirstPersonCameraComponent->bEnableFirstPersonScale = true;
 	FirstPersonCameraComponent->FirstPersonFieldOfView = 70.0f;
 	FirstPersonCameraComponent->FirstPersonScale = 0.6f;
+	HealthComponent = CreateDefaultSubobject<UPPHealthComponent>(TEXT("HealthComponent"));
 
 	// configure the character comps
 	GetMesh()->SetOwnerNoSee(true);
@@ -43,6 +46,28 @@ AKruger_ConclusionCharacter::AKruger_ConclusionCharacter()
 	// Configure character movement
 	GetCharacterMovement()->BrakingDecelerationFalling = 1500.0f;
 	GetCharacterMovement()->AirControl = 0.5f;
+}
+
+void AKruger_ConclusionCharacter::BeginPlay()
+{
+	Super::BeginPlay();
+
+	if (HealthComponent)
+	{
+		HealthComponent->OnDeath.AddDynamic(this, &AKruger_ConclusionCharacter::OnPlayerHealthDepleted);
+	}
+}
+
+float AKruger_ConclusionCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
+{
+	const float AppliedDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+	if (DamageAmount <= 0.0f || !HealthComponent || HealthComponent->IsDead())
+	{
+		return AppliedDamage;
+	}
+
+	HealthComponent->ApplyDamage(DamageAmount);
+	return DamageAmount;
 }
 
 void AKruger_ConclusionCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -154,5 +179,40 @@ void AKruger_ConclusionCharacter::DoInteract()
 	{
 		IPPInteractableInterface::Execute_Interact(HitActor, this);
 		UE_LOG(LogKruger_Conclusion, Log, TEXT("Interacted with %s"), *GetNameSafe(HitActor));
+	}
+}
+
+void AKruger_ConclusionCharacter::OnPlayerHealthDepleted()
+{
+	if (bIsDowned)
+	{
+		return;
+	}
+
+	bIsDowned = true;
+	GetCharacterMovement()->DisableMovement();
+
+	if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
+	{
+		DisableInput(PlayerController);
+	}
+
+	BP_OnPlayerDowned();
+}
+
+void AKruger_ConclusionCharacter::ResetPlayerHealth()
+{
+	bIsDowned = false;
+
+	if (HealthComponent)
+	{
+		HealthComponent->ResetHealth();
+	}
+
+	GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+
+	if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
+	{
+		EnableInput(PlayerController);
 	}
 }

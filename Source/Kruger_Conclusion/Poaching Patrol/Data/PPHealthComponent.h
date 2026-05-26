@@ -37,6 +37,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Health")
 	void Heal(float HealAmount);
 
+	UFUNCTION(BlueprintCallable, Category="Health")
+	void ResetHealth();
+
 	UFUNCTION(BlueprintPure, Category="Health")
 	float GetCurrentHealth() const { return CurrentHealth; }
 

@@ -11,6 +11,7 @@ class UInputComponent;
 class USkeletalMeshComponent;
 class UCameraComponent;
 class UInputAction;
+class UPPHealthComponent;
 struct FInputActionValue;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
@@ -30,6 +31,12 @@ class AKruger_ConclusionCharacter : public ACharacter
 	/** First person camera */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta = (AllowPrivateAccess = "true"))
 	UCameraComponent* FirstPersonCameraComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Health", meta = (AllowPrivateAccess = "true"))
+	UPPHealthComponent* HealthComponent;
+
+	UPROPERTY(BlueprintReadOnly, Category="Health", meta = (AllowPrivateAccess = "true"))
+	bool bIsDowned = false;
 
 protected:
 
@@ -58,6 +65,9 @@ public:
 
 protected:
 
+	virtual void BeginPlay() override;
+	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
+
 	/** Called from Input Actions for movement input */
 	void MoveInput(const FInputActionValue& Value);
 
@@ -84,6 +94,12 @@ protected:
 	UFUNCTION(BlueprintCallable, Category="Interaction")
 	virtual void DoInteract();
 
+	UFUNCTION()
+	virtual void OnPlayerHealthDepleted();
+
+	UFUNCTION(BlueprintImplementableEvent, Category="Health", meta=(DisplayName="On Player Downed"))
+	void BP_OnPlayerDowned();
+
 protected:
 
 	/** Set up input action bindings */
@@ -97,6 +113,12 @@ public:
 
 	/** Returns first person camera component **/
 	UCameraComponent* GetFirstPersonCameraComponent() const { return FirstPersonCameraComponent; }
+
+	UFUNCTION(BlueprintCallable, Category="Health")
+	virtual void ResetPlayerHealth();
+
+	UFUNCTION(BlueprintPure, Category="Health")
+	UPPHealthComponent* GetHealthComponent() const { return HealthComponent; }
 
 };
 

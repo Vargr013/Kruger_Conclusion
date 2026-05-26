@@ -1,6 +1,7 @@
 #include "Characters/PPCreatureBase.h"
 
 #include "AIController.h"
+#include "Data/PPHealthComponent.h"
 #include "DrawDebugHelpers.h"
 #include "Engine/Engine.h"
 #include "EngineUtils.h"
@@ -13,11 +14,17 @@ APPCreatureBase::APPCreatureBase()
 	PrimaryActorTick.bCanEverTick = false;
 	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
 	AIControllerClass = AAIController::StaticClass();
+	HealthComponent = CreateDefaultSubobject<UPPHealthComponent>(TEXT("HealthComponent"));
 }
 
 void APPCreatureBase::BeginPlay()
 {
 	Super::BeginPlay();
+
+	if (HealthComponent)
+	{
+		HealthComponent->OnDeath.AddDynamic(this, &APPCreatureBase::OnHealthDepleted);
+	}
 
 	HomeLocation = GetActorLocation();
 	SetCreatureMoveSpeed(WalkSpeed);
@@ -30,6 +37,33 @@ void APPCreatureBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	StopAIUpdates();
 	Super::EndPlay(EndPlayReason);
+}
+
+float APPCreatureBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
+{
+	const float AppliedDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+	if (DamageAmount <= 0.0f || !HealthComponent || HealthComponent->IsDead())
+	{
+		return AppliedDamage;
+	}
+
+	LastDamageInstigator = EventInstigator;
+	LastDamageCauser = DamageCauser;
+	HealthComponent->ApplyDamage(DamageAmount);
+	return DamageAmount;
+}
+
+void APPCreatureBase::OnHealthDepleted()
+{
+	HandleHealthDepleted();
+}
+
+void APPCreatureBase::HandleHealthDepleted()
+{
+	StopMovement();
+	StopAIUpdates();
+	SetActorEnableCollision(false);
+	DebugMessage(TEXT("Health depleted"), FColor::Red, 3.0f);
 }
 
 void APPCreatureBase::StartAIUpdates()

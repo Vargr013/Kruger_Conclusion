@@ -531,3 +531,36 @@ void APPPoacherCharacter::SetThreatActor(AActor* NewThreat)
 {
 	CurrentThreatActor = NewThreat;
 }
+
+void APPPoacherCharacter::HandleHealthDepleted()
+{
+	if (CurrentPoacherState == EPPPoacherState::Arrested || bPendingRemovalAfterArrest || bIsCaptured)
+	{
+		return;
+	}
+
+	AActor* CaptorActorFromDamage = LastDamageInstigator ? LastDamageInstigator->GetPawn() : nullptr;
+	if (!CaptorActorFromDamage)
+	{
+		CaptorActorFromDamage = LastDamageCauser ? LastDamageCauser->GetOwner() : nullptr;
+	}
+	if (!CaptorActorFromDamage)
+	{
+		CaptorActorFromDamage = LastDamageCauser;
+	}
+	if (!CaptorActorFromDamage)
+	{
+		CaptorActorFromDamage = FindPlayerActor();
+	}
+
+	if (CaptorActorFromDamage)
+	{
+		CapturePoacher(CaptorActorFromDamage);
+	}
+	else
+	{
+		StopMovement();
+		SetPoacherState(EPPPoacherState::Captured);
+		DebugMessage(TEXT("Poacher subdued but no captor was found"), FColor::Yellow, 3.0f);
+	}
+}

@@ -1,5 +1,7 @@
 #include "BaseGun.h"
 #include "BaseProjectile.h"
+#include "Characters/PPAnimalCharacter.h"
+#include "Characters/PPPoacherCharacter.h"
 #include "Engine/Engine.h"
 #include "Kismet/GameplayStatics.h"
 #include "DrawDebugHelpers.h"
@@ -94,14 +96,20 @@ void ABaseGun::FireRaycast()
 
     if (bHit && HitResult.GetActor())
     {
-        // Deal damage directly to whatever the pepper spray hit.
-        UGameplayStatics::ApplyDamage(
-            HitResult.GetActor(),
-            DamagePerShot,
-            GetInstigatorController(),
-            this,
-            UDamageType::StaticClass()
-        );
+        if (APPPoacherCharacter* Poacher = Cast<APPPoacherCharacter>(HitResult.GetActor()))
+        {
+            Poacher->ApplyPepperSpraySlow();
+        }
+        else if (!Cast<APPAnimalCharacter>(HitResult.GetActor()))
+        {
+            UGameplayStatics::ApplyDamage(
+                HitResult.GetActor(),
+                DamagePerShot,
+                GetInstigatorController(),
+                this,
+                UDamageType::StaticClass()
+            );
+        }
 
         // Trigger the Blueprint Event and pass along who we hit. 
         OnRaycastHit(HitResult.GetActor(), HitResult.ImpactPoint);

@@ -233,3 +233,50 @@ FVector APPAnimalCharacter::GetFleeLocation(float Distance) const
 	const FVector FleeLocation = GetActorLocation() + (GetDirectionAwayFromActor(CurrentThreatActor) * Distance);
 	return Distance == PreviousFleeDistance ? GetFleeDestination(CurrentThreatActor) : FleeLocation;
 }
+
+void APPAnimalCharacter::HandleHealthDepleted()
+{
+	if (bPoached)
+	{
+		return;
+	}
+
+	bPoached = true;
+	StopMovement();
+	StopAIUpdates();
+	SetActorEnableCollision(false);
+
+	if (UWorld* World = GetWorld())
+	{
+		if (UEnvironmentLevelSubsystem* LevelSubsystem = World->GetSubsystem<UEnvironmentLevelSubsystem>())
+		{
+			LevelSubsystem->OnAnimalPoached();
+		}
+
+		if (bRemoveAfterPoached)
+		{
+			const float SafeDelay = FMath::Max(0.0f, PoachedRemovalDelay);
+			if (SafeDelay <= 0.0f)
+			{
+				FinalizePoachedRemoval();
+			}
+			else
+			{
+				GetWorldTimerManager().SetTimer(PoachedRemovalTimerHandle, this, &APPAnimalCharacter::FinalizePoachedRemoval, SafeDelay, false);
+			}
+		}
+	}
+
+	DebugMessage(TEXT("Animal poached"), FColor::Red, 3.0f);
+}
+
+void APPAnimalCharacter::FinalizePoachedRemoval()
+{
+	if (!bPoached)
+	{
+		return;
+	}
+
+	SetActorHiddenInGame(true);
+	Destroy();
+}
