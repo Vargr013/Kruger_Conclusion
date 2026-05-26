@@ -31,8 +31,9 @@ void ABaseProjectile::OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UP
 	if (OtherActor && (OtherActor != this) && (OtherActor != GetOwner()))
 	{
 		const AController* InstigatorController = GetInstigatorController();
-		const bool bPlayerFiredAtAnimal = InstigatorController && InstigatorController->IsPlayerController() && Cast<APPAnimalCharacter>(OtherActor);
-		if (!bPlayerFiredAtAnimal)
+		const APPAnimalCharacter* HitAnimal = Cast<APPAnimalCharacter>(OtherActor);
+		const bool bPlayerFiredAtProtectedAnimal = InstigatorController && InstigatorController->IsPlayerController() && HitAnimal && !HitAnimal->IsPredator();
+		if (!bPlayerFiredAtProtectedAnimal)
 		{
 			UGameplayStatics::ApplyDamage(OtherActor, 20.f, GetInstigatorController(), this, nullptr);
 		}

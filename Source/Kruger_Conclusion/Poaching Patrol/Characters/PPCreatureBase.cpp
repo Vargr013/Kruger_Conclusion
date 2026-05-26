@@ -6,6 +6,8 @@
 #include "Engine/Engine.h"
 #include "EngineUtils.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "GameFramework/DamageType.h"
+#include "Kismet/GameplayStatics.h"
 #include "NavigationSystem.h"
 #include "Navigation/PathFollowingComponent.h"
 
@@ -64,6 +66,111 @@ void APPCreatureBase::HandleHealthDepleted()
 	StopAIUpdates();
 	SetActorEnableCollision(false);
 	DebugMessage(TEXT("Health depleted"), FColor::Red, 3.0f);
+}
+
+bool APPCreatureBase::CanAttackTarget(AActor* PotentialTarget) const
+{
+	return PotentialTarget && PotentialTarget != this && !IsActorHealthDepleted(PotentialTarget);
+}
+
+AActor* APPCreatureBase::FindBestAttackTarget() const
+{
+	AActor* BestTarget = nullptr;
+	float BestDistanceSquared = TNumericLimits<float>::Max();
+
+	auto ConsiderTarget = [this, &BestTarget, &BestDistanceSquared](AActor* Candidate)
+	{
+		if (!CanAttackTarget(Candidate))
+		{
+			return;
+		}
+
+		EPPThreatDetectionType DetectionType = EPPThreatDetectionType::None;
+		if (!CanDetectThreat(Candidate, DetectionType))
+		{
+			return;
+		}
+
+		const float DistanceSquared = FVector::DistSquared(GetActorLocation(), Candidate->GetActorLocation());
+		if (DistanceSquared < BestDistanceSquared)
+		{
+			BestDistanceSquared = DistanceSquared;
+			BestTarget = Candidate;
+		}
+	};
+
+	ConsiderTarget(FindPlayerActor());
+
+	if (UWorld* World = GetWorld())
+	{
+		for (TActorIterator<APPCreatureBase> It(World); It; ++It)
+		{
+			ConsiderTarget(*It);
+		}
+	}
+
+	return BestTarget;
+}
+
+bool APPCreatureBase::IsTargetInAttackRange(AActor* TargetActor) const
+{
+	if (!TargetActor)
+	{
+		return false;
+	}
+
+	return FVector::DistSquared(GetActorLocation(), TargetActor->GetActorLocation()) <= FMath::Square(AttackRange);
+}
+
+bool APPCreatureBase::TryAttackTarget(AActor* TargetActor)
+{
+	if (!CanAttackTarget(TargetActor))
+	{
+		return false;
+	}
+
+	if (!IsTargetInAttackRange(TargetActor))
+	{
+		return MoveTowardAttackTarget(TargetActor);
+	}
+
+	StopMovement();
+
+	const float CurrentTime = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0f;
+	if (CurrentTime - LastAttackTime < AttackCooldown)
+	{
+		return true;
+	}
+
+	LastAttackTime = CurrentTime;
+	UGameplayStatics::ApplyDamage(TargetActor, AttackDamage, GetController(), this, UDamageType::StaticClass());
+	DebugMessage(FString::Printf(TEXT("Attacked %s for %.0f damage"), *GetNameSafe(TargetActor), AttackDamage), FColor::Red, 1.5f);
+	return true;
+}
+
+bool APPCreatureBase::MoveTowardAttackTarget(AActor* TargetActor)
+{
+	if (!CanAttackTarget(TargetActor))
+	{
+		return false;
+	}
+
+	return MoveToLocation(TargetActor->GetActorLocation(), AttackAcceptanceRadius);
+}
+
+bool APPCreatureBase::IsActorHealthDepleted(AActor* Actor) const
+{
+	if (!Actor)
+	{
+		return true;
+	}
+
+	if (const UPPHealthComponent* ActorHealth = Actor->FindComponentByClass<UPPHealthComponent>())
+	{
+		return ActorHealth->IsDead();
+	}
+
+	return false;
 }
 
 void APPCreatureBase::StartAIUpdates()

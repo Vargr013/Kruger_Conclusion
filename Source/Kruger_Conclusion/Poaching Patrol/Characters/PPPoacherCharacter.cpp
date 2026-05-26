@@ -35,6 +35,10 @@ APPPoacherCharacter::APPPoacherCharacter()
 	WalkSpeed = 260.0f;
 	FleeSpeed = 460.0f;
 	FleeDistance = 1400.0f;
+	AttackRange = 160.0f;
+	AttackDamage = 20.0f;
+	AttackCooldown = 1.5f;
+	AttackAcceptanceRadius = 130.0f;
 }
 
 void APPPoacherCharacter::BeginPlay()
@@ -65,7 +69,6 @@ void APPPoacherCharacter::UpdateCreatureAI()
 		return;
 	}
 
-	AActor* ThreatActor = FindBestThreatActor();
 	const float CurrentTime = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0f;
 
 	if (CurrentPoacherState == EPPPoacherState::Escaped)
@@ -83,6 +86,7 @@ void APPPoacherCharacter::UpdateCreatureAI()
 		return;
 	}
 
+	AActor* ThreatActor = FindBestThreatActor();
 	if (CurrentPoacherState == EPPPoacherState::Fleeing)
 	{
 		if (ThreatActor && CurrentThreatActor != ThreatActor)
@@ -104,9 +108,20 @@ void APPPoacherCharacter::UpdateCreatureAI()
 
 	if (ThreatActor)
 	{
+		CurrentTargetActor = nullptr;
 		StartFleeing(ThreatActor);
 		return;
 	}
+
+	if (AActor* AttackTarget = FindBestAttackTarget())
+	{
+		CurrentTargetActor = AttackTarget;
+		SetPoacherState(EPPPoacherState::DisguisedRoaming);
+		TryAttackTarget(AttackTarget);
+		return;
+	}
+
+	CurrentTargetActor = nullptr;
 
 	if (CurrentPoacherState == EPPPoacherState::Alert)
 	{
@@ -139,9 +154,9 @@ bool APPPoacherCharacter::IsValidThreatActor_Implementation(AActor* PotentialThr
 		return true;
 	}
 
-	if (Cast<APPAnimalCharacter>(PotentialThreat))
+	if (const APPAnimalCharacter* Animal = Cast<APPAnimalCharacter>(PotentialThreat))
 	{
-		return true;
+		return Animal->IsPredator();
 	}
 
 	if (Cast<APPPoacherCharacter>(PotentialThreat))
@@ -539,6 +554,45 @@ void APPPoacherCharacter::HandleHealthDepleted()
 		return;
 	}
 
+	if (const APPAnimalCharacter* DamageCauserAnimal = Cast<APPAnimalCharacter>(LastDamageCauser))
+	{
+		if (DamageCauserAnimal->IsPredator())
+		{
+			bProcessedAsEscaped = true;
+			bIsCaptured = false;
+			bCanEscapeAfterCapture = false;
+			EscapeProgress = 0.0f;
+			CaptorActor = nullptr;
+			CurrentThreatActor = nullptr;
+			CurrentTargetActor = nullptr;
+			SetPoacherState(EPPPoacherState::Escaped);
+			StopMovement();
+			StopAIUpdates();
+			SetActorEnableCollision(false);
+
+			if (UWorld* World = GetWorld())
+			{
+				if (UEnvironmentLevelSubsystem* LevelSubsystem = World->GetSubsystem<UEnvironmentLevelSubsystem>())
+				{
+					LevelSubsystem->OnPoacherEscaped();
+				}
+
+				const float SafeDelay = FMath::Max(0.0f, PredatorRemovalDelay);
+				if (SafeDelay <= 0.0f)
+				{
+					FinalizePredatorRemoval();
+				}
+				else
+				{
+					GetWorldTimerManager().SetTimer(PredatorRemovalTimerHandle, this, &APPPoacherCharacter::FinalizePredatorRemoval, SafeDelay, false);
+				}
+			}
+
+			DebugMessage(TEXT("Poacher removed by predator"), FColor::Red, 3.0f);
+			return;
+		}
+	}
+
 	AActor* CaptorActorFromDamage = LastDamageInstigator ? LastDamageInstigator->GetPawn() : nullptr;
 	if (!CaptorActorFromDamage)
 	{
@@ -563,4 +617,26 @@ void APPPoacherCharacter::HandleHealthDepleted()
 		SetPoacherState(EPPPoacherState::Captured);
 		DebugMessage(TEXT("Poacher subdued but no captor was found"), FColor::Yellow, 3.0f);
 	}
+}
+
+bool APPPoacherCharacter::CanAttackTarget(AActor* PotentialTarget) const
+{
+	if (!Super::CanAttackTarget(PotentialTarget) || bIsCaptured || bPendingRemovalAfterArrest || CurrentPoacherState == EPPPoacherState::Arrested || CurrentPoacherState == EPPPoacherState::Escaped)
+	{
+		return false;
+	}
+
+	const APPAnimalCharacter* Animal = Cast<APPAnimalCharacter>(PotentialTarget);
+	return Animal && !Animal->IsPredator();
+}
+
+void APPPoacherCharacter::FinalizePredatorRemoval()
+{
+	if (!bProcessedAsEscaped)
+	{
+		return;
+	}
+
+	SetActorHiddenInGame(true);
+	Destroy();
 }

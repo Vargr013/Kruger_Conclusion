@@ -61,6 +61,12 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Category="Poacher|Arrest")
 	bool bPendingRemovalAfterArrest = false;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Poacher|Escape", meta=(ClampMin="0.0"))
+	float PredatorRemovalDelay = 2.0f;
+
+	UPROPERTY(BlueprintReadOnly, Category="Poacher|Escape")
+	bool bProcessedAsEscaped = false;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Poacher|Status Effects")
 	float PepperSprayDuration = 4.0f;
 
@@ -79,6 +85,7 @@ protected:
 	float NextIdleLocalWanderTime = 0.0f;
 	FTimerHandle ArrestRemovalTimerHandle;
 	FTimerHandle PepperSprayTimerHandle;
+	FTimerHandle PredatorRemovalTimerHandle;
 
 public:
 	virtual void UpdateCreatureAI() override;
@@ -152,11 +159,15 @@ public:
 protected:
 	void UpdateIdleLocalWander(float CurrentTime);
 	virtual void HandleHealthDepleted() override;
+	virtual bool CanAttackTarget(AActor* PotentialTarget) const override;
 	float GetAdjustedPoacherMoveSpeed(float BaseSpeed) const;
 	void RefreshPoacherMoveSpeed();
 
 	UFUNCTION()
 	void FinalizeArrestRemoval();
+
+	UFUNCTION()
+	void FinalizePredatorRemoval();
 
 	UFUNCTION()
 	void ClearPepperSpraySlow();

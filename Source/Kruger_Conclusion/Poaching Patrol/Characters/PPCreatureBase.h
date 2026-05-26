@@ -93,6 +93,18 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Creature|Timing")
 	float MoveRequestCooldown = 0.75f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Creature|Attack")
+	float AttackRange = 160.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Creature|Attack")
+	float AttackDamage = 20.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Creature|Attack")
+	float AttackCooldown = 1.5f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Creature|Attack")
+	float AttackAcceptanceRadius = 130.0f;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Creature|Movement")
 	int32 MaxConsecutiveMoveFailures = 3;
 
@@ -134,6 +146,9 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly, Category="Creature|Runtime")
 	int32 ConsecutiveMoveFailures = 0;
+
+	UPROPERTY(BlueprintReadOnly, Category="Creature|Attack")
+	float LastAttackTime = -1000.0f;
 
 	mutable float LastDebugStatusTime = -1000.0f;
 
@@ -229,6 +244,12 @@ protected:
 	void OnHealthDepleted();
 
 	virtual void HandleHealthDepleted();
+	virtual bool CanAttackTarget(AActor* PotentialTarget) const;
+	AActor* FindBestAttackTarget() const;
+	bool IsTargetInAttackRange(AActor* TargetActor) const;
+	bool TryAttackTarget(AActor* TargetActor);
+	bool MoveTowardAttackTarget(AActor* TargetActor);
+	bool IsActorHealthDepleted(AActor* Actor) const;
 
 	AAIController* GetCreatureAIController() const;
 	AAIController* EnsureCreatureAIController();

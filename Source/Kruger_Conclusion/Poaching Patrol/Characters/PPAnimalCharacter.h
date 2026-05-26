@@ -25,6 +25,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Animal|Identity")
 	FGameplayTag AnimalSpeciesTag;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Animal|Identity")
+	bool bIsPredator = false;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Animal|Timing")
 	float IdleTimeMin = 4.0f;
 
@@ -73,9 +76,13 @@ public:
 	UFUNCTION(BlueprintPure, Category="Animal|Identity")
 	FGameplayTag GetAnimalSpeciesTag() const { return AnimalSpeciesTag; }
 
+	UFUNCTION(BlueprintPure, Category="Animal|Identity")
+	bool IsPredator() const { return bIsPredator; }
+
 protected:
 	void UpdateIdleLocalWander(float CurrentTime);
 	virtual void HandleHealthDepleted() override;
+	virtual bool CanAttackTarget(AActor* PotentialTarget) const override;
 
 	UFUNCTION()
 	void FinalizePoachedRemoval();

@@ -100,7 +100,20 @@ void ABaseGun::FireRaycast()
         {
             Poacher->ApplyPepperSpraySlow();
         }
-        else if (!Cast<APPAnimalCharacter>(HitResult.GetActor()))
+        else if (const APPAnimalCharacter* Animal = Cast<APPAnimalCharacter>(HitResult.GetActor()))
+        {
+            if (Animal->IsPredator())
+            {
+                UGameplayStatics::ApplyDamage(
+                    HitResult.GetActor(),
+                    DamagePerShot,
+                    GetInstigatorController(),
+                    this,
+                    UDamageType::StaticClass()
+                );
+            }
+        }
+        else
         {
             UGameplayStatics::ApplyDamage(
                 HitResult.GetActor(),

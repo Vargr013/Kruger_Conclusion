@@ -26,6 +26,10 @@ const TCHAR* GetAnimalStateName(EPPAnimalState State)
 APPAnimalCharacter::APPAnimalCharacter()
 {
 	PrimaryActorTick.bCanEverTick = false;
+	AttackRange = 180.0f;
+	AttackDamage = 25.0f;
+	AttackCooldown = 1.25f;
+	AttackAcceptanceRadius = 140.0f;
 }
 
 void APPAnimalCharacter::BeginPlay()
@@ -44,6 +48,20 @@ void APPAnimalCharacter::BeginPlay()
 
 void APPAnimalCharacter::UpdateCreatureAI()
 {
+	if (bPoached)
+	{
+		return;
+	}
+
+	if (bIsPredator)
+	{
+		if (AActor* AttackTarget = FindBestAttackTarget())
+		{
+			TryAttackTarget(AttackTarget);
+			return;
+		}
+	}
+
 	AActor* ThreatActor = FindBestThreatActor();
 	const float CurrentTime = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0f;
 
@@ -114,6 +132,16 @@ bool APPAnimalCharacter::IsValidThreatActor_Implementation(AActor* PotentialThre
 	if (!OtherAnimal)
 	{
 		return false;
+	}
+
+	if (bIsPredator)
+	{
+		return false;
+	}
+
+	if (OtherAnimal->IsPredator())
+	{
+		return true;
 	}
 
 	const FGameplayTag OtherSpeciesTag = OtherAnimal->GetAnimalSpeciesTag();
@@ -279,4 +307,25 @@ void APPAnimalCharacter::FinalizePoachedRemoval()
 
 	SetActorHiddenInGame(true);
 	Destroy();
+}
+
+bool APPAnimalCharacter::CanAttackTarget(AActor* PotentialTarget) const
+{
+	if (!bIsPredator || !Super::CanAttackTarget(PotentialTarget))
+	{
+		return false;
+	}
+
+	if (PotentialTarget == FindPlayerActor())
+	{
+		return true;
+	}
+
+	if (Cast<APPPoacherCharacter>(PotentialTarget))
+	{
+		return true;
+	}
+
+	const APPAnimalCharacter* OtherAnimal = Cast<APPAnimalCharacter>(PotentialTarget);
+	return OtherAnimal && !OtherAnimal->IsPredator();
 }
