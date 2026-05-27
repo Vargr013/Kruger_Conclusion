@@ -4,6 +4,7 @@
 #include "Characters/ARangerCharacter.h"
 #include "Characters/PPAnimalCharacter.h"
 #include "Characters/PPPoacherCharacter.h"
+#include "Data/PPHealthComponent.h"
 #include "Actors/PPArrestZone.h"
 #include "Engine/Canvas.h"
 #include "EngineUtils.h"
@@ -31,6 +32,7 @@ int32 UPPPatrolHUDWidget::NativePaint(
 
 	DrawMinimap(AllottedGeometry, OutDrawElements, LayerId);
 	DrawCompass(AllottedGeometry, OutDrawElements, LayerId);
+	DrawPlayerHealth(AllottedGeometry, OutDrawElements, LayerId);
 	DrawToolCount(AllottedGeometry, OutDrawElements, LayerId);
 
 	return LayerId;
@@ -180,6 +182,75 @@ void UPPPatrolHUDWidget::DrawCompass(const FGeometry& AllottedGeometry, FSlateWi
 			ESlateDrawEffect::None,
 			LineColor);
 	}
+}
+
+void UPPPatrolHUDWidget::DrawPlayerHealth(const FGeometry& AllottedGeometry, FSlateWindowElementList& OutDrawElements, int32& LayerId) const
+{
+	const APlayerController* PlayerController = GetOwningPlayer();
+	const APawn* PlayerPawn = PlayerController ? PlayerController->GetPawn() : nullptr;
+	const UPPHealthComponent* HealthComponent = PlayerPawn ? PlayerPawn->FindComponentByClass<UPPHealthComponent>() : nullptr;
+	if (!HealthComponent)
+	{
+		return;
+	}
+
+	const float MaxHealth = FMath::Max(1.0f, HealthComponent->GetMaxHealth());
+	const float CurrentHealth = FMath::Clamp(HealthComponent->GetCurrentHealth(), 0.0f, MaxHealth);
+	const float HealthPercent = CurrentHealth / MaxHealth;
+
+	const FVector2D ViewSize = AllottedGeometry.GetLocalSize();
+	const FVector2D Size(176.0f, 28.0f);
+	const FVector2D Origin(ViewSize.X - Size.X - HealthOffset.X, ViewSize.Y - Size.Y - HealthOffset.Y);
+	const FVector2D BarOrigin = Origin + FVector2D(12.0f, 10.0f);
+	const FVector2D BarSize(Size.X - 24.0f, 8.0f);
+	const FVector2D ThumbSize(4.0f, 18.0f);
+	const float ThumbX = BarOrigin.X + (BarSize.X * HealthPercent) - (ThumbSize.X * 0.5f);
+	const FSlateBrush* WhiteBrush = FCoreStyle::Get().GetBrush(TEXT("WhiteBrush"));
+	const FSlateFontInfo LabelFont = FCoreStyle::GetDefaultFontStyle(TEXT("Regular"), 11);
+	const FLinearColor HealthColor = HealthPercent <= 0.3f
+		? FLinearColor(0.95f, 0.16f, 0.1f, 1.0f)
+		: FLinearColor(0.1f, 0.8f, 0.38f, 1.0f);
+
+	FSlateDrawElement::MakeBox(
+		OutDrawElements,
+		LayerId++,
+		AllottedGeometry.ToPaintGeometry(Size, FSlateLayoutTransform(Origin)),
+		WhiteBrush,
+		ESlateDrawEffect::None,
+		PanelColor);
+
+	FSlateDrawElement::MakeText(
+		OutDrawElements,
+		LayerId++,
+		AllottedGeometry.ToPaintGeometry(FVector2D(76.0f, 14.0f), FSlateLayoutTransform(Origin + FVector2D(12.0f, -5.0f))),
+		TEXT("HEALTH"),
+		LabelFont,
+		ESlateDrawEffect::None,
+		LineColor);
+
+	FSlateDrawElement::MakeBox(
+		OutDrawElements,
+		LayerId++,
+		AllottedGeometry.ToPaintGeometry(BarSize, FSlateLayoutTransform(BarOrigin)),
+		WhiteBrush,
+		ESlateDrawEffect::None,
+		FLinearColor(0.12f, 0.14f, 0.12f, 0.95f));
+
+	FSlateDrawElement::MakeBox(
+		OutDrawElements,
+		LayerId++,
+		AllottedGeometry.ToPaintGeometry(FVector2D(BarSize.X * HealthPercent, BarSize.Y), FSlateLayoutTransform(BarOrigin)),
+		WhiteBrush,
+		ESlateDrawEffect::None,
+		HealthColor);
+
+	FSlateDrawElement::MakeBox(
+		OutDrawElements,
+		LayerId++,
+		AllottedGeometry.ToPaintGeometry(ThumbSize, FSlateLayoutTransform(FVector2D(ThumbX, BarOrigin.Y - 5.0f))),
+		WhiteBrush,
+		ESlateDrawEffect::None,
+		LineColor);
 }
 
 void UPPPatrolHUDWidget::DrawToolCount(const FGeometry& AllottedGeometry, FSlateWindowElementList& OutDrawElements, int32& LayerId) const

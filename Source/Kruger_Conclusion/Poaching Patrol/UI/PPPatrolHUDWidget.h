@@ -31,6 +31,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Poaching Patrol HUD|Layout")
 	FVector2D ToolCountOffset = FVector2D(24.0f, 24.0f);
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Poaching Patrol HUD|Layout")
+	FVector2D HealthOffset = FVector2D(24.0f, 74.0f);
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Poaching Patrol HUD|Minimap")
 	float MinimapWorldRadius = 1800.0f;
 
@@ -67,6 +70,7 @@ protected:
 private:
 	void DrawMinimap(const FGeometry& AllottedGeometry, FSlateWindowElementList& OutDrawElements, int32& LayerId) const;
 	void DrawCompass(const FGeometry& AllottedGeometry, FSlateWindowElementList& OutDrawElements, int32& LayerId) const;
+	void DrawPlayerHealth(const FGeometry& AllottedGeometry, FSlateWindowElementList& OutDrawElements, int32& LayerId) const;
 	void DrawToolCount(const FGeometry& AllottedGeometry, FSlateWindowElementList& OutDrawElements, int32& LayerId) const;
 
 	ABaseGun* FindCurrentTool() const;
