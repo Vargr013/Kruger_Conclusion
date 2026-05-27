@@ -13,6 +13,66 @@
 #include "Rendering/DrawElements.h"
 #include "Styling/CoreStyle.h"
 
+namespace
+{
+	const FLinearColor SafariPanelColor(0.11f, 0.085f, 0.045f, 0.78f);
+	const FLinearColor SafariInnerColor(0.18f, 0.145f, 0.075f, 0.42f);
+	const FLinearColor SafariSoftPanelColor(0.11f, 0.085f, 0.045f, 0.52f);
+	const FLinearColor SafariSoftInnerColor(0.18f, 0.145f, 0.075f, 0.28f);
+	const FLinearColor SafariBorderColor(0.67f, 0.55f, 0.34f, 0.82f);
+	const FLinearColor SafariTextColor(0.86f, 0.76f, 0.56f, 0.95f);
+	const FLinearColor SafariMinorColor(0.62f, 0.53f, 0.38f, 0.58f);
+	const FLinearColor SafariMarkerColor(0.96f, 0.62f, 0.22f, 1.0f);
+	const FLinearColor SafariGreenColor(0.48f, 0.70f, 0.36f, 1.0f);
+	const FLinearColor SafariDangerColor(0.92f, 0.22f, 0.14f, 1.0f);
+
+	void DrawHudLine(
+		const FGeometry& AllottedGeometry,
+		FSlateWindowElementList& OutDrawElements,
+		int32& LayerId,
+		const FVector2D& A,
+		const FVector2D& B,
+		const FLinearColor& Color,
+		float Thickness)
+	{
+		TArray<FVector2D> Points;
+		Points.Add(A);
+		Points.Add(B);
+		FSlateDrawElement::MakeLines(OutDrawElements, LayerId++, AllottedGeometry.ToPaintGeometry(), Points, ESlateDrawEffect::None, Color, true, Thickness);
+	}
+
+	void DrawSafariPanel(
+		const FGeometry& AllottedGeometry,
+		FSlateWindowElementList& OutDrawElements,
+		int32& LayerId,
+		const FSlateBrush* WhiteBrush,
+		const FVector2D& Origin,
+		const FVector2D& Size,
+		bool bSoftPanel)
+	{
+		FSlateDrawElement::MakeBox(
+			OutDrawElements,
+			LayerId++,
+			AllottedGeometry.ToPaintGeometry(Size, FSlateLayoutTransform(Origin)),
+			WhiteBrush,
+			ESlateDrawEffect::None,
+			bSoftPanel ? SafariSoftPanelColor : SafariPanelColor);
+
+		const FVector2D InnerOrigin = Origin + FVector2D(5.0f, 5.0f);
+		const FVector2D InnerSize = Size - FVector2D(10.0f, 10.0f);
+		FSlateDrawElement::MakeBox(
+			OutDrawElements,
+			LayerId++,
+			AllottedGeometry.ToPaintGeometry(InnerSize, FSlateLayoutTransform(InnerOrigin)),
+			WhiteBrush,
+			ESlateDrawEffect::None,
+			bSoftPanel ? SafariSoftInnerColor : SafariInnerColor);
+
+		DrawHudLine(AllottedGeometry, OutDrawElements, LayerId, Origin, Origin + FVector2D(Size.X, 0.0f), SafariBorderColor, 1.0f);
+		DrawHudLine(AllottedGeometry, OutDrawElements, LayerId, Origin + FVector2D(0.0f, Size.Y), Origin + Size, SafariBorderColor, 1.0f);
+	}
+}
+
 UPPPatrolHUDWidget::UPPPatrolHUDWidget(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
@@ -56,18 +116,11 @@ void UPPPatrolHUDWidget::DrawMinimap(const FGeometry& AllottedGeometry, FSlateWi
 	const FVector2D MapCenter = MapOrigin + (MapSize * 0.5f);
 	const float DotSize = 5.0f;
 
-	FSlateDrawElement::MakeBox(
-		OutDrawElements,
-		LayerId++,
-		AllottedGeometry.ToPaintGeometry(MapSize, FSlateLayoutTransform(MapOrigin)),
-		WhiteBrush,
-		ESlateDrawEffect::None,
-		PanelColor);
+	DrawSafariPanel(AllottedGeometry, OutDrawElements, LayerId, WhiteBrush, MapOrigin, MapSize, false);
 
-	TArray<FVector2D> NorthLine;
-	NorthLine.Add(MapCenter);
-	NorthLine.Add(MapCenter + FVector2D(0.0f, -MapSize.Y * 0.42f));
-	FSlateDrawElement::MakeLines(OutDrawElements, LayerId++, AllottedGeometry.ToPaintGeometry(), NorthLine, ESlateDrawEffect::None, LineColor, true, 1.0f);
+	DrawHudLine(AllottedGeometry, OutDrawElements, LayerId, MapCenter, MapCenter + FVector2D(0.0f, -MapSize.Y * 0.42f), SafariTextColor, 1.0f);
+	DrawHudLine(AllottedGeometry, OutDrawElements, LayerId, MapCenter + FVector2D(-MapSize.X * 0.34f, 0.0f), MapCenter + FVector2D(MapSize.X * 0.34f, 0.0f), SafariMinorColor, 1.0f);
+	DrawHudLine(AllottedGeometry, OutDrawElements, LayerId, MapCenter + FVector2D(0.0f, MapSize.Y * 0.34f), MapCenter + FVector2D(0.0f, -MapSize.Y * 0.34f), SafariMinorColor, 1.0f);
 
 	int32 DrawnActors = 0;
 	for (TActorIterator<AActor> It(GetWorld()); It && DrawnActors < MaxMinimapActors; ++It)
@@ -116,7 +169,7 @@ void UPPPatrolHUDWidget::DrawMinimap(const FGeometry& AllottedGeometry, FSlateWi
 		AllottedGeometry.ToPaintGeometry(FVector2D(8.0f), FSlateLayoutTransform(MapCenter - FVector2D(4.0f))),
 		WhiteBrush,
 		ESlateDrawEffect::None,
-		PlayerColor);
+		SafariGreenColor);
 }
 
 void UPPPatrolHUDWidget::DrawCompass(const FGeometry& AllottedGeometry, FSlateWindowElementList& OutDrawElements, int32& LayerId) const
@@ -136,22 +189,8 @@ void UPPPatrolHUDWidget::DrawCompass(const FGeometry& AllottedGeometry, FSlateWi
 	const FSlateBrush* WhiteBrush = FCoreStyle::Get().GetBrush(TEXT("WhiteBrush"));
 	const FSlateFontInfo CardinalFont = FCoreStyle::GetDefaultFontStyle(TEXT("Bold"), 12);
 	const FSlateFontInfo IntercardinalFont = FCoreStyle::GetDefaultFontStyle(TEXT("Regular"), 10);
-	const FLinearColor CompassPanelColor(0.11f, 0.085f, 0.045f, 0.78f);
-	const FLinearColor CompassInnerColor(0.18f, 0.145f, 0.075f, 0.42f);
-	const FLinearColor CompassBorderColor(0.67f, 0.55f, 0.34f, 0.82f);
-	const FLinearColor CompassTextColor(0.86f, 0.76f, 0.56f, 0.95f);
-	const FLinearColor CompassMinorColor(0.62f, 0.53f, 0.38f, 0.58f);
-	const FLinearColor CompassMarkerColor(0.96f, 0.62f, 0.22f, 1.0f);
 	const float VisibleDegrees = 110.0f;
 	const float HalfWidth = LocalCompassWidth * 0.5f;
-
-	auto DrawLine = [&AllottedGeometry, &OutDrawElements, &LayerId](const FVector2D& A, const FVector2D& B, const FLinearColor& Color, float Thickness)
-	{
-		TArray<FVector2D> Points;
-		Points.Add(A);
-		Points.Add(B);
-		FSlateDrawElement::MakeLines(OutDrawElements, LayerId++, AllottedGeometry.ToPaintGeometry(), Points, ESlateDrawEffect::None, Color, true, Thickness);
-	};
 
 	FSlateDrawElement::MakeBox(
 		OutDrawElements,
@@ -159,7 +198,7 @@ void UPPPatrolHUDWidget::DrawCompass(const FGeometry& AllottedGeometry, FSlateWi
 		AllottedGeometry.ToPaintGeometry(CompassSize, FSlateLayoutTransform(Start)),
 		WhiteBrush,
 		ESlateDrawEffect::None,
-		CompassPanelColor);
+		SafariPanelColor);
 
 	FSlateDrawElement::MakeBox(
 		OutDrawElements,
@@ -167,11 +206,11 @@ void UPPPatrolHUDWidget::DrawCompass(const FGeometry& AllottedGeometry, FSlateWi
 		AllottedGeometry.ToPaintGeometry(FVector2D(LocalCompassWidth - 10.0f, 18.0f), FSlateLayoutTransform(Start + FVector2D(5.0f, 8.0f))),
 		WhiteBrush,
 		ESlateDrawEffect::None,
-		CompassInnerColor);
+		SafariInnerColor);
 
-	DrawLine(Start, Start + FVector2D(LocalCompassWidth, 0.0f), CompassBorderColor, 1.0f);
-	DrawLine(Start + FVector2D(0.0f, CompassSize.Y), Start + CompassSize, CompassBorderColor, 1.0f);
-	DrawLine(Start + FVector2D(6.0f, Center.Y - Start.Y), Start + FVector2D(LocalCompassWidth - 6.0f, Center.Y - Start.Y), CompassMinorColor, 1.0f);
+	DrawHudLine(AllottedGeometry, OutDrawElements, LayerId, Start, Start + FVector2D(LocalCompassWidth, 0.0f), SafariBorderColor, 1.0f);
+	DrawHudLine(AllottedGeometry, OutDrawElements, LayerId, Start + FVector2D(0.0f, CompassSize.Y), Start + CompassSize, SafariBorderColor, 1.0f);
+	DrawHudLine(AllottedGeometry, OutDrawElements, LayerId, Start + FVector2D(6.0f, Center.Y - Start.Y), Start + FVector2D(LocalCompassWidth - 6.0f, Center.Y - Start.Y), SafariMinorColor, 1.0f);
 
 	for (int32 Degrees = 0; Degrees < 360; Degrees += 15)
 	{
@@ -191,7 +230,7 @@ void UPPPatrolHUDWidget::DrawCompass(const FGeometry& AllottedGeometry, FSlateWi
 		const bool bIntercardinal = Degrees % 45 == 0;
 		const float TickHeight = bCardinal ? 10.0f : (bIntercardinal ? 8.0f : 5.0f);
 		const float TickThickness = bCardinal ? 1.6f : 1.0f;
-		DrawLine(FVector2D(X, Center.Y - TickHeight * 0.5f), FVector2D(X, Center.Y + TickHeight * 0.5f), bIntercardinal ? CompassTextColor : CompassMinorColor, TickThickness);
+		DrawHudLine(AllottedGeometry, OutDrawElements, LayerId, FVector2D(X, Center.Y - TickHeight * 0.5f), FVector2D(X, Center.Y + TickHeight * 0.5f), bIntercardinal ? SafariTextColor : SafariMinorColor, TickThickness);
 
 		const TCHAR* Label = nullptr;
 		switch (Degrees)
@@ -238,12 +277,12 @@ void UPPPatrolHUDWidget::DrawCompass(const FGeometry& AllottedGeometry, FSlateWi
 			FString(Label),
 			Font,
 			ESlateDrawEffect::None,
-			bCardinal ? CompassMarkerColor : CompassTextColor);
+			bCardinal ? SafariMarkerColor : SafariTextColor);
 	}
 
-	DrawLine(Center + FVector2D(0.0f, -13.0f), Center + FVector2D(0.0f, 13.0f), CompassMarkerColor, 2.0f);
-	DrawLine(Center + FVector2D(-7.0f, -12.0f), Center + FVector2D(0.0f, -5.0f), CompassMarkerColor, 1.4f);
-	DrawLine(Center + FVector2D(7.0f, -12.0f), Center + FVector2D(0.0f, -5.0f), CompassMarkerColor, 1.4f);
+	DrawHudLine(AllottedGeometry, OutDrawElements, LayerId, Center + FVector2D(0.0f, -13.0f), Center + FVector2D(0.0f, 13.0f), SafariMarkerColor, 2.0f);
+	DrawHudLine(AllottedGeometry, OutDrawElements, LayerId, Center + FVector2D(-7.0f, -12.0f), Center + FVector2D(0.0f, -5.0f), SafariMarkerColor, 1.4f);
+	DrawHudLine(AllottedGeometry, OutDrawElements, LayerId, Center + FVector2D(7.0f, -12.0f), Center + FVector2D(0.0f, -5.0f), SafariMarkerColor, 1.4f);
 }
 
 void UPPPatrolHUDWidget::DrawPlayerHealth(const FGeometry& AllottedGeometry, FSlateWindowElementList& OutDrawElements, int32& LayerId) const
@@ -270,16 +309,10 @@ void UPPPatrolHUDWidget::DrawPlayerHealth(const FGeometry& AllottedGeometry, FSl
 	const FSlateBrush* WhiteBrush = FCoreStyle::Get().GetBrush(TEXT("WhiteBrush"));
 	const FSlateFontInfo LabelFont = FCoreStyle::GetDefaultFontStyle(TEXT("Regular"), 11);
 	const FLinearColor HealthColor = HealthPercent <= 0.3f
-		? FLinearColor(0.95f, 0.16f, 0.1f, 1.0f)
-		: FLinearColor(0.1f, 0.8f, 0.38f, 1.0f);
+		? SafariDangerColor
+		: SafariGreenColor;
 
-	FSlateDrawElement::MakeBox(
-		OutDrawElements,
-		LayerId++,
-		AllottedGeometry.ToPaintGeometry(Size, FSlateLayoutTransform(Origin)),
-		WhiteBrush,
-		ESlateDrawEffect::None,
-		PanelColor);
+	DrawSafariPanel(AllottedGeometry, OutDrawElements, LayerId, WhiteBrush, Origin, Size, true);
 
 	FSlateDrawElement::MakeText(
 		OutDrawElements,
@@ -288,7 +321,7 @@ void UPPPatrolHUDWidget::DrawPlayerHealth(const FGeometry& AllottedGeometry, FSl
 		TEXT("HEALTH"),
 		LabelFont,
 		ESlateDrawEffect::None,
-		LineColor);
+		SafariTextColor);
 
 	FSlateDrawElement::MakeBox(
 		OutDrawElements,
@@ -296,7 +329,7 @@ void UPPPatrolHUDWidget::DrawPlayerHealth(const FGeometry& AllottedGeometry, FSl
 		AllottedGeometry.ToPaintGeometry(BarSize, FSlateLayoutTransform(BarOrigin)),
 		WhiteBrush,
 		ESlateDrawEffect::None,
-		FLinearColor(0.12f, 0.14f, 0.12f, 0.95f));
+		FLinearColor(0.09f, 0.075f, 0.045f, 0.58f));
 
 	FSlateDrawElement::MakeBox(
 		OutDrawElements,
@@ -312,7 +345,7 @@ void UPPPatrolHUDWidget::DrawPlayerHealth(const FGeometry& AllottedGeometry, FSl
 		AllottedGeometry.ToPaintGeometry(ThumbSize, FSlateLayoutTransform(FVector2D(ThumbX, BarOrigin.Y - 5.0f))),
 		WhiteBrush,
 		ESlateDrawEffect::None,
-		LineColor);
+		SafariTextColor);
 }
 
 void UPPPatrolHUDWidget::DrawToolCount(const FGeometry& AllottedGeometry, FSlateWindowElementList& OutDrawElements, int32& LayerId) const
@@ -330,13 +363,7 @@ void UPPPatrolHUDWidget::DrawToolCount(const FGeometry& AllottedGeometry, FSlate
 	const FSlateFontInfo LabelFont = FCoreStyle::GetDefaultFontStyle(TEXT("Regular"), 11);
 	const FSlateFontInfo CountFont = FCoreStyle::GetDefaultFontStyle(TEXT("Bold"), 19);
 
-	FSlateDrawElement::MakeBox(
-		OutDrawElements,
-		LayerId++,
-		AllottedGeometry.ToPaintGeometry(Size, FSlateLayoutTransform(Origin)),
-		WhiteBrush,
-		ESlateDrawEffect::None,
-		PanelColor);
+	DrawSafariPanel(AllottedGeometry, OutDrawElements, LayerId, WhiteBrush, Origin, Size, true);
 
 	FSlateDrawElement::MakeText(
 		OutDrawElements,
@@ -345,7 +372,7 @@ void UPPPatrolHUDWidget::DrawToolCount(const FGeometry& AllottedGeometry, FSlate
 		Tool->GetToolDisplayName().ToString().ToUpper(),
 		LabelFont,
 		ESlateDrawEffect::None,
-		LineColor);
+		SafariTextColor);
 
 	FSlateDrawElement::MakeText(
 		OutDrawElements,
@@ -354,7 +381,7 @@ void UPPPatrolHUDWidget::DrawToolCount(const FGeometry& AllottedGeometry, FSlate
 		FString::Printf(TEXT("%d / %d"), Tool->GetRemainingUses(), Tool->GetMaxUses()),
 		CountFont,
 		ESlateDrawEffect::None,
-		PlayerColor);
+		SafariMarkerColor);
 }
 
 ABaseGun* UPPPatrolHUDWidget::FindCurrentTool() const
