@@ -23,7 +23,7 @@ protected:
 	float MinimapSize = 118.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Poaching Patrol HUD|Layout")
-	float CompassWidth = 260.0f;
+	float CompassWidth = 820.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Poaching Patrol HUD|Layout")
 	float CompassTopOffset = 20.0f;

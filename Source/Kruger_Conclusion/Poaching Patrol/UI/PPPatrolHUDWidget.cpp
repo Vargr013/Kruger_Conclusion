@@ -129,59 +129,121 @@ void UPPPatrolHUDWidget::DrawCompass(const FGeometry& AllottedGeometry, FSlateWi
 
 	const float Yaw = FRotator::ClampAxis(PlayerController->GetControlRotation().Yaw);
 	const FVector2D ViewSize = AllottedGeometry.GetLocalSize();
-	const FVector2D Start((ViewSize.X - CompassWidth) * 0.5f, CompassTopOffset);
-	const FVector2D Center(Start.X + CompassWidth * 0.5f, Start.Y + 12.0f);
+	const float LocalCompassWidth = FMath::Min(CompassWidth, FMath::Max(260.0f, ViewSize.X - 48.0f));
+	const FVector2D Start((ViewSize.X - LocalCompassWidth) * 0.5f, CompassTopOffset);
+	const FVector2D CompassSize(LocalCompassWidth, 34.0f);
+	const FVector2D Center(Start.X + LocalCompassWidth * 0.5f, Start.Y + 17.0f);
 	const FSlateBrush* WhiteBrush = FCoreStyle::Get().GetBrush(TEXT("WhiteBrush"));
-	const FSlateFontInfo Font = FCoreStyle::GetDefaultFontStyle(TEXT("Regular"), 11);
+	const FSlateFontInfo CardinalFont = FCoreStyle::GetDefaultFontStyle(TEXT("Bold"), 12);
+	const FSlateFontInfo IntercardinalFont = FCoreStyle::GetDefaultFontStyle(TEXT("Regular"), 10);
+	const FLinearColor CompassPanelColor(0.11f, 0.085f, 0.045f, 0.78f);
+	const FLinearColor CompassInnerColor(0.18f, 0.145f, 0.075f, 0.42f);
+	const FLinearColor CompassBorderColor(0.67f, 0.55f, 0.34f, 0.82f);
+	const FLinearColor CompassTextColor(0.86f, 0.76f, 0.56f, 0.95f);
+	const FLinearColor CompassMinorColor(0.62f, 0.53f, 0.38f, 0.58f);
+	const FLinearColor CompassMarkerColor(0.96f, 0.62f, 0.22f, 1.0f);
+	const float VisibleDegrees = 110.0f;
+	const float HalfWidth = LocalCompassWidth * 0.5f;
+
+	auto DrawLine = [&AllottedGeometry, &OutDrawElements, &LayerId](const FVector2D& A, const FVector2D& B, const FLinearColor& Color, float Thickness)
+	{
+		TArray<FVector2D> Points;
+		Points.Add(A);
+		Points.Add(B);
+		FSlateDrawElement::MakeLines(OutDrawElements, LayerId++, AllottedGeometry.ToPaintGeometry(), Points, ESlateDrawEffect::None, Color, true, Thickness);
+	};
 
 	FSlateDrawElement::MakeBox(
 		OutDrawElements,
 		LayerId++,
-		AllottedGeometry.ToPaintGeometry(FVector2D(CompassWidth, 24.0f), FSlateLayoutTransform(Start)),
+		AllottedGeometry.ToPaintGeometry(CompassSize, FSlateLayoutTransform(Start)),
 		WhiteBrush,
 		ESlateDrawEffect::None,
-		PanelColor);
+		CompassPanelColor);
 
-	TArray<FVector2D> CenterTick;
-	CenterTick.Add(Center + FVector2D(0.0f, -8.0f));
-	CenterTick.Add(Center + FVector2D(0.0f, 8.0f));
-	FSlateDrawElement::MakeLines(OutDrawElements, LayerId++, AllottedGeometry.ToPaintGeometry(), CenterTick, ESlateDrawEffect::None, PlayerColor, true, 2.0f);
+	FSlateDrawElement::MakeBox(
+		OutDrawElements,
+		LayerId++,
+		AllottedGeometry.ToPaintGeometry(FVector2D(LocalCompassWidth - 10.0f, 18.0f), FSlateLayoutTransform(Start + FVector2D(5.0f, 8.0f))),
+		WhiteBrush,
+		ESlateDrawEffect::None,
+		CompassInnerColor);
 
-	struct FCompassMark
+	DrawLine(Start, Start + FVector2D(LocalCompassWidth, 0.0f), CompassBorderColor, 1.0f);
+	DrawLine(Start + FVector2D(0.0f, CompassSize.Y), Start + CompassSize, CompassBorderColor, 1.0f);
+	DrawLine(Start + FVector2D(6.0f, Center.Y - Start.Y), Start + FVector2D(LocalCompassWidth - 6.0f, Center.Y - Start.Y), CompassMinorColor, 1.0f);
+
+	for (int32 Degrees = 0; Degrees < 360; Degrees += 15)
 	{
-		float Degrees;
-		const TCHAR* Label;
-	};
-
-	const FCompassMark Marks[] = {
-		{ 0.0f, TEXT("N") },
-		{ 90.0f, TEXT("E") },
-		{ 180.0f, TEXT("S") },
-		{ 270.0f, TEXT("W") }
-	};
-
-	for (const FCompassMark& Mark : Marks)
-	{
-		float Delta = FRotator::NormalizeAxis(Mark.Degrees - Yaw);
-		const float X = Center.X + (Delta / 90.0f) * (CompassWidth * 0.5f);
-		if (X < Start.X + 8.0f || X > Start.X + CompassWidth - 18.0f)
+		const float Delta = FRotator::NormalizeAxis(static_cast<float>(Degrees) - Yaw);
+		if (FMath::Abs(Delta) > VisibleDegrees)
 		{
 			continue;
 		}
 
-		TArray<FVector2D> Tick;
-		Tick.Add(FVector2D(X, Center.Y - 5.0f));
-		Tick.Add(FVector2D(X, Center.Y + 5.0f));
-		FSlateDrawElement::MakeLines(OutDrawElements, LayerId++, AllottedGeometry.ToPaintGeometry(), Tick, ESlateDrawEffect::None, LineColor, true, 1.0f);
+		const float X = Center.X + (Delta / VisibleDegrees) * HalfWidth;
+		if (X < Start.X + 10.0f || X > Start.X + LocalCompassWidth - 10.0f)
+		{
+			continue;
+		}
+
+		const bool bCardinal = Degrees % 90 == 0;
+		const bool bIntercardinal = Degrees % 45 == 0;
+		const float TickHeight = bCardinal ? 10.0f : (bIntercardinal ? 8.0f : 5.0f);
+		const float TickThickness = bCardinal ? 1.6f : 1.0f;
+		DrawLine(FVector2D(X, Center.Y - TickHeight * 0.5f), FVector2D(X, Center.Y + TickHeight * 0.5f), bIntercardinal ? CompassTextColor : CompassMinorColor, TickThickness);
+
+		const TCHAR* Label = nullptr;
+		switch (Degrees)
+		{
+		case 0:
+			Label = TEXT("N");
+			break;
+		case 45:
+			Label = TEXT("NE");
+			break;
+		case 90:
+			Label = TEXT("E");
+			break;
+		case 135:
+			Label = TEXT("SE");
+			break;
+		case 180:
+			Label = TEXT("S");
+			break;
+		case 225:
+			Label = TEXT("SW");
+			break;
+		case 270:
+			Label = TEXT("W");
+			break;
+		case 315:
+			Label = TEXT("NW");
+			break;
+		default:
+			break;
+		}
+
+		if (!Label)
+		{
+			continue;
+		}
+
+		const FVector2D TextSize(bCardinal ? 18.0f : 24.0f, 14.0f);
+		const FSlateFontInfo& Font = bCardinal ? CardinalFont : IntercardinalFont;
 		FSlateDrawElement::MakeText(
 			OutDrawElements,
 			LayerId++,
-			AllottedGeometry.ToPaintGeometry(FVector2D(20.0f, 16.0f), FSlateLayoutTransform(FVector2D(X - 4.0f, Center.Y - 8.0f))),
-			FString(Mark.Label),
+			AllottedGeometry.ToPaintGeometry(TextSize, FSlateLayoutTransform(FVector2D(X - TextSize.X * 0.5f, Start.Y + 3.0f))),
+			FString(Label),
 			Font,
 			ESlateDrawEffect::None,
-			LineColor);
+			bCardinal ? CompassMarkerColor : CompassTextColor);
 	}
+
+	DrawLine(Center + FVector2D(0.0f, -13.0f), Center + FVector2D(0.0f, 13.0f), CompassMarkerColor, 2.0f);
+	DrawLine(Center + FVector2D(-7.0f, -12.0f), Center + FVector2D(0.0f, -5.0f), CompassMarkerColor, 1.4f);
+	DrawLine(Center + FVector2D(7.0f, -12.0f), Center + FVector2D(0.0f, -5.0f), CompassMarkerColor, 1.4f);
 }
 
 void UPPPatrolHUDWidget::DrawPlayerHealth(const FGeometry& AllottedGeometry, FSlateWindowElementList& OutDrawElements, int32& LayerId) const
