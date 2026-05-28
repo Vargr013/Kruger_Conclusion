@@ -58,19 +58,19 @@ protected:
 	float IdleStandTimeMax = 2.25f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Creature|Threat")
-	float ThreatDetectionRadius = 900.0f;
+	float ThreatDetectionRadius = 1800.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Creature|Threat")
 	float ForwardThreatAngleDegrees = 90.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Creature|Threat")
-	float SightThreatRadius = 900.0f;
+	float SightThreatRadius = 1800.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Creature|Threat")
 	float SightThreatAngleDegrees = 90.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Creature|Threat")
-	float SoundThreatRadius = 350.0f;
+	float SoundThreatRadius = 700.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Creature|Threat")
 	bool bUseSightThreats = true;
@@ -196,6 +196,9 @@ public:
 
 	UFUNCTION(BlueprintPure, Category="Creature|Movement")
 	FVector GetFleeDestination(AActor* ThreatActor) const;
+
+	UFUNCTION(BlueprintCallable, Category="Creature|Movement")
+	bool TryMoveToFleeDestination(AActor* ThreatActor, float AcceptanceRadius);
 
 	UFUNCTION(BlueprintPure, Category="Creature|Flee")
 	float GetRandomFleeDuration() const;

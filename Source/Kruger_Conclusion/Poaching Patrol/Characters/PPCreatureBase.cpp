@@ -378,6 +378,82 @@ FVector APPCreatureBase::GetFleeDestination(AActor* ThreatActor) const
 	return NavSys->ProjectPointToNavigation(RawDestination, NavLocation) ? NavLocation.Location : RawDestination;
 }
 
+bool APPCreatureBase::TryMoveToFleeDestination(AActor* ThreatActor, float AcceptanceRadius)
+{
+	if (!ThreatActor)
+	{
+		return false;
+	}
+
+	FVector AwayDirection = GetDirectionAwayFromActor(ThreatActor);
+	AwayDirection.Z = 0.0f;
+	if (!AwayDirection.Normalize())
+	{
+		return false;
+	}
+
+	TArray<float> CandidateYawOffsets;
+	CandidateYawOffsets.Reserve(5);
+	CandidateYawOffsets.Add(0.0f);
+
+	const float FirstTurn = FMath::FRandRange(35.0f, 90.0f);
+	const float SecondTurn = FMath::FRandRange(35.0f, 90.0f);
+	const float FirstSign = FMath::RandBool() ? 1.0f : -1.0f;
+	CandidateYawOffsets.Add(FirstTurn * FirstSign);
+	CandidateYawOffsets.Add(SecondTurn * -FirstSign);
+	CandidateYawOffsets.Add(180.0f);
+
+	UNavigationSystemV1* NavSys = UNavigationSystemV1::GetCurrent(GetWorld());
+	for (const float YawOffset : CandidateYawOffsets)
+	{
+		FVector CandidateDirection = AwayDirection;
+		if (FMath::IsNearlyEqual(YawOffset, 180.0f))
+		{
+			CandidateDirection = -GetDirectionAwayFromActor(ThreatActor);
+		}
+		CandidateDirection = CandidateDirection.RotateAngleAxis(YawOffset, FVector::UpVector);
+		CandidateDirection.Z = 0.0f;
+		if (!CandidateDirection.Normalize())
+		{
+			continue;
+		}
+
+		if (FVector::DotProduct(CandidateDirection, AwayDirection) < -KINDA_SMALL_NUMBER)
+		{
+			CandidateDirection = AwayDirection;
+		}
+
+		const FVector RawDestination = GetActorLocation() + (CandidateDirection * FleeDistance);
+		FVector MoveDestination = RawDestination;
+		if (NavSys)
+		{
+			FNavLocation NavLocation;
+			if (NavSys->ProjectPointToNavigation(RawDestination, NavLocation))
+			{
+				MoveDestination = NavLocation.Location;
+			}
+		}
+
+		FVector ProjectedMoveDirection = MoveDestination - GetActorLocation();
+		ProjectedMoveDirection.Z = 0.0f;
+		if (!ProjectedMoveDirection.Normalize() || FVector::DotProduct(ProjectedMoveDirection, AwayDirection) < -KINDA_SMALL_NUMBER)
+		{
+			continue;
+		}
+
+		if (MoveToLocation(MoveDestination, AcceptanceRadius))
+		{
+			if (!FMath::IsNearlyZero(YawOffset) && bDrawDebug)
+			{
+				DebugMessage(FString::Printf(TEXT("Flee fallback used %.0f degree turn"), YawOffset), FColor::Orange, 1.5f);
+			}
+			return true;
+		}
+	}
+
+	return false;
+}
+
 float APPCreatureBase::GetRandomFleeDuration() const
 {
 	const float MinDuration = FMath::Max(0.0f, FMath::Min(FleeDurationMin, FleeDurationMax));

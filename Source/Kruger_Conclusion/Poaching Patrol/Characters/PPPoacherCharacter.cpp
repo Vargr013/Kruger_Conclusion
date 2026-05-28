@@ -81,7 +81,7 @@ void APPPoacherCharacter::UpdateCreatureAI()
 		}
 		else if (CurrentThreatActor)
 		{
-			MoveToLocation(GetFleeDestination(CurrentThreatActor), RoamAcceptanceRadius);
+			TryMoveToFleeDestination(CurrentThreatActor, RoamAcceptanceRadius);
 		}
 		return;
 	}
@@ -101,7 +101,7 @@ void APPPoacherCharacter::UpdateCreatureAI()
 		}
 		else
 		{
-			MoveToLocation(GetFleeDestination(CurrentThreatActor), RoamAcceptanceRadius);
+			TryMoveToFleeDestination(CurrentThreatActor, RoamAcceptanceRadius);
 		}
 		return;
 	}
@@ -274,7 +274,7 @@ void APPPoacherCharacter::StartFleeing(AActor* ThreatActor)
 	FleeEndTime = GetWorld() ? GetWorld()->GetTimeSeconds() + FleeDuration : 0.0f;
 	DebugMessage(FString::Printf(TEXT("Fleeing from %s for %.1fs"), *GetNameSafe(ThreatActor), FleeDuration), FColor::Orange);
 
-	if (!MoveToLocation(GetFleeDestination(ThreatActor), RoamAcceptanceRadius))
+	if (!TryMoveToFleeDestination(ThreatActor, RoamAcceptanceRadius))
 	{
 		DebugMessage(TEXT("Poacher flee move failed, returning to idle"), FColor::Red);
 		StartDisguisedIdle();
@@ -399,7 +399,7 @@ void APPPoacherCharacter::EscapePoacher()
 	if (PreviousCaptor)
 	{
 		CurrentThreatActor = PreviousCaptor;
-		MoveToLocation(GetFleeDestination(PreviousCaptor), RoamAcceptanceRadius);
+		TryMoveToFleeDestination(PreviousCaptor, RoamAcceptanceRadius);
 	}
 	else
 	{

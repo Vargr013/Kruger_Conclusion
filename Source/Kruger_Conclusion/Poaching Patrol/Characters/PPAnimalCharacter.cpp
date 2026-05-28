@@ -97,7 +97,7 @@ void APPAnimalCharacter::UpdateCreatureAI()
 
 		if (CurrentThreatActor)
 		{
-			MoveToLocation(GetFleeDestination(CurrentThreatActor), RoamAcceptanceRadius);
+			TryMoveToFleeDestination(CurrentThreatActor, RoamAcceptanceRadius);
 		}
 		return;
 	}
@@ -221,7 +221,7 @@ void APPAnimalCharacter::StartFleeing(AActor* ThreatActor)
 	FleeEndTime = GetWorld() ? GetWorld()->GetTimeSeconds() + FleeDuration : 0.0f;
 	DebugMessage(FString::Printf(TEXT("Fleeing from %s for %.1fs"), *GetNameSafe(ThreatActor), FleeDuration), FColor::Orange);
 
-	if (!MoveToLocation(GetFleeDestination(ThreatActor), RoamAcceptanceRadius))
+	if (!TryMoveToFleeDestination(ThreatActor, RoamAcceptanceRadius))
 	{
 		DebugMessage(TEXT("Flee move failed, returning to idle"), FColor::Red);
 		StartIdle();
