@@ -1,5 +1,8 @@
 #include "Characters/PPAnimalCharacter.h"
 
+#include "Components/CapsuleComponent.h"
+#include "Components/SkeletalMeshComponent.h"
+#include "Components/StaticMeshComponent.h"
 #include "EnvironmentLevelSubsystem.h"
 #include "Characters/PPPoacherCharacter.h"
 
@@ -26,6 +29,12 @@ const TCHAR* GetAnimalStateName(EPPAnimalState State)
 APPAnimalCharacter::APPAnimalCharacter()
 {
 	PrimaryActorTick.bCanEverTick = false;
+	StaticAnimalMeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaticAnimalMesh"));
+	StaticAnimalMeshComponent->SetupAttachment(GetCapsuleComponent());
+	StaticAnimalMeshComponent->SetCollisionProfileName(FName("NoCollision"));
+	StaticAnimalMeshComponent->SetGenerateOverlapEvents(false);
+	StaticAnimalMeshComponent->SetVisibility(false);
+
 	AttackRange = 180.0f;
 	AttackDamage = 25.0f;
 	AttackCooldown = 1.25f;
@@ -35,6 +44,7 @@ APPAnimalCharacter::APPAnimalCharacter()
 void APPAnimalCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+	ApplyAnimalVisualMesh();
 	StartIdle();
 
 	if (UWorld* World = GetWorld())
@@ -44,6 +54,12 @@ void APPAnimalCharacter::BeginPlay()
 			LevelSubsystem->RegisterAnimal();
 		}
 	}
+}
+
+void APPAnimalCharacter::OnConstruction(const FTransform& Transform)
+{
+	Super::OnConstruction(Transform);
+	ApplyAnimalVisualMesh();
 }
 
 void APPAnimalCharacter::UpdateCreatureAI()
@@ -243,6 +259,45 @@ void APPAnimalCharacter::UpdateIdleLocalWander(float CurrentTime)
 	}
 
 	NextIdleLocalWanderTime = CurrentTime + GetRandomIdleStandDuration();
+}
+
+void APPAnimalCharacter::ApplyAnimalVisualMesh()
+{
+	if (!bUseStaticAnimalMeshVisual || !StaticAnimalMeshComponent)
+	{
+		if (USkeletalMeshComponent* CharacterMesh = GetMesh())
+		{
+			CharacterMesh->SetVisibility(true, true);
+			CharacterMesh->SetHiddenInGame(false, true);
+		}
+		return;
+	}
+
+	UStaticMesh* LoadedMesh = StaticAnimalMeshComponent->GetStaticMesh();
+	if (!StaticAnimalMeshOverride.IsNull())
+	{
+		LoadedMesh = StaticAnimalMeshOverride.LoadSynchronous();
+	}
+
+	if (!LoadedMesh)
+	{
+		if (USkeletalMeshComponent* CharacterMesh = GetMesh())
+		{
+			CharacterMesh->SetVisibility(true, true);
+			CharacterMesh->SetHiddenInGame(false, true);
+		}
+		return;
+	}
+
+	StaticAnimalMeshComponent->SetStaticMesh(LoadedMesh);
+	StaticAnimalMeshComponent->SetVisibility(true, true);
+	StaticAnimalMeshComponent->SetHiddenInGame(false, true);
+
+	if (USkeletalMeshComponent* CharacterMesh = GetMesh())
+	{
+		CharacterMesh->SetVisibility(false, true);
+		CharacterMesh->SetHiddenInGame(true, true);
+	}
 }
 
 void APPAnimalCharacter::SetThreatActor(AActor* NewThreat)

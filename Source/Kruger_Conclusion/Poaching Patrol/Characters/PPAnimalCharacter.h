@@ -7,6 +7,8 @@
 #include "PPAnimalCharacter.generated.h"
 
 class AActor;
+class UStaticMesh;
+class UStaticMeshComponent;
 
 UCLASS()
 class KRUGER_CONCLUSION_API APPAnimalCharacter : public APPCreatureBase
@@ -18,6 +20,16 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void OnConstruction(const FTransform& Transform) override;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Animal|Visuals")
+	UStaticMeshComponent* StaticAnimalMeshComponent;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Animal|Visuals")
+	bool bUseStaticAnimalMeshVisual = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Animal|Visuals")
+	TSoftObjectPtr<UStaticMesh> StaticAnimalMeshOverride;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Animal|State")
 	EPPAnimalState CurrentAnimalState = EPPAnimalState::Idle;
@@ -81,6 +93,7 @@ public:
 
 protected:
 	void UpdateIdleLocalWander(float CurrentTime);
+	void ApplyAnimalVisualMesh();
 	virtual void HandleHealthDepleted() override;
 	virtual bool CanAttackTarget(AActor* PotentialTarget) const override;
 
