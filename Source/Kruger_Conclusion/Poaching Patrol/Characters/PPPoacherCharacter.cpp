@@ -50,7 +50,7 @@ void APPPoacherCharacter::BeginPlay()
 	{
 		if (UEnvironmentLevelSubsystem* LevelSubsystem = World->GetSubsystem<UEnvironmentLevelSubsystem>())
 		{
-			LevelSubsystem->RegisterPoacher();
+			LevelSubsystem->RegisterPoacher(this);
 		}
 	}
 }
@@ -574,7 +574,7 @@ void APPPoacherCharacter::HandleHealthDepleted()
 			{
 				if (UEnvironmentLevelSubsystem* LevelSubsystem = World->GetSubsystem<UEnvironmentLevelSubsystem>())
 				{
-					LevelSubsystem->OnPoacherEscaped();
+					LevelSubsystem->ReportPoacherPermanentlyEscaped(this);
 				}
 
 				const float SafeDelay = FMath::Max(0.0f, PredatorRemovalDelay);

@@ -51,7 +51,7 @@ void APPAnimalCharacter::BeginPlay()
 	{
 		if (UEnvironmentLevelSubsystem* LevelSubsystem = World->GetSubsystem<UEnvironmentLevelSubsystem>())
 		{
-			LevelSubsystem->RegisterAnimal();
+			LevelSubsystem->RegisterAnimal(this);
 		}
 	}
 }
@@ -333,7 +333,7 @@ void APPAnimalCharacter::HandleHealthDepleted()
 	{
 		if (UEnvironmentLevelSubsystem* LevelSubsystem = World->GetSubsystem<UEnvironmentLevelSubsystem>())
 		{
-			LevelSubsystem->OnAnimalPoached();
+			LevelSubsystem->ReportAnimalPoached(this);
 		}
 
 		if (bRemoveAfterPoached)

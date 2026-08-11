@@ -107,7 +107,7 @@ void APPArrestZone::OnArrestBoundsBeginOverlap(
 	{
 		if (UEnvironmentLevelSubsystem* LevelSubsystem = World->GetSubsystem<UEnvironmentLevelSubsystem>())
 		{
-			LevelSubsystem->OnPoacherCaptured();
+			LevelSubsystem->ReportPoacherArrested(Poacher);
 		}
 	}
 

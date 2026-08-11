@@ -153,8 +153,20 @@ public:
 	UFUNCTION(BlueprintPure, Category="Poacher|Capture")
 	bool IsCaptured() const { return bIsCaptured; }
 
+	UFUNCTION(BlueprintPure, Category="Poacher|Capture")
+	AActor* GetCaptorActor() const { return CaptorActor; }
+
 	UFUNCTION(BlueprintPure, Category="Poacher|Escape")
 	float GetEscapeProgress() const { return EscapeProgress; }
+
+	UFUNCTION(BlueprintPure, Category="Poacher|Escape")
+	float GetEscapeGraceTime() const { return EscapeGraceTime; }
+
+	UFUNCTION(BlueprintPure, Category="Poacher|Escape")
+	float GetEscapeDistance() const { return EscapeDistance; }
+
+	UFUNCTION(BlueprintPure, Category="Poacher|Escape")
+	bool WasProcessedAsPermanentlyEscaped() const { return bProcessedAsEscaped; }
 
 protected:
 	void UpdateIdleLocalWander(float CurrentTime);
