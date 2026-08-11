@@ -9,6 +9,8 @@
 class UInputMappingContext;
 class UUserWidget;
 class UPPPatrolHUDWidget;
+class UPPRoundReportWidget;
+struct FPPRoundResult;
 
 /**
  *  Simple first person Player Controller
@@ -24,6 +26,12 @@ public:
 
 	/** Constructor */
 	AKruger_ConclusionPlayerController();
+
+	UFUNCTION(BlueprintCallable, Category="Poaching Patrol|Flow")
+	void ReplayPoachingPatrolDay();
+
+	UFUNCTION(BlueprintCallable, Category="Poaching Patrol|Flow")
+	void ReturnToPoachingPatrolMenu();
 
 protected:
 
@@ -55,6 +63,19 @@ protected:
 
 	UPROPERTY()
 	TObjectPtr<UPPPatrolHUDWidget> PoachingPatrolHUDWidget;
+
+	UPROPERTY(EditAnywhere, Category="HUD|Poaching Patrol")
+	TSubclassOf<UPPRoundReportWidget> RoundReportWidgetClass;
+
+	UPROPERTY()
+	TObjectPtr<UPPRoundReportWidget> RoundReportWidget;
+
+	UFUNCTION()
+	void HandlePoachingPatrolRoundEnded(FPPRoundResult Result);
+
+	void ApplyReplayMenuBypass();
+	void ReloadCurrentPatrolLevel();
+	FTimerHandle ReplayMenuBypassTimer;
 
 	/** Gameplay initialization */
 	virtual void BeginPlay() override;

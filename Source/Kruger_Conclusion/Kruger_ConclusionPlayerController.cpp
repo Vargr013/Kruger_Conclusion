@@ -4,17 +4,35 @@
 #include "Kruger_ConclusionPlayerController.h"
 #include "EnhancedInputSubsystems.h"
 #include "Engine/LocalPlayer.h"
+#include "UObject/ConstructorHelpers.h"
+#include "UObject/UObjectIterator.h"
 #include "InputMappingContext.h"
 #include "Kruger_ConclusionCameraManager.h"
 #include "Blueprint/UserWidget.h"
 #include "Kruger_Conclusion.h"
+#include "EnvironmentLevelSubsystem.h"
+#include "Data/PPGameFlowSubsystem.h"
 #include "PPPatrolHUDWidget.h"
+#include "UI/PPRoundReportWidget.h"
+#include "Kismet/GameplayStatics.h"
 #include "Widgets/Input/SVirtualJoystick.h"
 
 AKruger_ConclusionPlayerController::AKruger_ConclusionPlayerController()
 {
 	// set the player camera manager class
 	PlayerCameraManagerClass = AKruger_ConclusionCameraManager::StaticClass();
+
+	static ConstructorHelpers::FClassFinder<UPPPatrolHUDWidget> PatrolHUDClass(TEXT("/Game/Poaching_Patrol/UI/WBP_PPPatrolHUD"));
+	if (PatrolHUDClass.Succeeded())
+	{
+		PoachingPatrolHUDWidgetClass = PatrolHUDClass.Class;
+	}
+
+	static ConstructorHelpers::FClassFinder<UPPRoundReportWidget> ReportClass(TEXT("/Game/Poaching_Patrol/UI/WBP_PPRoundReport"));
+	if (ReportClass.Succeeded())
+	{
+		RoundReportWidgetClass = ReportClass.Class;
+	}
 }
 
 void AKruger_ConclusionPlayerController::BeginPlay()
@@ -55,6 +73,104 @@ void AKruger_ConclusionPlayerController::BeginPlay()
 			PoachingPatrolHUDWidget->AddToPlayerScreen(1);
 		}
 	}
+
+	if (IsLocalPlayerController())
+	{
+		if (UEnvironmentLevelSubsystem* LevelSubsystem = GetWorld() ? GetWorld()->GetSubsystem<UEnvironmentLevelSubsystem>() : nullptr)
+		{
+			LevelSubsystem->OnRoundEnded.AddUniqueDynamic(this, &AKruger_ConclusionPlayerController::HandlePoachingPatrolRoundEnded);
+			if (LevelSubsystem->HasRoundEnded())
+			{
+				HandlePoachingPatrolRoundEnded(LevelSubsystem->GetFinalRoundResult());
+			}
+		}
+
+		if (UGameInstance* GameInstance = GetGameInstance())
+		{
+			if (UPPGameFlowSubsystem* Flow = GameInstance->GetSubsystem<UPPGameFlowSubsystem>(); Flow && Flow->ConsumeReplayBypass())
+			{
+				ApplyReplayMenuBypass();
+				GetWorldTimerManager().SetTimer(ReplayMenuBypassTimer, this, &AKruger_ConclusionPlayerController::ApplyReplayMenuBypass, 0.1f, false);
+			}
+		}
+	}
+}
+
+void AKruger_ConclusionPlayerController::HandlePoachingPatrolRoundEnded(FPPRoundResult Result)
+{
+	if (!IsLocalPlayerController() || RoundReportWidget)
+	{
+		return;
+	}
+
+	TSubclassOf<UPPRoundReportWidget> WidgetClass = RoundReportWidgetClass;
+	if (!WidgetClass)
+	{
+		WidgetClass = UPPRoundReportWidget::StaticClass();
+	}
+
+	RoundReportWidget = CreateWidget<UPPRoundReportWidget>(this, WidgetClass);
+	if (!RoundReportWidget)
+	{
+		return;
+	}
+
+	RoundReportWidget->SetRoundResult(Result);
+	RoundReportWidget->AddToPlayerScreen(100);
+	if (PoachingPatrolHUDWidget)
+	{
+		PoachingPatrolHUDWidget->SetVisibility(ESlateVisibility::Collapsed);
+	}
+
+	UGameplayStatics::SetGamePaused(this, true);
+	bShowMouseCursor = true;
+	FInputModeUIOnly InputMode;
+	InputMode.SetWidgetToFocus(RoundReportWidget->TakeWidget());
+	SetInputMode(InputMode);
+}
+
+void AKruger_ConclusionPlayerController::ReplayPoachingPatrolDay()
+{
+	if (UGameInstance* GameInstance = GetGameInstance())
+	{
+		GameInstance->GetSubsystem<UPPGameFlowSubsystem>()->RequestReplayBypass();
+	}
+	ReloadCurrentPatrolLevel();
+}
+
+void AKruger_ConclusionPlayerController::ReturnToPoachingPatrolMenu()
+{
+	if (UGameInstance* GameInstance = GetGameInstance())
+	{
+		GameInstance->GetSubsystem<UPPGameFlowSubsystem>()->ClearReplayBypass();
+	}
+	ReloadCurrentPatrolLevel();
+}
+
+void AKruger_ConclusionPlayerController::ReloadCurrentPatrolLevel()
+{
+	UGameplayStatics::SetGamePaused(this, false);
+	const FString LevelName = UGameplayStatics::GetCurrentLevelName(this, true);
+	if (!LevelName.IsEmpty())
+	{
+		UGameplayStatics::OpenLevel(this, FName(*LevelName));
+	}
+}
+
+void AKruger_ConclusionPlayerController::ApplyReplayMenuBypass()
+{
+	for (TObjectIterator<UUserWidget> It; It; ++It)
+	{
+		UUserWidget* Widget = *It;
+		if (IsValid(Widget) && Widget->GetWorld() == GetWorld() && Widget->GetClass()->GetName().Contains(TEXT("WPB_MainMenuOverlay")))
+		{
+			Widget->RemoveFromParent();
+		}
+	}
+
+	UGameplayStatics::SetGamePaused(this, false);
+	bShowMouseCursor = false;
+	SetInputMode(FInputModeGameOnly());
 }
 
 void AKruger_ConclusionPlayerController::SetupInputComponent()
