@@ -1,6 +1,7 @@
 #include "PPPatrolHUDWidget.h"
 
 #include "BaseGun.h"
+#include "EnvironmentLevelSubsystem.h"
 #include "Characters/ARangerCharacter.h"
 #include "Characters/PPAnimalCharacter.h"
 #include "Characters/PPPoacherCharacter.h"
@@ -94,8 +95,128 @@ int32 UPPPatrolHUDWidget::NativePaint(
 	DrawCompass(AllottedGeometry, OutDrawElements, LayerId);
 	DrawPlayerHealth(AllottedGeometry, OutDrawElements, LayerId);
 	DrawToolCount(AllottedGeometry, OutDrawElements, LayerId);
+	DrawObjectives(AllottedGeometry, OutDrawElements, LayerId);
+	DrawEscortStatus(AllottedGeometry, OutDrawElements, LayerId);
 
 	return LayerId;
+}
+
+void UPPPatrolHUDWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
+{
+	Super::NativeTick(MyGeometry, InDeltaTime);
+	StatusRefreshAccumulator += InDeltaTime;
+	if (StatusRefreshAccumulator < 0.1f)
+	{
+		return;
+	}
+	StatusRefreshAccumulator = 0.0f;
+
+	const APlayerController* PlayerController = GetOwningPlayer();
+	APawn* PlayerPawn = PlayerController ? PlayerController->GetPawn() : nullptr;
+	UEnvironmentLevelSubsystem* LevelSubsystem = GetWorld() ? GetWorld()->GetSubsystem<UEnvironmentLevelSubsystem>() : nullptr;
+	if (!LevelSubsystem)
+	{
+		CachedObjectives.Reset();
+		bHasEscortStatus = false;
+		return;
+	}
+
+	CachedObjectives = LevelSubsystem->GetObjectivesForPlayer(PlayerPawn);
+	bHasEscortStatus = LevelSubsystem->GetMostUrgentEscortStatus(PlayerPawn, CachedEscortStatus);
+}
+
+void UPPPatrolHUDWidget::DrawObjectives(const FGeometry& AllottedGeometry, FSlateWindowElementList& OutDrawElements, int32& LayerId) const
+{
+	if (CachedObjectives.IsEmpty())
+	{
+		return;
+	}
+
+	const FSlateBrush* WhiteBrush = FCoreStyle::Get().GetBrush(TEXT("WhiteBrush"));
+	const FVector2D Origin(24.0f, 76.0f);
+	const FVector2D Size(368.0f, 126.0f);
+	const FSlateFontInfo HeadingFont = FCoreStyle::GetDefaultFontStyle(TEXT("Bold"), 16);
+	const FSlateFontInfo DetailFont = FCoreStyle::GetDefaultFontStyle(TEXT("Regular"), 12);
+	DrawSafariPanel(AllottedGeometry, OutDrawElements, LayerId, WhiteBrush, Origin, Size, false);
+
+	FSlateDrawElement::MakeText(
+		OutDrawElements, LayerId++, AllottedGeometry.ToPaintGeometry(FVector2D(340.0f, 20.0f), FSlateLayoutTransform(Origin + FVector2D(14.0f, 10.0f))),
+		TEXT("TODAY'S OBJECTIVES"), HeadingFont, ESlateDrawEffect::None, SafariMarkerColor);
+
+	const FPPObjectiveState& Primary = CachedObjectives[0];
+	FSlateDrawElement::MakeText(
+		OutDrawElements, LayerId++, AllottedGeometry.ToPaintGeometry(FVector2D(340.0f, 18.0f), FSlateLayoutTransform(Origin + FVector2D(14.0f, 38.0f))),
+		Primary.Title.ToString(), DetailFont, ESlateDrawEffect::None, SafariTextColor);
+
+	const float Progress = Primary.TargetValue > 0 ? FMath::Clamp(static_cast<float>(Primary.CurrentValue) / static_cast<float>(Primary.TargetValue), 0.0f, 1.0f) : 0.0f;
+	const FVector2D BarOrigin = Origin + FVector2D(14.0f, 63.0f);
+	const FVector2D BarSize(340.0f, 7.0f);
+	FSlateDrawElement::MakeBox(OutDrawElements, LayerId++, AllottedGeometry.ToPaintGeometry(BarSize, FSlateLayoutTransform(BarOrigin)), WhiteBrush, ESlateDrawEffect::None, FLinearColor(0.08f, 0.06f, 0.035f, 0.8f));
+	FSlateDrawElement::MakeBox(OutDrawElements, LayerId++, AllottedGeometry.ToPaintGeometry(FVector2D(BarSize.X * Progress, BarSize.Y), FSlateLayoutTransform(BarOrigin)), WhiteBrush, ESlateDrawEffect::None, SafariGreenColor);
+
+	FSlateDrawElement::MakeText(
+		OutDrawElements, LayerId++, AllottedGeometry.ToPaintGeometry(FVector2D(340.0f, 18.0f), FSlateLayoutTransform(Origin + FVector2D(14.0f, 78.0f))),
+		Primary.Detail.ToString(), DetailFont, ESlateDrawEffect::None, SafariTextColor);
+
+	for (const FPPObjectiveState& Objective : CachedObjectives)
+	{
+		if (Objective.Kind == EPPObjectiveKind::ConservationStatus)
+		{
+			FSlateDrawElement::MakeText(
+				OutDrawElements, LayerId++, AllottedGeometry.ToPaintGeometry(FVector2D(340.0f, 18.0f), FSlateLayoutTransform(Origin + FVector2D(14.0f, 100.0f))),
+				Objective.Title.ToString(), DetailFont, ESlateDrawEffect::None, SafariGreenColor);
+			break;
+		}
+	}
+}
+
+void UPPPatrolHUDWidget::DrawEscortStatus(const FGeometry& AllottedGeometry, FSlateWindowElementList& OutDrawElements, int32& LayerId) const
+{
+	if (!bHasEscortStatus)
+	{
+		return;
+	}
+
+	const FVector2D ViewSize = AllottedGeometry.GetLocalSize();
+	const FVector2D Size(440.0f, CachedEscortStatus.bUnderEscapePressure ? 116.0f : 86.0f);
+	const FVector2D Origin((ViewSize.X - Size.X) * 0.5f, ViewSize.Y - Size.Y - 28.0f);
+	const FSlateBrush* WhiteBrush = FCoreStyle::Get().GetBrush(TEXT("WhiteBrush"));
+	const FSlateFontInfo HeadingFont = FCoreStyle::GetDefaultFontStyle(TEXT("Bold"), 15);
+	const FSlateFontInfo DetailFont = FCoreStyle::GetDefaultFontStyle(TEXT("Regular"), 12);
+	DrawSafariPanel(AllottedGeometry, OutDrawElements, LayerId, WhiteBrush, Origin, Size, false);
+
+	FSlateDrawElement::MakeText(
+		OutDrawElements, LayerId++, AllottedGeometry.ToPaintGeometry(FVector2D(410.0f, 20.0f), FSlateLayoutTransform(Origin + FVector2D(14.0f, 10.0f))),
+		TEXT("ESCORT POACHER TO THE ARREST ZONE"), HeadingFont, ESlateDrawEffect::None, SafariMarkerColor);
+
+	const FString AdditionalText = CachedEscortStatus.ActiveEscortCount > 1
+		? FString::Printf(TEXT("  |  +%d additional escorts"), CachedEscortStatus.ActiveEscortCount - 1)
+		: FString();
+	FSlateDrawElement::MakeText(
+		OutDrawElements, LayerId++, AllottedGeometry.ToPaintGeometry(FVector2D(410.0f, 18.0f), FSlateLayoutTransform(Origin + FVector2D(14.0f, 38.0f))),
+		FString::Printf(TEXT("Stay within %.0f m%s"), CachedEscortStatus.SafeRange / 100.0f, *AdditionalText), DetailFont, ESlateDrawEffect::None, SafariTextColor);
+
+	if (!CachedEscortStatus.bUnderEscapePressure)
+	{
+		FSlateDrawElement::MakeText(
+			OutDrawElements, LayerId++, AllottedGeometry.ToPaintGeometry(FVector2D(410.0f, 18.0f), FSlateLayoutTransform(Origin + FVector2D(14.0f, 59.0f))),
+			TEXT("ESCORT SECURE"), DetailFont, ESlateDrawEffect::None, SafariGreenColor);
+		return;
+	}
+
+	const float Risk = CachedEscortStatus.GetNormalizedEscapeProgress();
+	FLinearColor RiskColor = Risk >= 0.7f ? SafariDangerColor : SafariMarkerColor;
+	if (Risk >= 0.7f && GetWorld())
+	{
+		RiskColor.A = 0.55f + 0.45f * FMath::Abs(FMath::Sin(GetWorld()->GetTimeSeconds() * 5.0f));
+	}
+	const FVector2D BarOrigin = Origin + FVector2D(14.0f, 66.0f);
+	const FVector2D BarSize(412.0f, 10.0f);
+	FSlateDrawElement::MakeBox(OutDrawElements, LayerId++, AllottedGeometry.ToPaintGeometry(BarSize, FSlateLayoutTransform(BarOrigin)), WhiteBrush, ESlateDrawEffect::None, FLinearColor(0.08f, 0.06f, 0.035f, 0.8f));
+	FSlateDrawElement::MakeBox(OutDrawElements, LayerId++, AllottedGeometry.ToPaintGeometry(FVector2D(BarSize.X * Risk, BarSize.Y), FSlateLayoutTransform(BarOrigin)), WhiteBrush, ESlateDrawEffect::None, RiskColor);
+	FSlateDrawElement::MakeText(
+		OutDrawElements, LayerId++, AllottedGeometry.ToPaintGeometry(FVector2D(412.0f, 18.0f), FSlateLayoutTransform(Origin + FVector2D(14.0f, 84.0f))),
+		FString::Printf(TEXT("ESCAPE RISK  •  %.1f seconds remaining"), CachedEscortStatus.SecondsRemaining), DetailFont, ESlateDrawEffect::None, RiskColor);
 }
 
 void UPPPatrolHUDWidget::DrawMinimap(const FGeometry& AllottedGeometry, FSlateWindowElementList& OutDrawElements, int32& LayerId) const

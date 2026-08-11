@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "Data/PPGameTypes.h"
 #include "PPPatrolHUDWidget.generated.h"
 
 class AActor;
@@ -66,13 +67,21 @@ protected:
 		int32 LayerId,
 		const FWidgetStyle& InWidgetStyle,
 		bool bParentEnabled) const override;
+	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 
 private:
 	void DrawMinimap(const FGeometry& AllottedGeometry, FSlateWindowElementList& OutDrawElements, int32& LayerId) const;
 	void DrawCompass(const FGeometry& AllottedGeometry, FSlateWindowElementList& OutDrawElements, int32& LayerId) const;
 	void DrawPlayerHealth(const FGeometry& AllottedGeometry, FSlateWindowElementList& OutDrawElements, int32& LayerId) const;
 	void DrawToolCount(const FGeometry& AllottedGeometry, FSlateWindowElementList& OutDrawElements, int32& LayerId) const;
+	void DrawObjectives(const FGeometry& AllottedGeometry, FSlateWindowElementList& OutDrawElements, int32& LayerId) const;
+	void DrawEscortStatus(const FGeometry& AllottedGeometry, FSlateWindowElementList& OutDrawElements, int32& LayerId) const;
 
 	ABaseGun* FindCurrentTool() const;
 	FVector2D WorldToMinimap(const FVector& WorldLocation, const APawn* PlayerPawn, float MapRadius) const;
+
+	TArray<FPPObjectiveState> CachedObjectives;
+	FPPEscortStatus CachedEscortStatus;
+	float StatusRefreshAccumulator = 0.0f;
+	bool bHasEscortStatus = false;
 };
