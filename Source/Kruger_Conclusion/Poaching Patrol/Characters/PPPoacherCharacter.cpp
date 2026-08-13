@@ -34,6 +34,7 @@ APPPoacherCharacter::APPPoacherCharacter()
 	PrimaryActorTick.bCanEverTick = false;
 	WalkSpeed = 260.0f;
 	FleeSpeed = 460.0f;
+	CapturedMoveSpeed = 500.0f;
 	FleeDistance = 1400.0f;
 	AttackRange = 160.0f;
 	AttackDamage = 20.0f;
