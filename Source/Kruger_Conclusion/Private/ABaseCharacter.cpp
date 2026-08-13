@@ -41,6 +41,17 @@ void ABaseCharacter::BeginPlay()
 void ABaseCharacter::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
+
+    // Sprint is a toggle; clear it as soon as the player is no longer moving.
+    if (bIsSprinting && GetVelocity().Size2D() <= 10.0f)
+    {
+        bIsSprinting = false;
+        if (UCharacterMovementComponent* Movement = GetCharacterMovement())
+        {
+            Movement->MaxWalkSpeed = 600.0f;
+        }
+        OnMovementStateChanged();
+    }
 }
 
 float ABaseCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)

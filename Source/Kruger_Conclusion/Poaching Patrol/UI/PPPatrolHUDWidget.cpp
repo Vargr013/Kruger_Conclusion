@@ -92,6 +92,7 @@ int32 UPPPatrolHUDWidget::NativePaint(
 	LayerId = Super::NativePaint(Args, AllottedGeometry, MyCullingRect, OutDrawElements, LayerId, InWidgetStyle, bParentEnabled);
 
 	DrawMinimap(AllottedGeometry, OutDrawElements, LayerId);
+	DrawControlsHint(AllottedGeometry, OutDrawElements, LayerId);
 	DrawCompass(AllottedGeometry, OutDrawElements, LayerId);
 	DrawPlayerHealth(AllottedGeometry, OutDrawElements, LayerId);
 	DrawToolCount(AllottedGeometry, OutDrawElements, LayerId);
@@ -217,6 +218,49 @@ void UPPPatrolHUDWidget::DrawEscortStatus(const FGeometry& AllottedGeometry, FSl
 	FSlateDrawElement::MakeText(
 		OutDrawElements, LayerId++, AllottedGeometry.ToPaintGeometry(FVector2D(412.0f, 18.0f), FSlateLayoutTransform(Origin + FVector2D(14.0f, 84.0f))),
 		FString::Printf(TEXT("ESCAPE RISK  •  %.1f seconds remaining"), CachedEscortStatus.SecondsRemaining), DetailFont, ESlateDrawEffect::None, RiskColor);
+}
+
+void UPPPatrolHUDWidget::DrawControlsHint(const FGeometry& AllottedGeometry, FSlateWindowElementList& OutDrawElements, int32& LayerId) const
+{
+	const FSlateBrush* WhiteBrush = FCoreStyle::Get().GetBrush(TEXT("WhiteBrush"));
+	const FVector2D ViewSize = AllottedGeometry.GetLocalSize();
+	const FVector2D MapOrigin(
+		MinimapBottomLeftOffset.X,
+		ViewSize.Y - MinimapSize - MinimapBottomLeftOffset.Y);
+
+	static const TCHAR* ControlLines[] = {
+		TEXT("WASD to Move"),
+		TEXT("E to Capture Poacher"),
+		TEXT("Space to jump"),
+		TEXT("LClick to pepper spray")
+	};
+	constexpr int32 LineCount = UE_ARRAY_COUNT(ControlLines);
+	constexpr float LineHeight = 16.0f;
+	constexpr float PanelPaddingX = 12.0f;
+	constexpr float PanelPaddingY = 10.0f;
+	constexpr float GapAboveMinimap = 8.0f;
+
+	const FVector2D Size(
+		FMath::Max(MinimapSize, 168.0f),
+		PanelPaddingY * 2.0f + LineHeight * static_cast<float>(LineCount));
+	const FVector2D Origin(MapOrigin.X, MapOrigin.Y - GapAboveMinimap - Size.Y);
+	const FSlateFontInfo DetailFont = FCoreStyle::GetDefaultFontStyle(TEXT("Regular"), 11);
+
+	DrawSafariPanel(AllottedGeometry, OutDrawElements, LayerId, WhiteBrush, Origin, Size, true);
+
+	for (int32 Index = 0; Index < LineCount; ++Index)
+	{
+		FSlateDrawElement::MakeText(
+			OutDrawElements,
+			LayerId++,
+			AllottedGeometry.ToPaintGeometry(
+				FVector2D(Size.X - PanelPaddingX * 2.0f, LineHeight),
+				FSlateLayoutTransform(Origin + FVector2D(PanelPaddingX, PanelPaddingY + LineHeight * static_cast<float>(Index)))),
+			ControlLines[Index],
+			DetailFont,
+			ESlateDrawEffect::None,
+			SafariTextColor);
+	}
 }
 
 void UPPPatrolHUDWidget::DrawMinimap(const FGeometry& AllottedGeometry, FSlateWindowElementList& OutDrawElements, int32& LayerId) const
