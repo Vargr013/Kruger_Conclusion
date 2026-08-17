@@ -52,6 +52,12 @@ public:
 	UFUNCTION(BlueprintPure, Category="Poaching Patrol|Escort")
 	bool GetMostUrgentEscortStatus(AActor* Captor, FPPEscortStatus& OutStatus) const;
 
+	UFUNCTION(BlueprintPure, Category="Poaching Patrol|Minimap")
+	TArray<APPPoacherCharacter*> GetActivePoachers() const;
+
+	UFUNCTION(BlueprintPure, Category="Poaching Patrol|Minimap")
+	TArray<APPAnimalCharacter*> GetLivingAnimals() const;
+
 	static int32 CalculateRequiredArrests(int32 TotalPoachers, float Threshold);
 
 	UPROPERTY(BlueprintAssignable, Category="Poaching Patrol|Events")

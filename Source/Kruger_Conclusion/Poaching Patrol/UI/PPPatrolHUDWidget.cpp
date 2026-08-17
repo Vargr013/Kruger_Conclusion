@@ -6,11 +6,14 @@
 #include "Characters/PPAnimalCharacter.h"
 #include "Characters/PPPoacherCharacter.h"
 #include "Data/PPHealthComponent.h"
+#include "Data/PPMinimapDefinition.h"
 #include "Actors/PPArrestZone.h"
 #include "Engine/Canvas.h"
+#include "Engine/Texture2D.h"
 #include "EngineUtils.h"
 #include "Fonts/SlateFontInfo.h"
 #include "GameFramework/PlayerController.h"
+#include "Materials/MaterialInterface.h"
 #include "Rendering/DrawElements.h"
 #include "Styling/CoreStyle.h"
 
@@ -111,6 +114,7 @@ void UPPPatrolHUDWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTi
 		return;
 	}
 	StatusRefreshAccumulator = 0.0f;
+	RefreshMinimapActors();
 
 	const APlayerController* PlayerController = GetOwningPlayer();
 	APawn* PlayerPawn = PlayerController ? PlayerController->GetPawn() : nullptr;
@@ -224,15 +228,17 @@ void UPPPatrolHUDWidget::DrawControlsHint(const FGeometry& AllottedGeometry, FSl
 {
 	const FSlateBrush* WhiteBrush = FCoreStyle::Get().GetBrush(TEXT("WhiteBrush"));
 	const FVector2D ViewSize = AllottedGeometry.GetLocalSize();
+	const float ResponsiveMinimapSize = GetResponsiveMinimapSize(ViewSize);
 	const FVector2D MapOrigin(
 		MinimapBottomLeftOffset.X,
-		ViewSize.Y - MinimapSize - MinimapBottomLeftOffset.Y);
+		ViewSize.Y - ResponsiveMinimapSize - MinimapBottomLeftOffset.Y);
 
 	static const TCHAR* ControlLines[] = {
 		TEXT("WASD to Move"),
 		TEXT("E to Capture Poacher"),
 		TEXT("Space to jump"),
-		TEXT("LClick to pepper spray")
+		TEXT("LClick to pepper spray"),
+		TEXT("Z / D-Pad Up to zoom map")
 	};
 	constexpr int32 LineCount = UE_ARRAY_COUNT(ControlLines);
 	constexpr float LineHeight = 16.0f;
@@ -241,7 +247,7 @@ void UPPPatrolHUDWidget::DrawControlsHint(const FGeometry& AllottedGeometry, FSl
 	constexpr float GapAboveMinimap = 8.0f;
 
 	const FVector2D Size(
-		FMath::Max(MinimapSize, 168.0f),
+		FMath::Max(ResponsiveMinimapSize, 168.0f),
 		PanelPaddingY * 2.0f + LineHeight * static_cast<float>(LineCount));
 	const FVector2D Origin(MapOrigin.X, MapOrigin.Y - GapAboveMinimap - Size.Y);
 	const FSlateFontInfo DetailFont = FCoreStyle::GetDefaultFontStyle(TEXT("Regular"), 11);
@@ -273,68 +279,174 @@ void UPPPatrolHUDWidget::DrawMinimap(const FGeometry& AllottedGeometry, FSlateWi
 	}
 
 	const FSlateBrush* WhiteBrush = FCoreStyle::Get().GetBrush(TEXT("WhiteBrush"));
-	const FVector2D MapSize(MinimapSize, MinimapSize);
 	const FVector2D ViewSize = AllottedGeometry.GetLocalSize();
+	const float ResponsiveMinimapSize = GetResponsiveMinimapSize(ViewSize);
+	const FVector2D MapSize(ResponsiveMinimapSize, ResponsiveMinimapSize);
 	const FVector2D MapOrigin(
 		MinimapBottomLeftOffset.X,
-		ViewSize.Y - MinimapSize - MinimapBottomLeftOffset.Y);
+		ViewSize.Y - ResponsiveMinimapSize - MinimapBottomLeftOffset.Y);
 	const FVector2D MapCenter = MapOrigin + (MapSize * 0.5f);
-	const float DotSize = 5.0f;
+	const FVector2D InnerOrigin = MapOrigin + FVector2D(5.0f, 5.0f);
+	const FVector2D InnerSize = MapSize - FVector2D(10.0f, 10.0f);
+	const float MapHalfExtent = InnerSize.X * 0.46f;
+	const float WorldRadius = GetCurrentMinimapWorldRadius();
+	const float ViewYaw = PlayerPawn->GetControlRotation().Yaw;
 
 	DrawSafariPanel(AllottedGeometry, OutDrawElements, LayerId, WhiteBrush, MapOrigin, MapSize, false);
 
-	DrawHudLine(AllottedGeometry, OutDrawElements, LayerId, MapCenter, MapCenter + FVector2D(0.0f, -MapSize.Y * 0.42f), SafariTextColor, 1.0f);
-	DrawHudLine(AllottedGeometry, OutDrawElements, LayerId, MapCenter + FVector2D(-MapSize.X * 0.34f, 0.0f), MapCenter + FVector2D(MapSize.X * 0.34f, 0.0f), SafariMinorColor, 1.0f);
-	DrawHudLine(AllottedGeometry, OutDrawElements, LayerId, MapCenter + FVector2D(0.0f, MapSize.Y * 0.34f), MapCenter + FVector2D(0.0f, -MapSize.Y * 0.34f), SafariMinorColor, 1.0f);
-
-	int32 DrawnActors = 0;
-	for (TActorIterator<AActor> It(GetWorld()); It && DrawnActors < MaxMinimapActors; ++It)
+	if (MinimapDefinition && MinimapDefinition->IsValidDefinition())
 	{
-		const AActor* Actor = *It;
-		FLinearColor DotColor;
-		float LocalDotSize = DotSize;
+		const FVector2D BoundsSize = MinimapDefinition->WorldBoundsMax - MinimapDefinition->WorldBoundsMin;
+		const FVector2D PlayerXY(PlayerPawn->GetActorLocation().X, PlayerPawn->GetActorLocation().Y);
+		const FVector2D CenterUV = MinimapDefinition->WorldToTextureUV(PlayerXY);
+		const float BackgroundHalfWorldSize = WorldRadius * UE_SQRT_2;
+		const FVector2D HalfUV(BackgroundHalfWorldSize / BoundsSize.X, BackgroundHalfWorldSize / BoundsSize.Y);
 
-		if (Actor->IsA<APPPoacherCharacter>())
-		{
-			DotColor = PoacherColor;
-		}
-		else if (Actor->IsA<APPAnimalCharacter>())
-		{
-			DotColor = AnimalColor;
-		}
-		else if (Actor->IsA<APPArrestZone>())
-		{
-			DotColor = ArrestZoneColor;
-			LocalDotSize = 7.0f;
-		}
-		else
+		FSlateBrush BackgroundBrush;
+		BackgroundBrush.SetResourceObject(MinimapDefinition->BackgroundMaterial
+			? static_cast<UObject*>(MinimapDefinition->BackgroundMaterial)
+			: static_cast<UObject*>(MinimapDefinition->BackgroundTexture));
+		BackgroundBrush.ImageSize = InnerSize * UE_SQRT_2;
+		BackgroundBrush.DrawAs = ESlateBrushDrawType::Image;
+		BackgroundBrush.SetUVRegion(FBox2f(
+			FVector2f(CenterUV - HalfUV),
+			FVector2f(CenterUV + HalfUV)));
+
+		const FVector2D BackgroundSize = InnerSize * UE_SQRT_2;
+		const FVector2D BackgroundOrigin = MapCenter - BackgroundSize * 0.5f;
+		OutDrawElements.PushClip(FSlateClippingZone(AllottedGeometry.ToPaintGeometry(InnerSize, FSlateLayoutTransform(InnerOrigin))));
+		FSlateDrawElement::MakeRotatedBox(
+			OutDrawElements,
+			LayerId++,
+			AllottedGeometry.ToPaintGeometry(BackgroundSize, FSlateLayoutTransform(BackgroundOrigin)),
+			&BackgroundBrush,
+			ESlateDrawEffect::None,
+			FMath::DegreesToRadians(-90.0f - ViewYaw + MinimapDefinition->TextureRotationDegrees),
+			BackgroundSize * 0.5f,
+			FSlateDrawElement::RelativeToElement,
+			FLinearColor(0.72f, 0.76f, 0.64f, 0.82f));
+		OutDrawElements.PopClip();
+	}
+
+	const FVector2D NorthVector = ProjectWorldToMinimap(
+		PlayerPawn->GetActorLocation() + FVector(WorldRadius, 0.0f, 0.0f),
+		PlayerPawn->GetActorLocation(),
+		ViewYaw,
+		MapHalfExtent - 13.0f,
+		WorldRadius);
+	const FVector2D NorthLabelPosition = MapCenter + NorthVector - FVector2D(4.0f, 7.0f);
+	FSlateDrawElement::MakeText(
+		OutDrawElements,
+		LayerId++,
+		AllottedGeometry.ToPaintGeometry(FVector2D(12.0f, 14.0f), FSlateLayoutTransform(NorthLabelPosition)),
+		TEXT("N"),
+		FCoreStyle::GetDefaultFontStyle(TEXT("Bold"), 10),
+		ESlateDrawEffect::None,
+		SafariTextColor);
+
+	for (const TWeakObjectPtr<APPAnimalCharacter>& AnimalPtr : CachedMinimapAnimals)
+	{
+		const APPAnimalCharacter* Animal = AnimalPtr.Get();
+		const UPPHealthComponent* Health = IsValid(Animal) ? Animal->FindComponentByClass<UPPHealthComponent>() : nullptr;
+		if (!IsValid(Animal) || !Health || Health->IsDead())
 		{
 			continue;
 		}
-
-		const FVector2D LocalPoint = WorldToMinimap(Actor->GetActorLocation(), PlayerPawn, MinimapSize * 0.44f);
-		if (FMath::Abs(LocalPoint.X) > MinimapSize * 0.44f || FMath::Abs(LocalPoint.Y) > MinimapSize * 0.44f)
+		const FVector2D LocalPoint = WorldToMinimap(Animal->GetActorLocation(), PlayerPawn, MapHalfExtent);
+		if (FMath::Abs(LocalPoint.X) > MapHalfExtent || FMath::Abs(LocalPoint.Y) > MapHalfExtent)
 		{
 			continue;
 		}
-
 		FSlateDrawElement::MakeBox(
 			OutDrawElements,
 			LayerId++,
-			AllottedGeometry.ToPaintGeometry(FVector2D(LocalDotSize), FSlateLayoutTransform(MapCenter + LocalPoint - FVector2D(LocalDotSize * 0.5f))),
+			AllottedGeometry.ToPaintGeometry(FVector2D(5.0f), FSlateLayoutTransform(MapCenter + LocalPoint - FVector2D(2.5f))),
 			WhiteBrush,
 			ESlateDrawEffect::None,
-			DotColor);
-		DrawnActors++;
+			AnimalColor);
 	}
 
-	FSlateDrawElement::MakeBox(
-		OutDrawElements,
-		LayerId++,
-		AllottedGeometry.ToPaintGeometry(FVector2D(8.0f), FSlateLayoutTransform(MapCenter - FVector2D(4.0f))),
-		WhiteBrush,
-		ESlateDrawEffect::None,
-		SafariGreenColor);
+	for (const TWeakObjectPtr<APPPoacherCharacter>& PoacherPtr : CachedMinimapPoachers)
+	{
+		const APPPoacherCharacter* Poacher = PoacherPtr.Get();
+		if (!IsValid(Poacher) || Poacher->GetPoacherState() == EPPPoacherState::Arrested || Poacher->GetPoacherState() == EPPPoacherState::Escaped)
+		{
+			continue;
+		}
+		const FVector2D LocalPoint = WorldToMinimap(Poacher->GetActorLocation(), PlayerPawn, MapHalfExtent);
+		if (FMath::Abs(LocalPoint.X) > MapHalfExtent || FMath::Abs(LocalPoint.Y) > MapHalfExtent)
+		{
+			continue;
+		}
+
+		const bool bEscorted = Poacher->GetPoacherState() == EPPPoacherState::Captured || Poacher->GetPoacherState() == EPPPoacherState::FollowingPlayer;
+		const float OuterSize = bEscorted ? 11.0f : 8.0f;
+		if (bEscorted)
+		{
+			FLinearColor EscortColor = SafariMarkerColor;
+			EscortColor.A = GetWorld() ? 0.55f + 0.35f * FMath::Abs(FMath::Sin(GetWorld()->GetTimeSeconds() * 4.0f)) : 0.8f;
+			FSlateDrawElement::MakeRotatedBox(
+				OutDrawElements, LayerId++,
+				AllottedGeometry.ToPaintGeometry(FVector2D(OuterSize), FSlateLayoutTransform(MapCenter + LocalPoint - FVector2D(OuterSize * 0.5f))),
+				WhiteBrush, ESlateDrawEffect::None, UE_PI * 0.25f, FVector2D(OuterSize * 0.5f),
+				FSlateDrawElement::RelativeToElement, EscortColor);
+		}
+		FSlateDrawElement::MakeRotatedBox(
+			OutDrawElements, LayerId++,
+			AllottedGeometry.ToPaintGeometry(FVector2D(6.0f), FSlateLayoutTransform(MapCenter + LocalPoint - FVector2D(3.0f))),
+			WhiteBrush, ESlateDrawEffect::None, UE_PI * 0.25f, FVector2D(3.0f),
+			FSlateDrawElement::RelativeToElement, PoacherColor);
+	}
+
+	const APPArrestZone* NearestOutsideZone = nullptr;
+	float NearestOutsideDistanceSquared = TNumericLimits<float>::Max();
+	for (const TWeakObjectPtr<APPArrestZone>& ZonePtr : CachedArrestZones)
+	{
+		const APPArrestZone* Zone = ZonePtr.Get();
+		if (!IsValid(Zone))
+		{
+			continue;
+		}
+		FVector2D LocalPoint = WorldToMinimap(Zone->GetActorLocation(), PlayerPawn, MapHalfExtent);
+		const bool bInside = FMath::Abs(LocalPoint.X) <= MapHalfExtent && FMath::Abs(LocalPoint.Y) <= MapHalfExtent;
+		if (!bInside)
+		{
+			const float DistanceSquared = FVector::DistSquared2D(Zone->GetActorLocation(), PlayerPawn->GetActorLocation());
+			if (bHasEscortStatus && DistanceSquared < NearestOutsideDistanceSquared)
+			{
+				NearestOutsideZone = Zone;
+				NearestOutsideDistanceSquared = DistanceSquared;
+			}
+			continue;
+		}
+		const FVector2D MarkerCenter = MapCenter + LocalPoint;
+		DrawHudLine(AllottedGeometry, OutDrawElements, LayerId, MarkerCenter + FVector2D(-5.0f, 0.0f), MarkerCenter + FVector2D(5.0f, 0.0f), ArrestZoneColor, 2.0f);
+		DrawHudLine(AllottedGeometry, OutDrawElements, LayerId, MarkerCenter + FVector2D(0.0f, -5.0f), MarkerCenter + FVector2D(0.0f, 5.0f), ArrestZoneColor, 2.0f);
+	}
+
+	if (NearestOutsideZone)
+	{
+		const FVector2D ClampedPoint = ClampMinimapPointToSquare(
+			WorldToMinimap(NearestOutsideZone->GetActorLocation(), PlayerPawn, MapHalfExtent),
+			MapHalfExtent - 7.0f);
+		const FVector2D MarkerCenter = MapCenter + ClampedPoint;
+		DrawHudLine(AllottedGeometry, OutDrawElements, LayerId, MarkerCenter + FVector2D(-6.0f, 0.0f), MarkerCenter + FVector2D(6.0f, 0.0f), ArrestZoneColor, 2.5f);
+		DrawHudLine(AllottedGeometry, OutDrawElements, LayerId, MarkerCenter + FVector2D(0.0f, -6.0f), MarkerCenter + FVector2D(0.0f, 6.0f), ArrestZoneColor, 2.5f);
+	}
+
+	TArray<FVector2D> PlayerArrow = {
+		MapCenter + FVector2D(0.0f, -10.0f),
+		MapCenter + FVector2D(-6.0f, 7.0f),
+		MapCenter,
+		MapCenter + FVector2D(6.0f, 7.0f),
+		MapCenter + FVector2D(0.0f, -10.0f)};
+	FSlateDrawElement::MakeLines(OutDrawElements, LayerId++, AllottedGeometry.ToPaintGeometry(), PlayerArrow, ESlateDrawEffect::None, PlayerColor, true, 2.5f);
+
+	const FString RangeText = FString::Printf(TEXT("%.0f m"), WorldRadius / 100.0f);
+	FSlateDrawElement::MakeText(
+		OutDrawElements, LayerId++,
+		AllottedGeometry.ToPaintGeometry(FVector2D(48.0f, 14.0f), FSlateLayoutTransform(MapOrigin + FVector2D(10.0f, MapSize.Y - 21.0f))),
+		RangeText, FCoreStyle::GetDefaultFontStyle(TEXT("Bold"), 10), ESlateDrawEffect::None, SafariTextColor);
 }
 
 void UPPPatrolHUDWidget::DrawCompass(const FGeometry& AllottedGeometry, FSlateWindowElementList& OutDrawElements, int32& LayerId) const
@@ -571,15 +683,86 @@ ABaseGun* UPPPatrolHUDWidget::FindCurrentTool() const
 	return nullptr;
 }
 
-FVector2D UPPPatrolHUDWidget::WorldToMinimap(const FVector& WorldLocation, const APawn* PlayerPawn, float MapRadius) const
+void UPPPatrolHUDWidget::CycleMinimapZoom()
 {
-	const FVector Delta = WorldLocation - PlayerPawn->GetActorLocation();
-	const float Scale = MapRadius / FMath::Max(1.0f, MinimapWorldRadius);
-	const FRotator ViewYaw(0.0f, PlayerPawn->GetControlRotation().Yaw, 0.0f);
+	if (MinimapZoomRadii.IsEmpty())
+	{
+		CurrentMinimapZoomIndex = 0;
+		return;
+	}
+	CurrentMinimapZoomIndex = (CurrentMinimapZoomIndex + 1) % MinimapZoomRadii.Num();
+}
+
+float UPPPatrolHUDWidget::GetCurrentMinimapWorldRadius() const
+{
+	if (MinimapZoomRadii.IsEmpty())
+	{
+		return 8000.0f;
+	}
+	return FMath::Max(1.0f, MinimapZoomRadii[FMath::Clamp(CurrentMinimapZoomIndex, 0, MinimapZoomRadii.Num() - 1)]);
+}
+
+FVector2D UPPPatrolHUDWidget::ProjectWorldToMinimap(
+	const FVector& WorldLocation,
+	const FVector& PlayerLocation,
+	float ViewYawDegrees,
+	float MapRadius,
+	float WorldRadius)
+{
+	const FVector Delta = WorldLocation - PlayerLocation;
+	const float Scale = MapRadius / FMath::Max(1.0f, WorldRadius);
+	const FRotator ViewYaw(0.0f, ViewYawDegrees, 0.0f);
 	const FVector Forward = FRotationMatrix(ViewYaw).GetUnitAxis(EAxis::X);
 	const FVector Right = FRotationMatrix(ViewYaw).GetUnitAxis(EAxis::Y);
 
 	return FVector2D(
 		FVector::DotProduct(Delta, Right),
 		-FVector::DotProduct(Delta, Forward)) * Scale;
+}
+
+FVector2D UPPPatrolHUDWidget::ClampMinimapPointToSquare(const FVector2D& Point, float HalfExtent)
+{
+	const float LargestAxis = FMath::Max(FMath::Abs(Point.X), FMath::Abs(Point.Y));
+	return LargestAxis > HalfExtent && LargestAxis > KINDA_SMALL_NUMBER
+		? Point * (HalfExtent / LargestAxis)
+		: Point;
+}
+
+float UPPPatrolHUDWidget::GetResponsiveMinimapSize(const FVector2D& ViewSize) const
+{
+	return FMath::Clamp(MinimapSize * (ViewSize.Y / 1080.0f), 288.0f, 396.0f);
+}
+
+FVector2D UPPPatrolHUDWidget::WorldToMinimap(const FVector& WorldLocation, const APawn* PlayerPawn, float MapRadius) const
+{
+	return PlayerPawn
+		? ProjectWorldToMinimap(WorldLocation, PlayerPawn->GetActorLocation(), PlayerPawn->GetControlRotation().Yaw, MapRadius, GetCurrentMinimapWorldRadius())
+		: FVector2D::ZeroVector;
+}
+
+void UPPPatrolHUDWidget::RefreshMinimapActors()
+{
+	CachedMinimapPoachers.Reset();
+	CachedMinimapAnimals.Reset();
+	CachedArrestZones.Reset();
+
+	if (const UEnvironmentLevelSubsystem* LevelSubsystem = GetWorld() ? GetWorld()->GetSubsystem<UEnvironmentLevelSubsystem>() : nullptr)
+	{
+		for (APPPoacherCharacter* Poacher : LevelSubsystem->GetActivePoachers())
+		{
+			CachedMinimapPoachers.Add(Poacher);
+		}
+		for (APPAnimalCharacter* Animal : LevelSubsystem->GetLivingAnimals())
+		{
+			CachedMinimapAnimals.Add(Animal);
+		}
+	}
+
+	if (GetWorld())
+	{
+		for (TActorIterator<APPArrestZone> It(GetWorld()); It; ++It)
+		{
+			CachedArrestZones.Add(*It);
+		}
+	}
 }

@@ -3,10 +3,12 @@
 
 #include "Kruger_ConclusionPlayerController.h"
 #include "EnhancedInputSubsystems.h"
+#include "EnhancedInputComponent.h"
 #include "Engine/LocalPlayer.h"
 #include "UObject/ConstructorHelpers.h"
 #include "UObject/UObjectIterator.h"
 #include "InputMappingContext.h"
+#include "InputAction.h"
 #include "Kruger_ConclusionCameraManager.h"
 #include "Blueprint/UserWidget.h"
 #include "Kruger_Conclusion.h"
@@ -26,6 +28,12 @@ AKruger_ConclusionPlayerController::AKruger_ConclusionPlayerController()
 	if (PatrolHUDClass.Succeeded())
 	{
 		PoachingPatrolHUDWidgetClass = PatrolHUDClass.Class;
+	}
+
+	static ConstructorHelpers::FObjectFinder<UInputAction> MinimapZoomActionFinder(TEXT("/Game/Input/Actions/IA_MinimapZoom.IA_MinimapZoom"));
+	if (MinimapZoomActionFinder.Succeeded())
+	{
+		MinimapZoomAction = MinimapZoomActionFinder.Object;
 	}
 
 	static ConstructorHelpers::FClassFinder<UPPRoundReportWidget> ReportClass(TEXT("/Game/Poaching_Patrol/UI/WBP_PPRoundReport"));
@@ -176,6 +184,10 @@ void AKruger_ConclusionPlayerController::ApplyReplayMenuBypass()
 void AKruger_ConclusionPlayerController::SetupInputComponent()
 {
 	Super::SetupInputComponent();
+	if (UEnhancedInputComponent* EnhancedInput = Cast<UEnhancedInputComponent>(InputComponent); EnhancedInput && MinimapZoomAction)
+	{
+		EnhancedInput->BindAction(MinimapZoomAction, ETriggerEvent::Started, this, &AKruger_ConclusionPlayerController::HandleMinimapZoom);
+	}
 
 	// only add IMCs for local player controllers
 	if (IsLocalPlayerController())
@@ -199,6 +211,14 @@ void AKruger_ConclusionPlayerController::SetupInputComponent()
 		}
 	}
 	
+}
+
+void AKruger_ConclusionPlayerController::HandleMinimapZoom()
+{
+	if (PoachingPatrolHUDWidget)
+	{
+		PoachingPatrolHUDWidget->CycleMinimapZoom();
+	}
 }
 
 bool AKruger_ConclusionPlayerController::ShouldUseTouchControls() const

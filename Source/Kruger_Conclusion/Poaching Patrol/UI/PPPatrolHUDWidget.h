@@ -7,6 +7,10 @@
 
 class AActor;
 class ABaseGun;
+class APPAnimalCharacter;
+class APPArrestZone;
+class APPPoacherCharacter;
+class UPPMinimapDefinition;
 
 UCLASS()
 class KRUGER_CONCLUSION_API UPPPatrolHUDWidget : public UUserWidget
@@ -16,12 +20,30 @@ class KRUGER_CONCLUSION_API UPPPatrolHUDWidget : public UUserWidget
 public:
 	UPPPatrolHUDWidget(const FObjectInitializer& ObjectInitializer);
 
+	UFUNCTION(BlueprintCallable, Category="Poaching Patrol HUD|Minimap")
+	void CycleMinimapZoom();
+
+	UFUNCTION(BlueprintPure, Category="Poaching Patrol HUD|Minimap")
+	float GetCurrentMinimapWorldRadius() const;
+
+	UFUNCTION(BlueprintPure, Category="Poaching Patrol HUD|Minimap")
+	int32 GetCurrentMinimapZoomIndex() const { return CurrentMinimapZoomIndex; }
+
+	static FVector2D ProjectWorldToMinimap(
+		const FVector& WorldLocation,
+		const FVector& PlayerLocation,
+		float ViewYawDegrees,
+		float MapRadius,
+		float WorldRadius);
+
+	static FVector2D ClampMinimapPointToSquare(const FVector2D& Point, float HalfExtent);
+
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Poaching Patrol HUD|Layout")
 	FVector2D MinimapBottomLeftOffset = FVector2D(24.0f, 24.0f);
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Poaching Patrol HUD|Layout")
-	float MinimapSize = 118.0f;
+	float MinimapSize = 360.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Poaching Patrol HUD|Layout")
 	float CompassWidth = 820.0f;
@@ -36,10 +58,10 @@ protected:
 	FVector2D HealthOffset = FVector2D(24.0f, 74.0f);
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Poaching Patrol HUD|Minimap")
-	float MinimapWorldRadius = 1800.0f;
+	TArray<float> MinimapZoomRadii = {4000.0f, 8000.0f, 14000.0f};
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Poaching Patrol HUD|Minimap")
-	int32 MaxMinimapActors = 24;
+	TObjectPtr<UPPMinimapDefinition> MinimapDefinition = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Poaching Patrol HUD|Style")
 	FLinearColor PanelColor = FLinearColor(0.02f, 0.025f, 0.02f, 0.72f);
@@ -79,10 +101,16 @@ private:
 	void DrawEscortStatus(const FGeometry& AllottedGeometry, FSlateWindowElementList& OutDrawElements, int32& LayerId) const;
 
 	ABaseGun* FindCurrentTool() const;
+	float GetResponsiveMinimapSize(const FVector2D& ViewSize) const;
 	FVector2D WorldToMinimap(const FVector& WorldLocation, const APawn* PlayerPawn, float MapRadius) const;
+	void RefreshMinimapActors();
 
 	TArray<FPPObjectiveState> CachedObjectives;
 	FPPEscortStatus CachedEscortStatus;
 	float StatusRefreshAccumulator = 0.0f;
 	bool bHasEscortStatus = false;
+	int32 CurrentMinimapZoomIndex = 1;
+	TArray<TWeakObjectPtr<APPPoacherCharacter>> CachedMinimapPoachers;
+	TArray<TWeakObjectPtr<APPAnimalCharacter>> CachedMinimapAnimals;
+	TArray<TWeakObjectPtr<APPArrestZone>> CachedArrestZones;
 };

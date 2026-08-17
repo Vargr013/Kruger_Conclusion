@@ -248,6 +248,43 @@ bool UEnvironmentLevelSubsystem::GetMostUrgentEscortStatus(AActor* Captor, FPPEs
 	return OutStatus.SelectedPoacher != nullptr;
 }
 
+TArray<APPPoacherCharacter*> UEnvironmentLevelSubsystem::GetActivePoachers() const
+{
+	TArray<APPPoacherCharacter*> ActivePoachers;
+	ActivePoachers.Reserve(RegisteredPoachers.Num());
+	for (const TWeakObjectPtr<APPPoacherCharacter>& PoacherPtr : RegisteredPoachers)
+	{
+		APPPoacherCharacter* Poacher = PoacherPtr.Get();
+		if (!IsValid(Poacher)
+			|| ArrestedPoachers.Contains(Poacher)
+			|| PermanentlyEscapedPoachers.Contains(Poacher)
+			|| Poacher->GetPoacherState() == EPPPoacherState::Arrested
+			|| Poacher->GetPoacherState() == EPPPoacherState::Escaped)
+		{
+			continue;
+		}
+		ActivePoachers.Add(Poacher);
+	}
+	return ActivePoachers;
+}
+
+TArray<APPAnimalCharacter*> UEnvironmentLevelSubsystem::GetLivingAnimals() const
+{
+	TArray<APPAnimalCharacter*> LivingAnimals;
+	LivingAnimals.Reserve(RegisteredAnimals.Num());
+	for (const TWeakObjectPtr<APPAnimalCharacter>& AnimalPtr : RegisteredAnimals)
+	{
+		APPAnimalCharacter* Animal = AnimalPtr.Get();
+		const UPPHealthComponent* Health = IsValid(Animal) ? Animal->FindComponentByClass<UPPHealthComponent>() : nullptr;
+		if (!IsValid(Animal) || PoachedAnimals.Contains(Animal) || !Health || Health->IsDead())
+		{
+			continue;
+		}
+		LivingAnimals.Add(Animal);
+	}
+	return LivingAnimals;
+}
+
 void UEnvironmentLevelSubsystem::BroadcastStateChanged()
 {
 	OnRoundStateChanged.Broadcast(GetRoundSnapshot());

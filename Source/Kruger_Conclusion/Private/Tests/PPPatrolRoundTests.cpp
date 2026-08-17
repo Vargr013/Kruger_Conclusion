@@ -4,6 +4,7 @@
 
 #include "Characters/PPAnimalCharacter.h"
 #include "Characters/PPPoacherCharacter.h"
+#include "Data/PPHealthComponent.h"
 #include "Engine/Engine.h"
 #include "Engine/World.h"
 #include "EnvironmentLevelSubsystem.h"
@@ -63,17 +64,43 @@ bool FPPPatrolRoundStateTest::RunTest(const FString& Parameters)
 		FPPRoundSnapshot Snapshot = Rules->GetRoundSnapshot();
 		TestEqual(TEXT("Duplicate registration is ignored"), Snapshot.TotalPoachers, 3);
 		TestEqual(TEXT("Duplicate animal registration is ignored"), Snapshot.TotalAnimals, 2);
+		TestEqual(TEXT("All registered poachers begin active on the minimap"), Rules->GetActivePoachers().Num(), 3);
+		TestEqual(TEXT("All registered animals begin living on the minimap"), Rules->GetLivingAnimals().Num(), 2);
+
+		for (const EPPPoacherState ActiveState : {
+			EPPPoacherState::DisguisedRoaming,
+			EPPPoacherState::Alert,
+			EPPPoacherState::Fleeing,
+			EPPPoacherState::Captured,
+			EPPPoacherState::FollowingPlayer})
+		{
+			PoacherB->SetPoacherState(ActiveState);
+			TestTrue(TEXT("Every gameplay-active poacher state remains in the minimap query"), Rules->GetActivePoachers().Contains(PoacherB));
+		}
+		PoacherB->SetPoacherState(EPPPoacherState::Arrested);
+		TestFalse(TEXT("Arrested state is filtered immediately"), Rules->GetActivePoachers().Contains(PoacherB));
+		PoacherB->SetPoacherState(EPPPoacherState::Escaped);
+		TestFalse(TEXT("Escaped state is filtered immediately"), Rules->GetActivePoachers().Contains(PoacherB));
+		PoacherB->SetPoacherState(EPPPoacherState::DisguisedRoaming);
+
+		if (UPPHealthComponent* AnimalHealth = AnimalA->FindComponentByClass<UPPHealthComponent>())
+		{
+			AnimalHealth->ApplyDamage(AnimalHealth->GetMaxHealth());
+			TestFalse(TEXT("Dead animals are filtered immediately"), Rules->GetLivingAnimals().Contains(AnimalA));
+		}
 
 		Rules->ReportAnimalPoached(AnimalA);
 		Rules->ReportAnimalPoached(AnimalA);
 		Snapshot = Rules->GetRoundSnapshot();
 		TestEqual(TEXT("Duplicate animal report is ignored"), Snapshot.AnimalsPoached, 1);
 		TestEqual(TEXT("Animals saved remains consistent"), Snapshot.AnimalsAlive, 1);
+		TestEqual(TEXT("Poached animals are removed from the minimap query"), Rules->GetLivingAnimals().Num(), 1);
 
 		Rules->ReportPoacherArrested(PoacherA);
 		Rules->ReportPoacherArrested(PoacherA);
 		TestFalse(TEXT("Round remains active with unresolved poachers"), Rules->HasRoundEnded());
 		TestEqual(TEXT("Duplicate arrest is ignored"), Rules->GetRoundSnapshot().PoachersArrested, 1);
+		TestEqual(TEXT("Arrested poachers are removed from the minimap query"), Rules->GetActivePoachers().Num(), 2);
 
 		// A temporary escort break does not call a permanent report method.
 		TestEqual(TEXT("Temporary escort break leaves permanent count unchanged"), Rules->GetRoundSnapshot().PoachersPermanentlyEscaped, 0);

@@ -7,6 +7,7 @@
 #include "Kruger_ConclusionPlayerController.generated.h"
 
 class UInputMappingContext;
+class UInputAction;
 class UUserWidget;
 class UPPPatrolHUDWidget;
 class UPPRoundReportWidget;
@@ -61,6 +62,9 @@ protected:
 	UPROPERTY(EditAnywhere, Category="HUD|Poaching Patrol")
 	TSubclassOf<UPPPatrolHUDWidget> PoachingPatrolHUDWidgetClass;
 
+	UPROPERTY(EditDefaultsOnly, Category="HUD|Poaching Patrol|Input")
+	TObjectPtr<UInputAction> MinimapZoomAction;
+
 	UPROPERTY()
 	TObjectPtr<UPPPatrolHUDWidget> PoachingPatrolHUDWidget;
 
@@ -72,6 +76,8 @@ protected:
 
 	UFUNCTION()
 	void HandlePoachingPatrolRoundEnded(FPPRoundResult Result);
+
+	void HandleMinimapZoom();
 
 	void ApplyReplayMenuBypass();
 	void ReloadCurrentPatrolLevel();
