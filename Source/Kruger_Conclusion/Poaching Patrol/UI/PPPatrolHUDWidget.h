@@ -38,6 +38,14 @@ public:
 
 	static FVector2D ClampMinimapPointToSquare(const FVector2D& Point, float HalfExtent);
 
+	static bool ProjectWorldToCompass(
+		const FVector& WorldLocation,
+		const FVector& PlayerLocation,
+		float ViewYawDegrees,
+		float VisibleDegrees,
+		float MaxWorldDistance,
+		float& OutNormalizedOffset);
+
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Poaching Patrol HUD|Layout")
 	FVector2D MinimapBottomLeftOffset = FVector2D(24.0f, 24.0f);
@@ -50,6 +58,12 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Poaching Patrol HUD|Layout")
 	float CompassTopOffset = 20.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Poaching Patrol HUD|Compass", meta=(ClampMin="0.0"))
+	float CompassPoacherRange = 14000.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Poaching Patrol HUD|Compass", meta=(ClampMin="2.0", ClampMax="24.0"))
+	float CompassPoacherMarkerSize = 8.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Poaching Patrol HUD|Layout")
 	FVector2D ToolCountOffset = FVector2D(24.0f, 24.0f);
@@ -74,6 +88,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Poaching Patrol HUD|Style")
 	FLinearColor PoacherColor = FLinearColor(0.9f, 0.16f, 0.1f, 1.0f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Poaching Patrol HUD|Style")
+	FLinearColor EscortedPoacherColor = FLinearColor(0.96f, 0.62f, 0.22f, 1.0f);
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Poaching Patrol HUD|Style")
 	FLinearColor AnimalColor = FLinearColor(0.95f, 0.72f, 0.22f, 1.0f);

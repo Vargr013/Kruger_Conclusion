@@ -452,7 +452,8 @@ void UPPPatrolHUDWidget::DrawMinimap(const FGeometry& AllottedGeometry, FSlateWi
 void UPPPatrolHUDWidget::DrawCompass(const FGeometry& AllottedGeometry, FSlateWindowElementList& OutDrawElements, int32& LayerId) const
 {
 	const APlayerController* PlayerController = GetOwningPlayer();
-	if (!PlayerController)
+	const APawn* PlayerPawn = PlayerController ? PlayerController->GetPawn() : nullptr;
+	if (!PlayerController || !PlayerPawn)
 	{
 		return;
 	}
@@ -555,6 +556,53 @@ void UPPPatrolHUDWidget::DrawCompass(const FGeometry& AllottedGeometry, FSlateWi
 			Font,
 			ESlateDrawEffect::None,
 			bCardinal ? SafariMarkerColor : SafariTextColor);
+	}
+
+	for (const TWeakObjectPtr<APPPoacherCharacter>& PoacherPtr : CachedMinimapPoachers)
+	{
+		const APPPoacherCharacter* Poacher = PoacherPtr.Get();
+		if (!IsValid(Poacher)
+			|| Poacher->GetPoacherState() == EPPPoacherState::Arrested
+			|| Poacher->GetPoacherState() == EPPPoacherState::Escaped)
+		{
+			continue;
+		}
+
+		float NormalizedOffset = 0.0f;
+		if (!ProjectWorldToCompass(
+			Poacher->GetActorLocation(),
+			PlayerPawn->GetActorLocation(),
+			Yaw,
+			VisibleDegrees,
+			CompassPoacherRange,
+			NormalizedOffset))
+		{
+			continue;
+		}
+
+		const bool bEscorted = Poacher->GetPoacherState() == EPPPoacherState::Captured
+			|| Poacher->GetPoacherState() == EPPPoacherState::FollowingPlayer;
+		FLinearColor MarkerColor = bEscorted ? EscortedPoacherColor : PoacherColor;
+		if (bEscorted && GetWorld())
+		{
+			MarkerColor.A *= 0.7f + 0.3f * FMath::Abs(FMath::Sin(GetWorld()->GetTimeSeconds() * 4.0f));
+		}
+
+		const float MarkerSize = FMath::Clamp(CompassPoacherMarkerSize, 2.0f, 24.0f);
+		const FVector2D MarkerExtent(MarkerSize, MarkerSize);
+		const FVector2D MarkerOrigin(
+			Center.X + NormalizedOffset * HalfWidth - MarkerSize * 0.5f,
+			Start.Y + CompassSize.Y - MarkerSize - 2.0f);
+		FSlateDrawElement::MakeRotatedBox(
+			OutDrawElements,
+			LayerId++,
+			AllottedGeometry.ToPaintGeometry(MarkerExtent, FSlateLayoutTransform(MarkerOrigin)),
+			WhiteBrush,
+			ESlateDrawEffect::None,
+			UE_PI * 0.25f,
+			FVector2D(MarkerSize * 0.5f),
+			FSlateDrawElement::RelativeToElement,
+			MarkerColor);
 	}
 
 	DrawHudLine(AllottedGeometry, OutDrawElements, LayerId, Center + FVector2D(0.0f, -13.0f), Center + FVector2D(0.0f, 13.0f), SafariMarkerColor, 2.0f);
@@ -726,6 +774,34 @@ FVector2D UPPPatrolHUDWidget::ClampMinimapPointToSquare(const FVector2D& Point, 
 	return LargestAxis > HalfExtent && LargestAxis > KINDA_SMALL_NUMBER
 		? Point * (HalfExtent / LargestAxis)
 		: Point;
+}
+
+bool UPPPatrolHUDWidget::ProjectWorldToCompass(
+	const FVector& WorldLocation,
+	const FVector& PlayerLocation,
+	float ViewYawDegrees,
+	float VisibleDegrees,
+	float MaxWorldDistance,
+	float& OutNormalizedOffset)
+{
+	OutNormalizedOffset = 0.0f;
+	const FVector2D Delta(WorldLocation.X - PlayerLocation.X, WorldLocation.Y - PlayerLocation.Y);
+	const float SafeVisibleDegrees = FMath::Max(1.0f, VisibleDegrees);
+	const float SafeMaxDistance = FMath::Max(0.0f, MaxWorldDistance);
+	if (Delta.SizeSquared() > FMath::Square(SafeMaxDistance))
+	{
+		return false;
+	}
+
+	const float WorldBearing = FMath::RadiansToDegrees(FMath::Atan2(Delta.Y, Delta.X));
+	const float RelativeBearing = FRotator::NormalizeAxis(WorldBearing - ViewYawDegrees);
+	if (FMath::Abs(RelativeBearing) > SafeVisibleDegrees)
+	{
+		return false;
+	}
+
+	OutNormalizedOffset = RelativeBearing / SafeVisibleDegrees;
+	return true;
 }
 
 float UPPPatrolHUDWidget::GetResponsiveMinimapSize(const FVector2D& ViewSize) const

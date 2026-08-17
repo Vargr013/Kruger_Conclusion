@@ -83,4 +83,60 @@ bool FPPMinimapZoomAndDefinitionTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FPPPoacherCompassProjectionTest,
+	"KrugerConclusion.PoachingPatrol.Compass.PoacherProjection",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FPPPoacherCompassProjectionTest::RunTest(const FString& Parameters)
+{
+	const FVector Origin = FVector::ZeroVector;
+	const float VisibleDegrees = 110.0f;
+	const float MaxRange = 14000.0f;
+	float Offset = 0.0f;
+
+	TestTrue(
+		TEXT("North-facing target is centered"),
+		UPPPatrolHUDWidget::ProjectWorldToCompass(FVector(1000.0f, 0.0f, 0.0f), Origin, 0.0f, VisibleDegrees, MaxRange, Offset));
+	TestEqual(TEXT("North-facing target has zero offset"), Offset, 0.0f);
+
+	TestTrue(
+		TEXT("East target is visible to the right"),
+		UPPPatrolHUDWidget::ProjectWorldToCompass(FVector(0.0f, 1000.0f, 0.0f), Origin, 0.0f, VisibleDegrees, MaxRange, Offset));
+	TestTrue(TEXT("East target uses positive compass offset"), FMath::IsNearlyEqual(Offset, 90.0f / VisibleDegrees));
+
+	TestTrue(
+		TEXT("West target is visible to the left"),
+		UPPPatrolHUDWidget::ProjectWorldToCompass(FVector(0.0f, -1000.0f, 0.0f), Origin, 0.0f, VisibleDegrees, MaxRange, Offset));
+	TestTrue(TEXT("West target uses negative compass offset"), FMath::IsNearlyEqual(Offset, -90.0f / VisibleDegrees));
+
+	TestFalse(
+		TEXT("Target behind the player is outside the visible compass strip"),
+		UPPPatrolHUDWidget::ProjectWorldToCompass(FVector(-1000.0f, 0.0f, 0.0f), Origin, 0.0f, VisibleDegrees, MaxRange, Offset));
+	TestTrue(
+		TEXT("Controller yaw rotates an east target to compass center"),
+		UPPPatrolHUDWidget::ProjectWorldToCompass(FVector(0.0f, 1000.0f, 0.0f), Origin, 90.0f, VisibleDegrees, MaxRange, Offset));
+	TestEqual(TEXT("Rotated target has zero offset"), Offset, 0.0f);
+
+	const float TwoDegrees = FMath::DegreesToRadians(1.0f);
+	TestTrue(
+		TEXT("Bearing projection wraps cleanly across 359 and 0 degrees"),
+		UPPPatrolHUDWidget::ProjectWorldToCompass(
+			FVector(FMath::Cos(TwoDegrees), FMath::Sin(TwoDegrees), 0.0f) * 1000.0f,
+			Origin,
+			359.0f,
+			VisibleDegrees,
+			MaxRange,
+			Offset));
+	TestTrue(TEXT("Wrapped bearing remains two degrees right of center"), FMath::IsNearlyEqual(Offset, 2.0f / VisibleDegrees, 0.001f));
+
+	TestTrue(
+		TEXT("Target at the 140 metre boundary remains visible"),
+		UPPPatrolHUDWidget::ProjectWorldToCompass(FVector(MaxRange, 0.0f, 0.0f), Origin, 0.0f, VisibleDegrees, MaxRange, Offset));
+	TestFalse(
+		TEXT("Target beyond the 140 metre boundary is hidden"),
+		UPPPatrolHUDWidget::ProjectWorldToCompass(FVector(MaxRange + 1.0f, 0.0f, 0.0f), Origin, 0.0f, VisibleDegrees, MaxRange, Offset));
+	return true;
+}
+
 #endif
