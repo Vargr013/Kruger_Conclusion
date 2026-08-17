@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Components/SlateWrapperTypes.h"
 #include "GameFramework/PlayerController.h"
 #include "Kruger_ConclusionPlayerController.generated.h"
 
@@ -11,7 +12,10 @@ class UInputAction;
 class UUserWidget;
 class UPPPatrolHUDWidget;
 class UPPRoundReportWidget;
+class UPPRestraintMinigameWidget;
+class APPPoacherCharacter;
 struct FPPRoundResult;
+enum class EPPRestraintResult : uint8;
 
 /**
  *  Simple first person Player Controller
@@ -33,6 +37,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category="Poaching Patrol|Flow")
 	void ReturnToPoachingPatrolMenu();
+
+	UFUNCTION(BlueprintCallable, Category="Poaching Patrol|Restraint")
+	bool StartPoacherRestraint(APPPoacherCharacter* Poacher);
 
 protected:
 
@@ -74,10 +81,27 @@ protected:
 	UPROPERTY()
 	TObjectPtr<UPPRoundReportWidget> RoundReportWidget;
 
+	UPROPERTY(EditAnywhere, Category="HUD|Poaching Patrol")
+	TSubclassOf<UPPRestraintMinigameWidget> RestraintMinigameWidgetClass;
+
+	UPROPERTY()
+	TObjectPtr<UPPRestraintMinigameWidget> RestraintMinigameWidget;
+
+	UPROPERTY()
+	TWeakObjectPtr<APPPoacherCharacter> ActiveRestraintPoacher;
+
+	TWeakObjectPtr<APawn> ActiveRestraintCaptor;
+	ESlateVisibility PreviousPatrolHUDVisibility = ESlateVisibility::Visible;
+
 	UFUNCTION()
 	void HandlePoachingPatrolRoundEnded(FPPRoundResult Result);
 
+	UFUNCTION()
+	void HandleRestraintFinished(EPPRestraintResult Result);
+
 	void HandleMinimapZoom();
+	void RestoreGameplayAfterRestraint();
+	void AbortActiveRestraint();
 
 	void ApplyReplayMenuBypass();
 	void ReloadCurrentPatrolLevel();
@@ -85,6 +109,7 @@ protected:
 
 	/** Gameplay initialization */
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	/** Input mapping context setup */
 	virtual void SetupInputComponent() override;

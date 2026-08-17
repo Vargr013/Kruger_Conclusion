@@ -40,6 +40,14 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Category="Poacher|Capture")
 	AActor* CaptorActor = nullptr;
 
+	UPROPERTY(BlueprintReadOnly, Category="Poacher|Capture")
+	bool bCaptureAttemptInProgress = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Poacher|Capture", meta=(ClampMin="0.0"))
+	float CaptureRetryLockDuration = 3.0f;
+
+	float CaptureRetryLockedUntil = 0.0f;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Poacher|Timing")
 	float IdleTimeMin = 3.5f;
 
@@ -110,6 +118,24 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category="Poacher|Capture")
 	void CapturePoacher(AActor* NewCaptor);
+
+	UFUNCTION(BlueprintPure, Category="Poacher|Capture")
+	bool CanStartCaptureAttempt() const;
+
+	UFUNCTION(BlueprintCallable, Category="Poacher|Capture")
+	bool BeginCaptureAttempt();
+
+	UFUNCTION(BlueprintCallable, Category="Poacher|Capture")
+	bool ResolveCaptureAttempt(EPPRestraintResult Result, AActor* AttemptingCaptor);
+
+	UFUNCTION(BlueprintCallable, Category="Poacher|Capture")
+	void AbortCaptureAttempt();
+
+	UFUNCTION(BlueprintPure, Category="Poacher|Capture")
+	bool IsCaptureAttemptInProgress() const { return bCaptureAttemptInProgress; }
+
+	UFUNCTION(BlueprintPure, Category="Poacher|Capture")
+	bool IsCaptureRetryLocked() const;
 
 	UFUNCTION(BlueprintCallable, Category="Poacher|Capture")
 	void FollowCaptor();

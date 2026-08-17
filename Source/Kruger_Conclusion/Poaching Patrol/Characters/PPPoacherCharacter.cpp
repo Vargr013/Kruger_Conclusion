@@ -2,6 +2,8 @@
 
 #include "Characters/PPAnimalCharacter.h"
 #include <EnvironmentLevelSubsystem.h>
+#include "GameFramework/Pawn.h"
+#include "Kruger_ConclusionPlayerController.h"
 
 namespace
 {
@@ -300,6 +302,75 @@ void APPPoacherCharacter::CapturePoacher(AActor* NewCaptor)
 	DebugMessage(FString::Printf(TEXT("Captured by %s"), *GetNameSafe(NewCaptor)), FColor::Yellow, 3.0f);
 }
 
+bool APPPoacherCharacter::CanStartCaptureAttempt() const
+{
+	return !bIsCaptured
+		&& !bCaptureAttemptInProgress
+		&& !bPendingRemovalAfterArrest
+		&& !bProcessedAsEscaped
+		&& CurrentPoacherState != EPPPoacherState::Captured
+		&& CurrentPoacherState != EPPPoacherState::FollowingPlayer
+		&& CurrentPoacherState != EPPPoacherState::Arrested
+		&& CurrentPoacherState != EPPPoacherState::Escaped
+		&& !IsCaptureRetryLocked();
+}
+
+bool APPPoacherCharacter::BeginCaptureAttempt()
+{
+	if (!CanStartCaptureAttempt())
+	{
+		return false;
+	}
+
+	bCaptureAttemptInProgress = true;
+	StopMovement();
+	DebugMessage(TEXT("Restraint attempt started"), FColor::Yellow, 2.0f);
+	return true;
+}
+
+bool APPPoacherCharacter::ResolveCaptureAttempt(EPPRestraintResult Result, AActor* AttemptingCaptor)
+{
+	if (!bCaptureAttemptInProgress)
+	{
+		return false;
+	}
+
+	bCaptureAttemptInProgress = false;
+	if (Result == EPPRestraintResult::Success && AttemptingCaptor)
+	{
+		CapturePoacher(AttemptingCaptor);
+		return bIsCaptured;
+	}
+
+	const float CurrentTime = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0f;
+	CaptureRetryLockedUntil = CurrentTime + FMath::Max(0.0f, CaptureRetryLockDuration);
+	if (AttemptingCaptor)
+	{
+		StartFleeing(AttemptingCaptor);
+	}
+	else
+	{
+		StartDisguisedIdle();
+	}
+
+	DebugMessage(
+		Result == EPPRestraintResult::Cancelled ? TEXT("Restraint cancelled: breaking away") : TEXT("Restraint failed: breaking away"),
+		FColor::Red,
+		3.0f);
+	return true;
+}
+
+void APPPoacherCharacter::AbortCaptureAttempt()
+{
+	bCaptureAttemptInProgress = false;
+}
+
+bool APPPoacherCharacter::IsCaptureRetryLocked() const
+{
+	const float CurrentTime = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0f;
+	return CurrentTime < CaptureRetryLockedUntil;
+}
+
 void APPPoacherCharacter::FollowCaptor()
 {
 	if (!CaptorActor || CurrentPoacherState == EPPPoacherState::Arrested || CurrentPoacherState == EPPPoacherState::Escaped)
@@ -520,9 +591,18 @@ void APPPoacherCharacter::ClearPepperSpraySlow()
 
 void APPPoacherCharacter::Interact_Implementation(AActor* Interactor)
 {
-	if (!bIsCaptured && CurrentPoacherState != EPPPoacherState::Arrested && !bPendingRemovalAfterArrest)
+	if (!Interactor || !CanStartCaptureAttempt())
 	{
-		CapturePoacher(Interactor);
+		return;
+	}
+
+	APawn* InteractorPawn = Cast<APawn>(Interactor);
+	AKruger_ConclusionPlayerController* PlayerController = InteractorPawn
+		? Cast<AKruger_ConclusionPlayerController>(InteractorPawn->GetController())
+		: nullptr;
+	if (!PlayerController || !PlayerController->StartPoacherRestraint(this))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Could not start restraint minigame for %s"), *GetName());
 	}
 }
 
@@ -533,9 +613,19 @@ FText APPPoacherCharacter::GetInteractionPrompt_Implementation() const
 		return FText::FromString(TEXT("Arrested"));
 	}
 
-	return bIsCaptured
-		? FText::FromString(TEXT("Captured"))
-		: FText::FromString(TEXT("Capture Poacher"));
+	if (bIsCaptured)
+	{
+		return FText::FromString(TEXT("Captured"));
+	}
+	if (bCaptureAttemptInProgress)
+	{
+		return FText::FromString(TEXT("Restraint In Progress"));
+	}
+	if (IsCaptureRetryLocked())
+	{
+		return FText::FromString(TEXT("Poacher Breaking Away"));
+	}
+	return FText::FromString(TEXT("Restrain Poacher"));
 }
 
 void APPPoacherCharacter::SetTargetActor(AActor* NewTarget)

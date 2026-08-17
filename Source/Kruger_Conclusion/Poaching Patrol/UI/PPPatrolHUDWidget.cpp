@@ -235,9 +235,9 @@ void UPPPatrolHUDWidget::DrawControlsHint(const FGeometry& AllottedGeometry, FSl
 
 	static const TCHAR* ControlLines[] = {
 		TEXT("WASD to Move"),
-		TEXT("E to Capture Poacher"),
+		TEXT("E to Restrain Poacher"),
 		TEXT("Space to jump"),
-		TEXT("LClick to pepper spray"),
+		TEXT("LClick: pepper spray slows restraint timing"),
 		TEXT("Z / D-Pad Up to zoom map")
 	};
 	constexpr int32 LineCount = UE_ARRAY_COUNT(ControlLines);

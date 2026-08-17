@@ -27,6 +27,14 @@ enum class EPPPoacherState : uint8
 };
 
 UENUM(BlueprintType)
+enum class EPPRestraintResult : uint8
+{
+	Success UMETA(DisplayName="Success"),
+	Failed UMETA(DisplayName="Failed"),
+	Cancelled UMETA(DisplayName="Cancelled")
+};
+
+UENUM(BlueprintType)
 enum class EPPObjectiveKind : uint8
 {
 	ArrestQuota UMETA(DisplayName="Arrest Quota"),
