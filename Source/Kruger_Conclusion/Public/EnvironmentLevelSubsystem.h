@@ -12,6 +12,7 @@ class APPPoacherCharacter;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnLevelStateChangedSignature);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPPRoundStateChangedSignature, FPPRoundSnapshot, Snapshot);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPPRoundEndedSignature, FPPRoundResult, Result);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnPPPoacherCombatEventSignature, APPPoacherCharacter*, Poacher, EPPPoacherCombatEvent, Event);
 
 UCLASS(Config=Game)
 class KRUGER_CONCLUSION_API UEnvironmentLevelSubsystem : public UWorldSubsystem
@@ -26,6 +27,15 @@ public:
 	void ReportPoacherArrested(APPPoacherCharacter* Poacher);
 	void ReportPoacherPermanentlyEscaped(APPPoacherCharacter* Poacher);
 	void ReportAnimalPoached(APPAnimalCharacter* Animal);
+	void ReportPlayerDowned();
+
+	bool TryAcquirePlayerAttackSlot(APPPoacherCharacter* Poacher);
+	void ReleasePlayerAttackSlot(APPPoacherCharacter* Poacher);
+	void CancelAllPoacherAttackWindups();
+	void BroadcastPoacherCombatEvent(APPPoacherCharacter* Poacher, EPPPoacherCombatEvent Event);
+
+	UFUNCTION(BlueprintPure, Category="Poaching Patrol|Combat")
+	int32 GetActivePlayerAttackSlotCount() const;
 
 	// Compatibility hooks for existing Blueprints. New gameplay code should use actor-aware Report methods.
 	UFUNCTION(BlueprintCallable, Category="EcoSystem|LevelRules", meta=(DeprecatedFunction, DeprecationMessage="Use ReportPoacherArrested with the poacher actor."))
@@ -66,6 +76,9 @@ public:
 	UPROPERTY(BlueprintAssignable, Category="Poaching Patrol|Events")
 	FOnPPRoundEndedSignature OnRoundEnded;
 
+	UPROPERTY(BlueprintAssignable, Category="Poaching Patrol|Events")
+	FOnPPPoacherCombatEventSignature OnPoacherCombatEvent;
+
 	UPROPERTY(BlueprintAssignable, Category="EcoSystem|Events")
 	FOnLevelStateChangedSignature OnLevelWon;
 
@@ -77,15 +90,20 @@ private:
 	void ScanPlacedActors();
 	void BroadcastStateChanged();
 	void CheckWinCondition();
+	void ReleaseAllPlayerAttackSlots();
 
 	UPROPERTY(Config, EditAnywhere, Category="Poaching Patrol|Round", meta=(ClampMin="0.0", ClampMax="1.0"))
 	float WinThresholdPercentage = 0.50f;
+
+	UPROPERTY(Config, EditAnywhere, Category="Poaching Patrol|Combat", meta=(ClampMin="1", ClampMax="8"))
+	int32 MaxConcurrentPlayerAttackers = 2;
 
 	TSet<TWeakObjectPtr<APPPoacherCharacter>> RegisteredPoachers;
 	TSet<TWeakObjectPtr<APPAnimalCharacter>> RegisteredAnimals;
 	TSet<TWeakObjectPtr<APPPoacherCharacter>> ArrestedPoachers;
 	TSet<TWeakObjectPtr<APPPoacherCharacter>> PermanentlyEscapedPoachers;
 	TSet<TWeakObjectPtr<APPAnimalCharacter>> PoachedAnimals;
+	TSet<TWeakObjectPtr<APPPoacherCharacter>> PlayerAttackSlotOwners;
 
 	UPROPERTY()
 	FPPRoundResult FinalRoundResult;

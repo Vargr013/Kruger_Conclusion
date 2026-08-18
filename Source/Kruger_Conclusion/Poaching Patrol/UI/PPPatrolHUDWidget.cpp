@@ -101,6 +101,7 @@ int32 UPPPatrolHUDWidget::NativePaint(
 	DrawToolCount(AllottedGeometry, OutDrawElements, LayerId);
 	DrawObjectives(AllottedGeometry, OutDrawElements, LayerId);
 	DrawEscortStatus(AllottedGeometry, OutDrawElements, LayerId);
+	DrawCombatStatus(AllottedGeometry, OutDrawElements, LayerId);
 
 	return LayerId;
 }
@@ -108,6 +109,7 @@ int32 UPPPatrolHUDWidget::NativePaint(
 void UPPPatrolHUDWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 {
 	Super::NativeTick(MyGeometry, InDeltaTime);
+	DamageFlashRemaining = FMath::Max(0.0f, DamageFlashRemaining - InDeltaTime);
 	StatusRefreshAccumulator += InDeltaTime;
 	if (StatusRefreshAccumulator < 0.1f)
 	{
@@ -118,16 +120,118 @@ void UPPPatrolHUDWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTi
 
 	const APlayerController* PlayerController = GetOwningPlayer();
 	APawn* PlayerPawn = PlayerController ? PlayerController->GetPawn() : nullptr;
+	if (const UPPHealthComponent* Health = PlayerPawn ? PlayerPawn->FindComponentByClass<UPPHealthComponent>() : nullptr)
+	{
+		const float CurrentHealth = Health->GetCurrentHealth();
+		if (LastObservedPlayerHealth >= 0.0f && CurrentHealth < LastObservedPlayerHealth)
+		{
+			DamageFlashRemaining = 0.35f;
+		}
+		LastObservedPlayerHealth = CurrentHealth;
+	}
 	UEnvironmentLevelSubsystem* LevelSubsystem = GetWorld() ? GetWorld()->GetSubsystem<UEnvironmentLevelSubsystem>() : nullptr;
 	if (!LevelSubsystem)
 	{
 		CachedObjectives.Reset();
 		bHasEscortStatus = false;
+		CachedHostilePoacherCount = 0;
+		CachedUrgentAttacker.Reset();
 		return;
 	}
 
 	CachedObjectives = LevelSubsystem->GetObjectivesForPlayer(PlayerPawn);
 	bHasEscortStatus = LevelSubsystem->GetMostUrgentEscortStatus(PlayerPawn, CachedEscortStatus);
+	CachedHostilePoacherCount = 0;
+	CachedUrgentAttacker.Reset();
+	float BestAttackerDistanceSquared = TNumericLimits<float>::Max();
+	for (APPPoacherCharacter* Poacher : LevelSubsystem->GetActivePoachers())
+	{
+		if (!IsValid(Poacher) || !Poacher->IsEngagingPlayer())
+		{
+			continue;
+		}
+		++CachedHostilePoacherCount;
+		if (Poacher->IsPlayerAttackWindupActive() && PlayerPawn)
+		{
+			const float DistanceSquared = FVector::DistSquared(Poacher->GetActorLocation(), PlayerPawn->GetActorLocation());
+			if (!CachedUrgentAttacker.IsValid() || DistanceSquared < BestAttackerDistanceSquared)
+			{
+				CachedUrgentAttacker = Poacher;
+				BestAttackerDistanceSquared = DistanceSquared;
+			}
+		}
+	}
+}
+
+void UPPPatrolHUDWidget::DrawCombatStatus(const FGeometry& AllottedGeometry, FSlateWindowElementList& OutDrawElements, int32& LayerId) const
+{
+	const FVector2D ViewSize = AllottedGeometry.GetLocalSize();
+	const FSlateBrush* WhiteBrush = FCoreStyle::Get().GetBrush(TEXT("WhiteBrush"));
+	if (DamageFlashRemaining > 0.0f)
+	{
+		const float Alpha = 0.18f * FMath::Clamp(DamageFlashRemaining / 0.35f, 0.0f, 1.0f);
+		FSlateDrawElement::MakeBox(
+			OutDrawElements,
+			LayerId++,
+			AllottedGeometry.ToPaintGeometry(ViewSize, FSlateLayoutTransform()),
+			WhiteBrush,
+			ESlateDrawEffect::None,
+			FLinearColor(0.85f, 0.02f, 0.01f, Alpha));
+	}
+
+	if (CachedHostilePoacherCount <= 0)
+	{
+		return;
+	}
+
+	const bool bIncomingAttack = CachedUrgentAttacker.IsValid();
+	const FVector2D Size(300.0f, bIncomingAttack ? 64.0f : 38.0f);
+	const FVector2D Origin((ViewSize.X - Size.X) * 0.5f, 86.0f);
+	DrawSafariPanel(AllottedGeometry, OutDrawElements, LayerId, WhiteBrush, Origin, Size, true);
+	const FSlateFontInfo LabelFont = FCoreStyle::GetDefaultFontStyle(TEXT("Bold"), bIncomingAttack ? 17 : 14);
+	FLinearColor WarningColor = SafariDangerColor;
+	if (bIncomingAttack && GetWorld())
+	{
+		WarningColor.A = 0.55f + 0.45f * FMath::Abs(FMath::Sin(GetWorld()->GetTimeSeconds() * 8.0f));
+	}
+	const FString Label = bIncomingAttack
+		? TEXT("ATTACK INCOMING")
+		: FString::Printf(TEXT("POACHERS ALERT: %d"), CachedHostilePoacherCount);
+	FSlateDrawElement::MakeText(
+		OutDrawElements,
+		LayerId++,
+		AllottedGeometry.ToPaintGeometry(FVector2D(Size.X - 24.0f, 24.0f), FSlateLayoutTransform(Origin + FVector2D(12.0f, 8.0f))),
+		Label,
+		LabelFont,
+		ESlateDrawEffect::None,
+		WarningColor);
+
+	if (!bIncomingAttack)
+	{
+		return;
+	}
+
+	const APlayerController* PlayerController = GetOwningPlayer();
+	const APawn* PlayerPawn = PlayerController ? PlayerController->GetPawn() : nullptr;
+	float DirectionOffset = 0.0f;
+	if (PlayerPawn)
+	{
+		const FVector Delta = CachedUrgentAttacker->GetActorLocation() - PlayerPawn->GetActorLocation();
+		const float Bearing = FMath::RadiansToDegrees(FMath::Atan2(Delta.Y, Delta.X));
+		const float RelativeBearing = FRotator::NormalizeAxis(Bearing - PlayerPawn->GetControlRotation().Yaw);
+		DirectionOffset = FMath::Clamp(RelativeBearing / 180.0f, -1.0f, 1.0f);
+	}
+	const float MarkerX = Origin.X + Size.X * 0.5f + DirectionOffset * (Size.X * 0.38f);
+	FSlateDrawElement::MakeRotatedBox(
+		OutDrawElements,
+		LayerId++,
+		AllottedGeometry.ToPaintGeometry(FVector2D(12.0f, 12.0f), FSlateLayoutTransform(FVector2D(MarkerX - 6.0f, Origin.Y + 40.0f))),
+		WhiteBrush,
+		ESlateDrawEffect::None,
+		UE_PI * 0.25f,
+		FVector2D(6.0f, 6.0f),
+		FSlateDrawElement::RelativeToElement,
+		WarningColor);
 }
 
 void UPPPatrolHUDWidget::DrawObjectives(const FGeometry& AllottedGeometry, FSlateWindowElementList& OutDrawElements, int32& LayerId) const

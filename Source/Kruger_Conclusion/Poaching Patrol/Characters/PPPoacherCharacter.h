@@ -18,6 +18,8 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Poacher|State")
 	EPPPoacherState CurrentPoacherState = EPPPoacherState::DisguisedRoaming;
@@ -34,6 +36,24 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Poacher|Capture")
 	float CapturedMoveSpeed = 550.0f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Poacher|Combat")
+	float CombatMoveSpeed = 650.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Poacher|Combat")
+	float CombatHoldDistance = 400.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Poacher|Combat")
+	float CombatLeashDistance = 3000.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Poacher|Combat")
+	float PlayerTargetMemoryTime = 3.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Poacher|Combat")
+	float AttackWindupDuration = 0.6f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Poacher|Combat", meta=(ClampMin="0.0", ClampMax="1.0"))
+	float ProjectileSubdualHealthFraction = 0.40f;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Poacher|Capture")
 	bool bIsCaptured = false;
 
@@ -42,6 +62,15 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly, Category="Poacher|Capture")
 	bool bCaptureAttemptInProgress = false;
+
+	UPROPERTY(BlueprintReadOnly, Category="Poacher|Combat")
+	bool bIsSubdued = false;
+
+	UPROPERTY(BlueprintReadOnly, Category="Poacher|Combat")
+	bool bPlayerAttackWindupActive = false;
+
+	UPROPERTY(BlueprintReadOnly, Category="Poacher|Combat")
+	bool bHasPlayerAttackSlot = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Poacher|Capture", meta=(ClampMin="0.0"))
 	float CaptureRetryLockDuration = 3.0f;
@@ -91,9 +120,13 @@ protected:
 	float FleeEndTime = 0.0f;
 	float LastEscapeUpdateTime = 0.0f;
 	float NextIdleLocalWanderTime = 0.0f;
+	float LastPlayerDetectedTime = -1000.0f;
 	FTimerHandle ArrestRemovalTimerHandle;
 	FTimerHandle PepperSprayTimerHandle;
 	FTimerHandle PredatorRemovalTimerHandle;
+	FTimerHandle PlayerAttackWindupTimerHandle;
+	FTimerHandle SubdualTimerHandle;
+	bool bSubduedByProjectile = false;
 
 public:
 	virtual void UpdateCreatureAI() override;
@@ -115,6 +148,24 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category="Poacher|Behaviour")
 	void StartFleeing(AActor* ThreatActor);
+
+	UFUNCTION(BlueprintCallable, Category="Poacher|Combat")
+	void StartEngagingPlayer(AActor* PlayerActor);
+
+	UFUNCTION(BlueprintCallable, Category="Poacher|Combat")
+	void CancelPlayerAttack();
+
+	UFUNCTION(BlueprintCallable, Category="Poacher|Combat")
+	void EnterSubduedState(float Duration = 4.0f, bool bFromProjectile = false);
+
+	UFUNCTION(BlueprintPure, Category="Poacher|Combat")
+	bool IsSubdued() const { return bIsSubdued; }
+
+	UFUNCTION(BlueprintPure, Category="Poacher|Combat")
+	bool IsEngagingPlayer() const { return CurrentPoacherState == EPPPoacherState::EngagingPlayer; }
+
+	UFUNCTION(BlueprintPure, Category="Poacher|Combat")
+	bool IsPlayerAttackWindupActive() const { return bPlayerAttackWindupActive; }
 
 	UFUNCTION(BlueprintCallable, Category="Poacher|Capture")
 	void CapturePoacher(AActor* NewCaptor);
@@ -194,8 +245,33 @@ public:
 	UFUNCTION(BlueprintPure, Category="Poacher|Escape")
 	bool WasProcessedAsPermanentlyEscaped() const { return bProcessedAsEscaped; }
 
+	UFUNCTION(BlueprintImplementableEvent, Category="Poacher|Combat", meta=(DisplayName="On Poacher Engaged Player"))
+	void BP_OnEngagedPlayer(AActor* PlayerActor);
+
+	UFUNCTION(BlueprintImplementableEvent, Category="Poacher|Combat", meta=(DisplayName="On Poacher Attack Windup"))
+	void BP_OnAttackWindup(AActor* PlayerActor);
+
+	UFUNCTION(BlueprintImplementableEvent, Category="Poacher|Combat", meta=(DisplayName="On Poacher Attack Hit"))
+	void BP_OnAttackHit(AActor* PlayerActor);
+
+	UFUNCTION(BlueprintImplementableEvent, Category="Poacher|Combat", meta=(DisplayName="On Poacher Attack Miss"))
+	void BP_OnAttackMiss(AActor* PlayerActor);
+
+	UFUNCTION(BlueprintImplementableEvent, Category="Poacher|Combat", meta=(DisplayName="On Poacher Disoriented"))
+	void BP_OnDisoriented();
+
 protected:
 	void UpdateIdleLocalWander(float CurrentTime);
+	void UpdatePlayerCombat(AActor* PlayerActor, float CurrentTime);
+	bool CanDetectPlayerForCombat(AActor* PlayerActor) const;
+	bool HasClearLineOfSightTo(AActor* TargetActor) const;
+	bool IsWithinCombatLeash(AActor* PlayerActor) const;
+	bool TryStartPlayerAttack(AActor* PlayerActor, float CurrentTime);
+	void ResolvePlayerAttack();
+	void DisengageFromPlayer(bool bReturnToIdle);
+	void ClearSubduedState(bool bResumeBehaviour);
+	void BroadcastCombatEvent(EPPPoacherCombatEvent Event) const;
+	bool IsPlayerProjectileDamage(AController* EventInstigator, AActor* DamageCauser) const;
 	virtual void HandleHealthDepleted() override;
 	virtual bool CanAttackTarget(AActor* PotentialTarget) const override;
 	float GetAdjustedPoacherMoveSpeed(float BaseSpeed) const;
@@ -209,4 +285,7 @@ protected:
 
 	UFUNCTION()
 	void ClearPepperSpraySlow();
+
+	UFUNCTION()
+	void RecoverFromTimedSubdual();
 };

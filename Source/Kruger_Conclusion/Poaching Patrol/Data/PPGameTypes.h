@@ -23,7 +23,20 @@ enum class EPPPoacherState : uint8
 	Captured UMETA(DisplayName="Captured"),
 	FollowingPlayer UMETA(DisplayName="Following Player"),
 	Arrested UMETA(DisplayName="Arrested"),
-	Escaped UMETA(DisplayName="Escaped")
+	Escaped UMETA(DisplayName="Escaped"),
+	EngagingPlayer UMETA(DisplayName="Engaging Player"),
+	Subdued UMETA(DisplayName="Subdued")
+};
+
+UENUM(BlueprintType)
+enum class EPPPoacherCombatEvent : uint8
+{
+	Engaged UMETA(DisplayName="Engaged"),
+	Disengaged UMETA(DisplayName="Disengaged"),
+	AttackWindup UMETA(DisplayName="Attack Windup"),
+	AttackHit UMETA(DisplayName="Attack Hit"),
+	AttackMiss UMETA(DisplayName="Attack Miss"),
+	Subdued UMETA(DisplayName="Subdued")
 };
 
 UENUM(BlueprintType)

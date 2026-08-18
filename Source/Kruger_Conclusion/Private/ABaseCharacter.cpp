@@ -1,5 +1,6 @@
 #include "ABaseCharacter.h"
 #include "Data/PPHealthComponent.h"
+#include "EnvironmentLevelSubsystem.h"
 #include "GameFramework/PlayerController.h"
 #include "InteractInterface.h"
 #include "Interfaces/PPInteractableInterface.h"
@@ -174,8 +175,13 @@ void ABaseCharacter::OnPlayerHealthDepleted()
         return;
     }
 
-    bIsDowned = true;
-    GetCharacterMovement()->DisableMovement();
+	bIsDowned = true;
+	GetCharacterMovement()->DisableMovement();
+
+	if (UEnvironmentLevelSubsystem* LevelSubsystem = GetWorld() ? GetWorld()->GetSubsystem<UEnvironmentLevelSubsystem>() : nullptr)
+	{
+		LevelSubsystem->ReportPlayerDowned();
+	}
 
     if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
     {

@@ -116,6 +116,7 @@ private:
 	void DrawToolCount(const FGeometry& AllottedGeometry, FSlateWindowElementList& OutDrawElements, int32& LayerId) const;
 	void DrawObjectives(const FGeometry& AllottedGeometry, FSlateWindowElementList& OutDrawElements, int32& LayerId) const;
 	void DrawEscortStatus(const FGeometry& AllottedGeometry, FSlateWindowElementList& OutDrawElements, int32& LayerId) const;
+	void DrawCombatStatus(const FGeometry& AllottedGeometry, FSlateWindowElementList& OutDrawElements, int32& LayerId) const;
 
 	ABaseGun* FindCurrentTool() const;
 	float GetResponsiveMinimapSize(const FVector2D& ViewSize) const;
@@ -130,4 +131,8 @@ private:
 	TArray<TWeakObjectPtr<APPPoacherCharacter>> CachedMinimapPoachers;
 	TArray<TWeakObjectPtr<APPAnimalCharacter>> CachedMinimapAnimals;
 	TArray<TWeakObjectPtr<APPArrestZone>> CachedArrestZones;
+	TWeakObjectPtr<APPPoacherCharacter> CachedUrgentAttacker;
+	int32 CachedHostilePoacherCount = 0;
+	float DamageFlashRemaining = 0.0f;
+	float LastObservedPlayerHealth = -1.0f;
 };

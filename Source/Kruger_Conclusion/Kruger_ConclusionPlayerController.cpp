@@ -145,6 +145,10 @@ bool AKruger_ConclusionPlayerController::StartPoacherRestraint(APPPoacherCharact
 
 	ActiveRestraintPoacher = Poacher;
 	ActiveRestraintCaptor = GetPawn();
+	if (UEnvironmentLevelSubsystem* LevelSubsystem = GetWorld() ? GetWorld()->GetSubsystem<UEnvironmentLevelSubsystem>() : nullptr)
+	{
+		LevelSubsystem->CancelAllPoacherAttackWindups();
+	}
 	RestraintMinigameWidget->OnRestraintFinished.AddUniqueDynamic(this, &AKruger_ConclusionPlayerController::HandleRestraintFinished);
 	RestraintMinigameWidget->StartSession(Poacher, Poacher->IsPepperSprayed());
 	RestraintMinigameWidget->AddToPlayerScreen(50);

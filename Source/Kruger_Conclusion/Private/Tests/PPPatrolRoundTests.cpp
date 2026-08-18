@@ -71,6 +71,8 @@ bool FPPPatrolRoundStateTest::RunTest(const FString& Parameters)
 			EPPPoacherState::DisguisedRoaming,
 			EPPPoacherState::Alert,
 			EPPPoacherState::Fleeing,
+			EPPPoacherState::EngagingPlayer,
+			EPPPoacherState::Subdued,
 			EPPPoacherState::Captured,
 			EPPPoacherState::FollowingPlayer})
 		{

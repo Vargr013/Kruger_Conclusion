@@ -20,6 +20,7 @@ void UEnvironmentLevelSubsystem::ResetRoundState()
 	ArrestedPoachers.Reset();
 	PermanentlyEscapedPoachers.Reset();
 	PoachedAnimals.Reset();
+	PlayerAttackSlotOwners.Reset();
 	bRoundEnded = false;
 	FinalRoundResult = FPPRoundResult();
 }
@@ -96,6 +97,95 @@ void UEnvironmentLevelSubsystem::ReportAnimalPoached(APPAnimalCharacter* Animal)
 	RegisterAnimal(Animal);
 	PoachedAnimals.Add(Animal);
 	BroadcastStateChanged();
+}
+
+void UEnvironmentLevelSubsystem::ReportPlayerDowned()
+{
+	if (bRoundEnded)
+	{
+		return;
+	}
+
+	bRoundEnded = true;
+	CancelAllPoacherAttackWindups();
+	ReleaseAllPlayerAttackSlots();
+	FinalRoundResult.Snapshot = GetRoundSnapshot();
+	FinalRoundResult.Outcome = EPPRoundOutcome::Failure;
+	OnRoundEnded.Broadcast(FinalRoundResult);
+	OnLevelLost.Broadcast();
+}
+
+bool UEnvironmentLevelSubsystem::TryAcquirePlayerAttackSlot(APPPoacherCharacter* Poacher)
+{
+	if (!IsValid(Poacher) || bRoundEnded)
+	{
+		return false;
+	}
+
+	for (auto It = PlayerAttackSlotOwners.CreateIterator(); It; ++It)
+	{
+		if (!It->IsValid())
+		{
+			It.RemoveCurrent();
+		}
+	}
+
+	if (PlayerAttackSlotOwners.Contains(Poacher))
+	{
+		return true;
+	}
+	if (PlayerAttackSlotOwners.Num() >= FMath::Max(1, MaxConcurrentPlayerAttackers))
+	{
+		return false;
+	}
+
+	PlayerAttackSlotOwners.Add(Poacher);
+	return true;
+}
+
+void UEnvironmentLevelSubsystem::ReleasePlayerAttackSlot(APPPoacherCharacter* Poacher)
+{
+	if (Poacher)
+	{
+		PlayerAttackSlotOwners.Remove(Poacher);
+	}
+}
+
+void UEnvironmentLevelSubsystem::CancelAllPoacherAttackWindups()
+{
+	for (const TWeakObjectPtr<APPPoacherCharacter>& PoacherPtr : RegisteredPoachers)
+	{
+		if (APPPoacherCharacter* Poacher = PoacherPtr.Get())
+		{
+			Poacher->CancelPlayerAttack();
+		}
+	}
+}
+
+void UEnvironmentLevelSubsystem::BroadcastPoacherCombatEvent(APPPoacherCharacter* Poacher, EPPPoacherCombatEvent Event)
+{
+	if (IsValid(Poacher))
+	{
+		OnPoacherCombatEvent.Broadcast(Poacher, Event);
+	}
+}
+
+int32 UEnvironmentLevelSubsystem::GetActivePlayerAttackSlotCount() const
+{
+	int32 Count = 0;
+	for (const TWeakObjectPtr<APPPoacherCharacter>& PoacherPtr : PlayerAttackSlotOwners)
+	{
+		if (PoacherPtr.IsValid())
+		{
+			++Count;
+		}
+	}
+	return Count;
+}
+
+void UEnvironmentLevelSubsystem::ReleaseAllPlayerAttackSlots()
+{
+	PlayerAttackSlotOwners.Reset();
 }
 
 void UEnvironmentLevelSubsystem::OnPoacherCaptured()
@@ -304,6 +394,8 @@ void UEnvironmentLevelSubsystem::CheckWinCondition()
 	}
 
 	bRoundEnded = true;
+	CancelAllPoacherAttackWindups();
+	ReleaseAllPlayerAttackSlots();
 	FinalRoundResult.Snapshot = Snapshot;
 	FinalRoundResult.Outcome = Snapshot.bQuotaMet ? EPPRoundOutcome::Success : EPPRoundOutcome::Failure;
 	OnRoundEnded.Broadcast(FinalRoundResult);

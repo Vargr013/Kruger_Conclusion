@@ -1,8 +1,13 @@
 #include "Characters/PPPoacherCharacter.h"
 
 #include "Characters/PPAnimalCharacter.h"
+#include "BaseProjectile.h"
+#include "Data/PPHealthComponent.h"
 #include <EnvironmentLevelSubsystem.h>
+#include "Engine/World.h"
+#include "GameFramework/Controller.h"
 #include "GameFramework/Pawn.h"
+#include "Kismet/GameplayStatics.h"
 #include "Kruger_ConclusionPlayerController.h"
 
 namespace
@@ -25,6 +30,10 @@ const TCHAR* GetPoacherStateName(EPPPoacherState State)
 		return TEXT("Arrested");
 	case EPPPoacherState::Escaped:
 		return TEXT("Escaped");
+	case EPPPoacherState::EngagingPlayer:
+		return TEXT("EngagingPlayer");
+	case EPPPoacherState::Subdued:
+		return TEXT("Subdued");
 	default:
 		return TEXT("Unknown");
 	}
@@ -38,10 +47,41 @@ APPPoacherCharacter::APPPoacherCharacter()
 	FleeSpeed = 800.0f;
 	CapturedMoveSpeed = 550.0f;
 	FleeDistance = 1400.0f;
-	AttackRange = 160.0f;
-	AttackDamage = 20.0f;
+	AttackRange = 170.0f;
+	AttackDamage = 10.0f;
 	AttackCooldown = 1.5f;
 	AttackAcceptanceRadius = 130.0f;
+}
+
+void APPPoacherCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	CancelPlayerAttack();
+	if (GetWorld())
+	{
+		GetWorldTimerManager().ClearTimer(SubdualTimerHandle);
+		GetWorldTimerManager().ClearTimer(PepperSprayTimerHandle);
+	}
+	Super::EndPlay(EndPlayReason);
+}
+
+float APPPoacherCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
+{
+	const bool bPlayerProjectile = IsPlayerProjectileDamage(EventInstigator, DamageCauser);
+	if (bPlayerProjectile && bIsSubdued)
+	{
+		return 0.0f;
+	}
+
+	const float AppliedDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+	if (bPlayerProjectile && !bIsCaptured && !bPendingRemovalAfterArrest && HealthComponent)
+	{
+		const float Threshold = HealthComponent->GetMaxHealth() * FMath::Clamp(ProjectileSubdualHealthFraction, 0.0f, 1.0f);
+		if (HealthComponent->GetCurrentHealth() <= Threshold)
+		{
+			EnterSubduedState(0.0f, true);
+		}
+	}
+	return AppliedDamage;
 }
 
 void APPPoacherCharacter::BeginPlay()
@@ -72,7 +112,22 @@ void APPPoacherCharacter::UpdateCreatureAI()
 		return;
 	}
 
+	if (bIsSubdued || CurrentPoacherState == EPPPoacherState::Subdued || bCaptureAttemptInProgress)
+	{
+		StopMovement();
+		return;
+	}
+
 	const float CurrentTime = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0f;
+	if (const UEnvironmentLevelSubsystem* LevelSubsystem = GetWorld() ? GetWorld()->GetSubsystem<UEnvironmentLevelSubsystem>() : nullptr)
+	{
+		if (LevelSubsystem->HasRoundEnded())
+		{
+			CancelPlayerAttack();
+			StopMovement();
+			return;
+		}
+	}
 
 	if (CurrentPoacherState == EPPPoacherState::Escaped)
 	{
@@ -111,8 +166,30 @@ void APPPoacherCharacter::UpdateCreatureAI()
 
 	if (ThreatActor)
 	{
+		DisengageFromPlayer(false);
 		CurrentTargetActor = nullptr;
 		StartFleeing(ThreatActor);
+		return;
+	}
+
+	AActor* PlayerActor = FindPlayerActor();
+	const bool bPlayerDetected = CanDetectPlayerForCombat(PlayerActor);
+	if (bPlayerDetected)
+	{
+		LastPlayerDetectedTime = CurrentTime;
+	}
+	const bool bRememberedPlayer = CurrentPoacherState == EPPPoacherState::EngagingPlayer
+		&& PlayerActor
+		&& CurrentTime - LastPlayerDetectedTime <= PlayerTargetMemoryTime;
+	if ((bPlayerDetected || bRememberedPlayer) && IsWithinCombatLeash(PlayerActor) && !IsActorHealthDepleted(PlayerActor))
+	{
+		StartEngagingPlayer(PlayerActor);
+		UpdatePlayerCombat(PlayerActor, CurrentTime);
+		return;
+	}
+	if (CurrentPoacherState == EPPPoacherState::EngagingPlayer)
+	{
+		DisengageFromPlayer(true);
 		return;
 	}
 
@@ -150,11 +227,6 @@ bool APPPoacherCharacter::IsValidThreatActor_Implementation(AActor* PotentialThr
 	if (!Super::IsValidThreatActor_Implementation(PotentialThreat))
 	{
 		return false;
-	}
-
-	if (PotentialThreat == FindPlayerActor())
-	{
-		return true;
 	}
 
 	if (const APPAnimalCharacter* Animal = Cast<APPAnimalCharacter>(PotentialThreat))
@@ -271,6 +343,7 @@ void APPPoacherCharacter::StartFleeing(AActor* ThreatActor)
 		return;
 	}
 
+	CancelPlayerAttack();
 	EnterFleeState(ThreatActor);
 	SetPoacherState(EPPPoacherState::Fleeing);
 	const float FleeDuration = GetRandomFleeDuration();
@@ -284,6 +357,202 @@ void APPPoacherCharacter::StartFleeing(AActor* ThreatActor)
 	}
 }
 
+void APPPoacherCharacter::StartEngagingPlayer(AActor* PlayerActor)
+{
+	if (!PlayerActor || bIsCaptured || bIsSubdued || bPendingRemovalAfterArrest)
+	{
+		return;
+	}
+
+	const bool bWasAlreadyEngaging = CurrentPoacherState == EPPPoacherState::EngagingPlayer && CurrentTargetActor == PlayerActor;
+	CurrentThreatActor = nullptr;
+	CurrentTargetActor = PlayerActor;
+	SetCreatureMoveSpeed(GetAdjustedPoacherMoveSpeed(CombatMoveSpeed));
+	SetPoacherState(EPPPoacherState::EngagingPlayer);
+	if (!bWasAlreadyEngaging)
+	{
+		BroadcastCombatEvent(EPPPoacherCombatEvent::Engaged);
+		BP_OnEngagedPlayer(PlayerActor);
+	}
+}
+
+void APPPoacherCharacter::UpdatePlayerCombat(AActor* PlayerActor, float CurrentTime)
+{
+	if (!PlayerActor || bPlayerAttackWindupActive)
+	{
+		return;
+	}
+
+	const float Distance = FVector::Dist(GetActorLocation(), PlayerActor->GetActorLocation());
+	const bool bAttackCooldownReady = CurrentTime - LastAttackTime >= AttackCooldown;
+	if (!bHasPlayerAttackSlot && bAttackCooldownReady)
+	{
+		if (UEnvironmentLevelSubsystem* LevelSubsystem = GetWorld() ? GetWorld()->GetSubsystem<UEnvironmentLevelSubsystem>() : nullptr)
+		{
+			bHasPlayerAttackSlot = LevelSubsystem->TryAcquirePlayerAttackSlot(this);
+		}
+	}
+
+	if (bHasPlayerAttackSlot)
+	{
+		if (Distance <= AttackRange && HasClearLineOfSightTo(PlayerActor))
+		{
+			StopMovement();
+			TryStartPlayerAttack(PlayerActor, CurrentTime);
+		}
+		else
+		{
+			MoveToLocation(PlayerActor->GetActorLocation(), AttackAcceptanceRadius);
+		}
+		return;
+	}
+
+	if (Distance > CombatHoldDistance)
+	{
+		MoveToLocation(PlayerActor->GetActorLocation(), FMath::Max(AttackAcceptanceRadius, CombatHoldDistance - 50.0f));
+	}
+	else
+	{
+		StopMovement();
+	}
+}
+
+bool APPPoacherCharacter::CanDetectPlayerForCombat(AActor* PlayerActor) const
+{
+	if (!PlayerActor || IsActorHealthDepleted(PlayerActor))
+	{
+		return false;
+	}
+
+	EPPThreatDetectionType DetectionType = EPPThreatDetectionType::None;
+	if (!CanDetectThreat(PlayerActor, DetectionType))
+	{
+		return false;
+	}
+	return DetectionType == EPPThreatDetectionType::Sound || HasClearLineOfSightTo(PlayerActor);
+}
+
+bool APPPoacherCharacter::HasClearLineOfSightTo(AActor* TargetActor) const
+{
+	if (!TargetActor || !GetWorld())
+	{
+		return false;
+	}
+
+	FVector Start = GetActorLocation();
+	Start.Z += BaseEyeHeight;
+	FVector End = TargetActor->GetActorLocation();
+	End.Z += 50.0f;
+	FCollisionQueryParams Params(SCENE_QUERY_STAT(PoacherCombatVisibility), false, this);
+	FHitResult Hit;
+	const bool bBlocked = GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_Visibility, Params);
+	return !bBlocked || Hit.GetActor() == TargetActor;
+}
+
+bool APPPoacherCharacter::IsWithinCombatLeash(AActor* PlayerActor) const
+{
+	return PlayerActor && FVector::DistSquared(HomeLocation, PlayerActor->GetActorLocation()) <= FMath::Square(FMath::Max(0.0f, CombatLeashDistance));
+}
+
+bool APPPoacherCharacter::TryStartPlayerAttack(AActor* PlayerActor, float CurrentTime)
+{
+	if (!PlayerActor || bPlayerAttackWindupActive || CurrentTime - LastAttackTime < AttackCooldown)
+	{
+		return false;
+	}
+
+	UEnvironmentLevelSubsystem* LevelSubsystem = GetWorld() ? GetWorld()->GetSubsystem<UEnvironmentLevelSubsystem>() : nullptr;
+	if (!LevelSubsystem)
+	{
+		return false;
+	}
+	if (!bHasPlayerAttackSlot)
+	{
+		bHasPlayerAttackSlot = LevelSubsystem->TryAcquirePlayerAttackSlot(this);
+	}
+	if (!bHasPlayerAttackSlot)
+	{
+		return false;
+	}
+	bPlayerAttackWindupActive = true;
+	LastAttackTime = CurrentTime;
+	CurrentTargetActor = PlayerActor;
+	StopMovement();
+
+	FVector Facing = PlayerActor->GetActorLocation() - GetActorLocation();
+	Facing.Z = 0.0f;
+	if (Facing.Normalize())
+	{
+		SetActorRotation(Facing.Rotation());
+	}
+
+	BroadcastCombatEvent(EPPPoacherCombatEvent::AttackWindup);
+	BP_OnAttackWindup(PlayerActor);
+	GetWorldTimerManager().SetTimer(PlayerAttackWindupTimerHandle, this, &APPPoacherCharacter::ResolvePlayerAttack, FMath::Max(0.01f, AttackWindupDuration), false);
+	return true;
+}
+
+void APPPoacherCharacter::ResolvePlayerAttack()
+{
+	AActor* PlayerActor = CurrentTargetActor;
+	const bool bCanHit = bPlayerAttackWindupActive
+		&& CurrentPoacherState == EPPPoacherState::EngagingPlayer
+		&& !bIsSubdued
+		&& !bIsCaptured
+		&& PlayerActor
+		&& !IsActorHealthDepleted(PlayerActor)
+		&& IsTargetInAttackRange(PlayerActor)
+		&& HasClearLineOfSightTo(PlayerActor);
+
+	bPlayerAttackWindupActive = false;
+	if (bCanHit)
+	{
+		UGameplayStatics::ApplyDamage(PlayerActor, AttackDamage, GetController(), this, UDamageType::StaticClass());
+		BroadcastCombatEvent(EPPPoacherCombatEvent::AttackHit);
+		BP_OnAttackHit(PlayerActor);
+	}
+	else
+	{
+		BroadcastCombatEvent(EPPPoacherCombatEvent::AttackMiss);
+		BP_OnAttackMiss(PlayerActor);
+	}
+
+	if (UEnvironmentLevelSubsystem* LevelSubsystem = GetWorld() ? GetWorld()->GetSubsystem<UEnvironmentLevelSubsystem>() : nullptr)
+	{
+		LevelSubsystem->ReleasePlayerAttackSlot(this);
+	}
+	bHasPlayerAttackSlot = false;
+}
+
+void APPPoacherCharacter::CancelPlayerAttack()
+{
+	if (GetWorld())
+	{
+		GetWorldTimerManager().ClearTimer(PlayerAttackWindupTimerHandle);
+		if (UEnvironmentLevelSubsystem* LevelSubsystem = GetWorld()->GetSubsystem<UEnvironmentLevelSubsystem>())
+		{
+			LevelSubsystem->ReleasePlayerAttackSlot(this);
+		}
+	}
+	bPlayerAttackWindupActive = false;
+	bHasPlayerAttackSlot = false;
+}
+
+void APPPoacherCharacter::DisengageFromPlayer(bool bReturnToIdle)
+{
+	const bool bWasEngaging = CurrentPoacherState == EPPPoacherState::EngagingPlayer;
+	CancelPlayerAttack();
+	CurrentTargetActor = nullptr;
+	if (bWasEngaging)
+	{
+		BroadcastCombatEvent(EPPPoacherCombatEvent::Disengaged);
+	}
+	if (bReturnToIdle && !bIsCaptured && !bIsSubdued)
+	{
+		StartDisguisedIdle();
+	}
+}
+
 void APPPoacherCharacter::CapturePoacher(AActor* NewCaptor)
 {
 	if (CurrentPoacherState == EPPPoacherState::Arrested || !NewCaptor)
@@ -291,6 +560,8 @@ void APPPoacherCharacter::CapturePoacher(AActor* NewCaptor)
 		return;
 	}
 
+	CancelPlayerAttack();
+	ClearSubduedState(false);
 	bIsCaptured = true;
 	CaptorActor = NewCaptor;
 	CurrentThreatActor = nullptr;
@@ -304,7 +575,9 @@ void APPPoacherCharacter::CapturePoacher(AActor* NewCaptor)
 
 bool APPPoacherCharacter::CanStartCaptureAttempt() const
 {
-	return !bIsCaptured
+	return bIsSubdued
+		&& CurrentPoacherState == EPPPoacherState::Subdued
+		&& !bIsCaptured
 		&& !bCaptureAttemptInProgress
 		&& !bPendingRemovalAfterArrest
 		&& !bProcessedAsEscaped
@@ -323,6 +596,7 @@ bool APPPoacherCharacter::BeginCaptureAttempt()
 	}
 
 	bCaptureAttemptInProgress = true;
+	CancelPlayerAttack();
 	StopMovement();
 	DebugMessage(TEXT("Restraint attempt started"), FColor::Yellow, 2.0f);
 	return true;
@@ -340,6 +614,13 @@ bool APPPoacherCharacter::ResolveCaptureAttempt(EPPRestraintResult Result, AActo
 	{
 		CapturePoacher(AttemptingCaptor);
 		return bIsCaptured;
+	}
+
+	const bool bWasProjectileSubdued = bSubduedByProjectile;
+	ClearSubduedState(false);
+	if (bWasProjectileSubdued && HealthComponent)
+	{
+		HealthComponent->ResetHealth();
 	}
 
 	const float CurrentTime = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0f;
@@ -363,6 +644,46 @@ bool APPPoacherCharacter::ResolveCaptureAttempt(EPPRestraintResult Result, AActo
 void APPPoacherCharacter::AbortCaptureAttempt()
 {
 	bCaptureAttemptInProgress = false;
+}
+
+void APPPoacherCharacter::EnterSubduedState(float Duration, bool bFromProjectile)
+{
+	if (bIsCaptured || bPendingRemovalAfterArrest || CurrentPoacherState == EPPPoacherState::Arrested || CurrentPoacherState == EPPPoacherState::Escaped)
+	{
+		return;
+	}
+
+	CancelPlayerAttack();
+	bIsSubdued = true;
+	bSubduedByProjectile = bSubduedByProjectile || bFromProjectile;
+	CurrentThreatActor = nullptr;
+	CurrentTargetActor = nullptr;
+	StopMovement();
+	SetPoacherState(EPPPoacherState::Subdued);
+	BroadcastCombatEvent(EPPPoacherCombatEvent::Subdued);
+
+	if (GetWorld())
+	{
+		GetWorldTimerManager().ClearTimer(SubdualTimerHandle);
+		if (!bFromProjectile && Duration > 0.0f)
+		{
+			GetWorldTimerManager().SetTimer(SubdualTimerHandle, this, &APPPoacherCharacter::RecoverFromTimedSubdual, Duration, false);
+		}
+	}
+}
+
+void APPPoacherCharacter::ClearSubduedState(bool bResumeBehaviour)
+{
+	if (GetWorld())
+	{
+		GetWorldTimerManager().ClearTimer(SubdualTimerHandle);
+	}
+	bIsSubdued = false;
+	bSubduedByProjectile = false;
+	if (bResumeBehaviour && !bIsCaptured && CurrentPoacherState == EPPPoacherState::Subdued)
+	{
+		StartDisguisedIdle();
+	}
 }
 
 bool APPPoacherCharacter::IsCaptureRetryLocked() const
@@ -404,6 +725,8 @@ bool APPPoacherCharacter::MarkArrested()
 		return false;
 	}
 
+	CancelPlayerAttack();
+	ClearSubduedState(false);
 	bIsCaptured = true;
 	bCanEscapeAfterCapture = false;
 	EscapeProgress = 0.0f;
@@ -459,6 +782,8 @@ void APPPoacherCharacter::EscapePoacher()
 		return;
 	}
 
+	CancelPlayerAttack();
+	ClearSubduedState(false);
 	AActor* PreviousCaptor = CaptorActor;
 	bIsCaptured = false;
 	CaptorActor = nullptr;
@@ -529,7 +854,7 @@ void APPPoacherCharacter::UpdateEscapePressure()
 
 void APPPoacherCharacter::ApplyPepperSpraySlow(float Duration)
 {
-	if (CurrentPoacherState == EPPPoacherState::Arrested || bPendingRemovalAfterArrest || !GetWorld())
+	if (CurrentPoacherState == EPPPoacherState::Arrested || bPendingRemovalAfterArrest || bIsCaptured || !GetWorld())
 	{
 		return;
 	}
@@ -543,6 +868,8 @@ void APPPoacherCharacter::ApplyPepperSpraySlow(float Duration)
 
 	bIsPepperSprayed = true;
 	RefreshPoacherMoveSpeed();
+	EnterSubduedState(SafeDuration, false);
+	BP_OnDisoriented();
 
 	GetWorldTimerManager().ClearTimer(PepperSprayTimerHandle);
 	GetWorldTimerManager().SetTimer(PepperSprayTimerHandle, this, &APPPoacherCharacter::ClearPepperSpraySlow, SafeDuration, false);
@@ -578,6 +905,11 @@ void APPPoacherCharacter::RefreshPoacherMoveSpeed()
 		SetCreatureMoveSpeed(GetAdjustedPoacherMoveSpeed(FleeSpeed));
 		return;
 	}
+	if (CurrentPoacherState == EPPPoacherState::EngagingPlayer)
+	{
+		SetCreatureMoveSpeed(GetAdjustedPoacherMoveSpeed(CombatMoveSpeed));
+		return;
+	}
 
 	SetCreatureMoveSpeed(GetAdjustedPoacherMoveSpeed(WalkSpeed));
 }
@@ -587,6 +919,11 @@ void APPPoacherCharacter::ClearPepperSpraySlow()
 	bIsPepperSprayed = false;
 	RefreshPoacherMoveSpeed();
 	DebugMessage(TEXT("Pepper spray slow ended"), FColor::Green, 2.0f);
+}
+
+void APPPoacherCharacter::RecoverFromTimedSubdual()
+{
+	ClearSubduedState(true);
 }
 
 void APPPoacherCharacter::Interact_Implementation(AActor* Interactor)
@@ -625,7 +962,9 @@ FText APPPoacherCharacter::GetInteractionPrompt_Implementation() const
 	{
 		return FText::FromString(TEXT("Poacher Breaking Away"));
 	}
-	return FText::FromString(TEXT("Restrain Poacher"));
+	return bIsSubdued
+		? FText::FromString(TEXT("Restrain Poacher"))
+		: FText::FromString(TEXT("Subdue Poacher First"));
 }
 
 void APPPoacherCharacter::SetTargetActor(AActor* NewTarget)
@@ -684,30 +1023,8 @@ void APPPoacherCharacter::HandleHealthDepleted()
 		}
 	}
 
-	AActor* CaptorActorFromDamage = LastDamageInstigator ? LastDamageInstigator->GetPawn() : nullptr;
-	if (!CaptorActorFromDamage)
-	{
-		CaptorActorFromDamage = LastDamageCauser ? LastDamageCauser->GetOwner() : nullptr;
-	}
-	if (!CaptorActorFromDamage)
-	{
-		CaptorActorFromDamage = LastDamageCauser;
-	}
-	if (!CaptorActorFromDamage)
-	{
-		CaptorActorFromDamage = FindPlayerActor();
-	}
-
-	if (CaptorActorFromDamage)
-	{
-		CapturePoacher(CaptorActorFromDamage);
-	}
-	else
-	{
-		StopMovement();
-		SetPoacherState(EPPPoacherState::Captured);
-		DebugMessage(TEXT("Poacher subdued but no captor was found"), FColor::Yellow, 3.0f);
-	}
+	EnterSubduedState(0.0f, true);
+	DebugMessage(TEXT("Poacher subdued: restraint required"), FColor::Yellow, 3.0f);
 }
 
 bool APPPoacherCharacter::CanAttackTarget(AActor* PotentialTarget) const
@@ -719,6 +1036,21 @@ bool APPPoacherCharacter::CanAttackTarget(AActor* PotentialTarget) const
 
 	const APPAnimalCharacter* Animal = Cast<APPAnimalCharacter>(PotentialTarget);
 	return Animal && !Animal->IsPredator();
+}
+
+void APPPoacherCharacter::BroadcastCombatEvent(EPPPoacherCombatEvent Event) const
+{
+	if (UEnvironmentLevelSubsystem* LevelSubsystem = GetWorld() ? GetWorld()->GetSubsystem<UEnvironmentLevelSubsystem>() : nullptr)
+	{
+		LevelSubsystem->BroadcastPoacherCombatEvent(const_cast<APPPoacherCharacter*>(this), Event);
+	}
+}
+
+bool APPPoacherCharacter::IsPlayerProjectileDamage(AController* EventInstigator, AActor* DamageCauser) const
+{
+	return EventInstigator
+		&& EventInstigator->IsPlayerController()
+		&& Cast<ABaseProjectile>(DamageCauser) != nullptr;
 }
 
 void APPPoacherCharacter::FinalizePredatorRemoval()

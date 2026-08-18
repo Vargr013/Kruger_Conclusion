@@ -53,7 +53,9 @@ bool FPPRestraintPoacherStateTest::RunTest(const FString& Parameters)
 		&& TestNotNull(TEXT("Resolved poacher exists"), ResolvedPoacher)
 		&& TestNotNull(TEXT("Captor exists"), Captor))
 	{
-		TestTrue(TEXT("An active poacher can begin restraint"), FailedPoacher->CanStartCaptureAttempt());
+		TestFalse(TEXT("A healthy active poacher cannot begin restraint"), FailedPoacher->CanStartCaptureAttempt());
+		FailedPoacher->EnterSubduedState(4.0f, false);
+		TestTrue(TEXT("A subdued poacher can begin restraint"), FailedPoacher->CanStartCaptureAttempt());
 		TestTrue(TEXT("The first begin succeeds"), FailedPoacher->BeginCaptureAttempt());
 		TestTrue(TEXT("Attempt flag is set"), FailedPoacher->IsCaptureAttemptInProgress());
 		TestFalse(TEXT("A duplicate begin is rejected"), FailedPoacher->BeginCaptureAttempt());
@@ -68,7 +70,8 @@ bool FPPRestraintPoacherStateTest::RunTest(const FString& Parameters)
 				|| FailedPoacher->GetPoacherState() == EPPPoacherState::DisguisedRoaming);
 		TestFalse(TEXT("A duplicate resolution is ignored"), FailedPoacher->ResolveCaptureAttempt(EPPRestraintResult::Failed, Captor));
 
-		TestTrue(TEXT("A second poacher can begin restraint"), SuccessfulPoacher->BeginCaptureAttempt());
+		SuccessfulPoacher->EnterSubduedState(4.0f, false);
+		TestTrue(TEXT("A second subdued poacher can begin restraint"), SuccessfulPoacher->BeginCaptureAttempt());
 		TestTrue(TEXT("Success resolves the active attempt"), SuccessfulPoacher->ResolveCaptureAttempt(EPPRestraintResult::Success, Captor));
 		TestTrue(TEXT("Success captures the poacher"), SuccessfulPoacher->IsCaptured());
 		TestEqual(TEXT("Success starts the existing escort state"), SuccessfulPoacher->GetPoacherState(), EPPPoacherState::FollowingPlayer);
