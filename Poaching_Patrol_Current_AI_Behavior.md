@@ -116,7 +116,7 @@
 - Default follow tuning:
   - `FollowDistance = 250`
   - `FollowAcceptanceRadius = 120`
-  - `CapturedMoveSpeed = 220`
+  - `CapturedMoveSpeed = 550`
 - Escort pressure:
   - `EscapeDistance = 900`
   - `EscapeGraceTime = 5.0`

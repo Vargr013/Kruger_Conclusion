@@ -32,7 +32,7 @@ protected:
 	float FollowAcceptanceRadius = 120.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Poacher|Capture")
-	float CapturedMoveSpeed = 500.0f;
+	float CapturedMoveSpeed = 550.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Poacher|Capture")
 	bool bIsCaptured = false;

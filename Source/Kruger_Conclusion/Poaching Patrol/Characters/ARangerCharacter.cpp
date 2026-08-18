@@ -2,7 +2,8 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "GameFramework/PlayerController.h"
-#include "Camera/CameraComponent.h" 
+#include "GameFramework/CharacterMovementComponent.h"
+#include "Camera/CameraComponent.h"
 #include "BaseGun.h"                
 
 ARangerCharacter::ARangerCharacter()
@@ -43,6 +44,57 @@ void ARangerCharacter::BeginPlay()
             CurrentGun->SetActorRelativeLocation(FVector(100.0f, 40.0f, -30.0f));
         }
     }
+
+    // Store camera position so headbob can be applied as an offset and restored.
+    if (Camera)
+    {
+        CameraRestRelativeLocation = Camera->GetRelativeLocation();
+        CameraRestRelativeRotation = Camera->GetRelativeRotation();
+    }
+}
+
+void ARangerCharacter::Tick(float DeltaTime)
+{
+    Super::Tick(DeltaTime); 
+	UpdateHeadBob(DeltaTime); // Apply headbob effect.
+}
+
+void ARangerCharacter::UpdateHeadBob(float DeltaTime)
+{
+    if (!Camera)
+    {
+        return;
+    }
+
+    // Bob only while sprinting on the ground.
+    const UCharacterMovementComponent* Movement = GetCharacterMovement();
+    const bool bShouldBob =
+        bIsSprinting &&
+        Movement &&
+        Movement->IsMovingOnGround() &&
+        GetVelocity().Size2D() > 10.0f;
+
+    HeadBobPoint = FMath::FInterpTo(HeadBobPoint, bShouldBob ? 1.0f : 0.0f, DeltaTime, HeadBobBlendSpeed);
+
+    // Snap back to the rest pose once the blend is finished so the camera does not drift.
+    if (HeadBobPoint <= KINDA_SMALL_NUMBER)
+    {
+        HeadBobPoint = 0.0f;
+        HeadBobTime = 0.0f;
+        Camera->SetRelativeLocation(CameraRestRelativeLocation);
+        Camera->SetRelativeRotation(CameraRestRelativeRotation);
+        return;
+    }
+
+    HeadBobTime += DeltaTime * HeadBobFrequency;
+
+    // Vertical uses 2x frequency so there are two bobs per stride (left and right foot).
+    const float VerticalOffset = FMath::Sin(HeadBobTime * 2.0f) * HeadBobVerticalAmount * HeadBobPoint;
+    const float HorizontalOffset = FMath::Sin(HeadBobTime) * HeadBobHorizontalAmount * HeadBobPoint;
+    const float RollOffset = FMath::Sin(HeadBobTime) * HeadBobRollAmount * HeadBobPoint;
+
+    Camera->SetRelativeLocation(CameraRestRelativeLocation + FVector(0.0f, HorizontalOffset, VerticalOffset));
+    Camera->SetRelativeRotation(CameraRestRelativeRotation + FRotator(0.0f, 0.0f, RollOffset));
 }
 
 void ARangerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -67,7 +119,7 @@ void ARangerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
     // Interact
     EnhancedInput->BindAction(InteractAction, ETriggerEvent::Started, this, &ARangerCharacter::Interact);
 
-    // NEW: Bind Fire Action
+    // Bind Fire Action
     EnhancedInput->BindAction(FireAction, ETriggerEvent::Started, this, &ARangerCharacter::Fire);
 }
 
@@ -78,8 +130,6 @@ void ARangerCharacter::Fire()
         CurrentGun->Shoot();
     }
 }
-
-// ... Keep your existing Move, Look, StartSprint, StopSprint, and StartCrouch logic below ...
 
 void ARangerCharacter::Move(const FInputActionValue& Value)
 {

@@ -17,7 +17,28 @@ public:
 
 protected:
     virtual void BeginPlay() override;
+    virtual void Tick(float DeltaTime) override;
     virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+
+    // How fast the headbob bounces up and down. Higher = quicker steps. 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera|HeadBob", meta = (ClampMin = "0.0"))
+    float HeadBobFrequency = 12.0f;
+
+    // Up/down camera offset. 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera|HeadBob", meta = (ClampMin = "0.0"))
+    float HeadBobVerticalAmount = 5.0f;
+
+    // Side-to-side camera offset. 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera|HeadBob", meta = (ClampMin = "0.0"))
+    float HeadBobHorizontalAmount = 1.0f;
+
+    // Camera roll that tilts with each stride. 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera|HeadBob", meta = (ClampMin = "0.0"))
+    float HeadBobRollAmount = 0.5f;
+
+    // How quickly the bob blends in when sprint starts and out when it stops. 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera|HeadBob", meta = (ClampMin = "0.0"))
+    float HeadBobBlendSpeed = 8.0f;
 
     // Input Actions
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
@@ -41,11 +62,11 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
     class UInputAction* InteractAction;
 
-    // NEW: Fire Action
+    // Fire Action
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
     class UInputAction* FireAction;
 
-    // NEW: Gun Properties
+    // Gun Properties
     UPROPERTY(EditAnywhere, Category = "Weapon")
     TSubclassOf<ABaseGun> GunClass;
 
@@ -65,4 +86,17 @@ private:
     void StartCrouch(const FInputActionValue& Value);
 
     void Fire();
+
+    // Applies a sin-wave camera offset while sprinting on the ground. 
+    void UpdateHeadBob(float DeltaTime);
+
+    // Camera transform, for restoring its position when sprinting stops.
+    FVector CameraRestRelativeLocation = FVector::ZeroVector;
+    FRotator CameraRestRelativeRotation = FRotator::ZeroRotator;
+
+    // Running phase of the sine wave. Reset when the bob fully blends out.
+    float HeadBobTime = 0.0f;
+
+    // 0 = rest pose, 1 = full sprint bob. Interpolated each tick. 
+    float HeadBobPoint = 0.0f;
 };
