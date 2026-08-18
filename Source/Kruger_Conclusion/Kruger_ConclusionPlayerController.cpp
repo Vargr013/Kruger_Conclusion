@@ -20,6 +20,7 @@
 #include "Characters/PPPoacherCharacter.h"
 #include "Kismet/GameplayStatics.h"
 #include "Widgets/Input/SVirtualJoystick.h"
+#include "InputCoreTypes.h"
 
 AKruger_ConclusionPlayerController::AKruger_ConclusionPlayerController()
 {
@@ -315,6 +316,9 @@ void AKruger_ConclusionPlayerController::ApplyReplayMenuBypass()
 void AKruger_ConclusionPlayerController::SetupInputComponent()
 {
 	Super::SetupInputComponent();
+	FInputKeyBinding& PauseBinding = InputComponent->BindKey(EKeys::Escape, IE_Pressed, this, &AKruger_ConclusionPlayerController::ToggleGameplayPause);
+	PauseBinding.bExecuteWhenPaused = true;
+
 	if (UEnhancedInputComponent* EnhancedInput = Cast<UEnhancedInputComponent>(InputComponent); EnhancedInput && MinimapZoomAction)
 	{
 		EnhancedInput->BindAction(MinimapZoomAction, ETriggerEvent::Started, this, &AKruger_ConclusionPlayerController::HandleMinimapZoom);
@@ -342,6 +346,38 @@ void AKruger_ConclusionPlayerController::SetupInputComponent()
 		}
 	}
 	
+}
+
+void AKruger_ConclusionPlayerController::ToggleGameplayPause()
+{
+	if (!IsLocalPlayerController() || RestraintMinigameWidget || RoundReportWidget || IsLegacyMainMenuVisible())
+	{
+		return;
+	}
+
+	const bool bShouldPause = !IsPaused();
+	if (UGameplayStatics::SetGamePaused(this, bShouldPause))
+	{
+		bShowMouseCursor = false;
+		SetInputMode(FInputModeGameOnly());
+	}
+}
+
+bool AKruger_ConclusionPlayerController::IsLegacyMainMenuVisible() const
+{
+	for (TObjectIterator<UUserWidget> It; It; ++It)
+	{
+		const UUserWidget* Widget = *It;
+		if (IsValid(Widget)
+			&& Widget->GetWorld() == GetWorld()
+			&& Widget->IsInViewport()
+			&& Widget->GetClass()->GetName().Contains(TEXT("WPB_MainMenuOverlay")))
+		{
+			return true;
+		}
+	}
+
+	return false;
 }
 
 void AKruger_ConclusionPlayerController::HandleMinimapZoom()

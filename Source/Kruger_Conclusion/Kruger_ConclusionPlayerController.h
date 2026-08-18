@@ -100,6 +100,8 @@ protected:
 	void HandleRestraintFinished(EPPRestraintResult Result);
 
 	void HandleMinimapZoom();
+	void ToggleGameplayPause();
+	bool IsLegacyMainMenuVisible() const;
 	void RestoreGameplayAfterRestraint();
 	void AbortActiveRestraint();
 
