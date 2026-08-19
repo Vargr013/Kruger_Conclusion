@@ -8,6 +8,7 @@
 #include "Data/PPHealthComponent.h"
 #include "Data/PPMinimapDefinition.h"
 #include "Actors/PPArrestZone.h"
+#include "Actors/PPRestPoint.h"
 #include "Engine/Canvas.h"
 #include "Engine/Texture2D.h"
 #include "EngineUtils.h"
@@ -102,6 +103,7 @@ int32 UPPPatrolHUDWidget::NativePaint(
 	DrawObjectives(AllottedGeometry, OutDrawElements, LayerId);
 	DrawEscortStatus(AllottedGeometry, OutDrawElements, LayerId);
 	DrawCombatStatus(AllottedGeometry, OutDrawElements, LayerId);
+	DrawRestPointPrompt(AllottedGeometry, OutDrawElements, LayerId);
 
 	return LayerId;
 }
@@ -232,6 +234,64 @@ void UPPPatrolHUDWidget::DrawCombatStatus(const FGeometry& AllottedGeometry, FSl
 		FVector2D(6.0f, 6.0f),
 		FSlateDrawElement::RelativeToElement,
 		WarningColor);
+}
+
+void UPPPatrolHUDWidget::DrawRestPointPrompt(const FGeometry& AllottedGeometry, FSlateWindowElementList& OutDrawElements, int32& LayerId) const
+{
+	const APlayerController* PlayerController = GetOwningPlayer();
+	const APawn* PlayerPawn = PlayerController ? PlayerController->GetPawn() : nullptr;
+	if (!PlayerPawn || !GetWorld())
+	{
+		return;
+	}
+
+	const APPRestPoint* RestPoint = nullptr;
+	for (TActorIterator<APPRestPoint> It(GetWorld()); It; ++It)
+	{
+		if (*It && (*It)->IsRangerInRangeFor(PlayerPawn))
+		{
+			RestPoint = *It;
+			break;
+		}
+	}
+	if (!RestPoint)
+	{
+		return;
+	}
+
+	const FSlateBrush* WhiteBrush = FCoreStyle::Get().GetBrush(TEXT("WhiteBrush"));
+	const FVector2D ViewSize = AllottedGeometry.GetLocalSize();
+	const FVector2D Size(320.0f, 58.0f);
+	const FVector2D Origin((ViewSize.X - Size.X) * 0.5f, ViewSize.Y * 0.62f);
+	DrawSafariPanel(AllottedGeometry, OutDrawElements, LayerId, WhiteBrush, Origin, Size, false);
+
+	const FSlateFontInfo LabelFont = FCoreStyle::GetDefaultFontStyle(TEXT("Bold"), 16);
+	FSlateDrawElement::MakeText(
+		OutDrawElements,
+		LayerId++,
+		AllottedGeometry.ToPaintGeometry(FVector2D(Size.X - 24.0f, 22.0f), FSlateLayoutTransform(Origin + FVector2D(12.0f, 8.0f))),
+		RestPoint->GetInteractionPrompt().ToString(),
+		LabelFont,
+		ESlateDrawEffect::None,
+		SafariTextColor);
+
+	const FVector2D BarOrigin = Origin + FVector2D(12.0f, 36.0f);
+	const FVector2D BarSize(Size.X - 24.0f, 10.0f);
+	const float HoldProgress = RestPoint->GetHoldProgress();
+	FSlateDrawElement::MakeBox(
+		OutDrawElements,
+		LayerId++,
+		AllottedGeometry.ToPaintGeometry(BarSize, FSlateLayoutTransform(BarOrigin)),
+		WhiteBrush,
+		ESlateDrawEffect::None,
+		FLinearColor(0.08f, 0.06f, 0.035f, 0.8f));
+	FSlateDrawElement::MakeBox(
+		OutDrawElements,
+		LayerId++,
+		AllottedGeometry.ToPaintGeometry(FVector2D(BarSize.X * HoldProgress, BarSize.Y), FSlateLayoutTransform(BarOrigin)),
+		WhiteBrush,
+		ESlateDrawEffect::None,
+		SafariGreenColor);
 }
 
 void UPPPatrolHUDWidget::DrawObjectives(const FGeometry& AllottedGeometry, FSlateWindowElementList& OutDrawElements, int32& LayerId) const

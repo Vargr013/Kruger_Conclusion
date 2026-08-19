@@ -47,18 +47,24 @@ public:
     FText ToolDisplayName;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon Setup|HUD", meta = (ClampMin = 0))
-    int32 MaxUses = 8;
+    int32 MaxAmmo = 10;
+
+
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon Setup|HUD")
     bool bConsumesUses = true;
 
+	UFUNCTION(BlueprintCallable, Category = "Weapon")
+	void Reload() { CurrentAmmo = MaxAmmo; }
+
+
     void Shoot();
 
     UFUNCTION(BlueprintPure, Category = "Weapon Setup|HUD")
-    int32 GetRemainingUses() const { return CurrentUses; }
+    int32 GetRemainingUses() const { return CurrentAmmo; }
 
     UFUNCTION(BlueprintPure, Category = "Weapon Setup|HUD")
-    int32 GetMaxUses() const { return MaxUses; }
+    int32 GetMaxUses() const { return MaxAmmo; }
 
     UFUNCTION(BlueprintPure, Category = "Weapon Setup|HUD")
     FText GetToolDisplayName() const;
@@ -68,7 +74,7 @@ private:
     void FireRaycast();
 
     UPROPERTY(VisibleInstanceOnly, Category = "Weapon Setup|HUD")
-    int32 CurrentUses = 0;
+    int32 CurrentAmmo = 0;
 
 protected:
     virtual void BeginPlay() override;

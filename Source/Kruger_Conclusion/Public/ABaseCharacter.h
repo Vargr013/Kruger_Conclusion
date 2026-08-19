@@ -35,6 +35,9 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
     float Health = 100.0f;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+    float MaxHealth = 100.0f;
+
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats")
     class UPPHealthComponent* HealthComponent;
 
@@ -69,7 +72,7 @@ protected:
     virtual void OnMovementStateChanged();
 
     UFUNCTION()
-    virtual void OnPlayerHealthChanged(float CurrentHealth, float MaxHealth);
+    virtual void OnPlayerHealthChanged(float NewCurrentHealth, float NewMaxHealth);
 
     UFUNCTION()
     virtual void OnPlayerHealthDepleted();

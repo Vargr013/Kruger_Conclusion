@@ -1,5 +1,7 @@
 #include "ABaseCharacter.h"
+#include "Actors/PPRestPoint.h"
 #include "Data/PPHealthComponent.h"
+#include "EngineUtils.h"
 #include "EnvironmentLevelSubsystem.h"
 #include "GameFramework/PlayerController.h"
 #include "InteractInterface.h"
@@ -163,9 +165,9 @@ void ABaseCharacter::OnMovementStateChanged()
     UpdateNoiseRadius();
 }
 
-void ABaseCharacter::OnPlayerHealthChanged(float CurrentHealth, float MaxHealth)
+void ABaseCharacter::OnPlayerHealthChanged(float NewCurrentHealth, float NewMaxHealth)
 {
-    Health = CurrentHealth;
+    Health = NewCurrentHealth;
 }
 
 void ABaseCharacter::OnPlayerHealthDepleted()
@@ -210,6 +212,17 @@ void ABaseCharacter::ResetPlayerHealth()
 
 void ABaseCharacter::Interact()
 {
+    if (UWorld* World = GetWorld())
+    {
+        for (TActorIterator<APPRestPoint> It(World); It; ++It)
+        {
+            if (*It && (*It)->IsRangerInRangeFor(this))
+            {
+                return;
+            }
+        }
+    }
+
     if (!Camera) return;
 
     FVector StartLocation = Camera->GetComponentLocation();

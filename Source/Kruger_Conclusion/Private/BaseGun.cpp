@@ -16,12 +16,12 @@ ABaseGun::ABaseGun()
     MuzzleLocation = CreateDefaultSubobject<USceneComponent>(TEXT("Muzzle"));
     MuzzleLocation->SetupAttachment(SceneRoot);
 
-    CurrentUses = MaxUses;
+    CurrentAmmo = MaxAmmo;
 }
 
 void ABaseGun::Shoot()
 {
-    if (bConsumesUses && CurrentUses <= 0)
+    if (bConsumesUses && CurrentAmmo <= 0)
     {
         return;
     }
@@ -37,7 +37,7 @@ void ABaseGun::Shoot()
 
     if (bConsumesUses)
     {
-        CurrentUses = FMath::Max(0, CurrentUses - 1);
+        CurrentAmmo = FMath::Max(0, CurrentAmmo - 1);
     }
 }
 
@@ -45,7 +45,7 @@ void ABaseGun::BeginPlay()
 {
     Super::BeginPlay();
 
-    CurrentUses = MaxUses;
+    CurrentAmmo = MaxAmmo;
 }
 
 FText ABaseGun::GetToolDisplayName() const

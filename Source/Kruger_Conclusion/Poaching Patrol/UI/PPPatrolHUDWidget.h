@@ -10,6 +10,7 @@ class ABaseGun;
 class APPAnimalCharacter;
 class APPArrestZone;
 class APPPoacherCharacter;
+class APPRestPoint;
 class UPPMinimapDefinition;
 
 UCLASS()
@@ -117,6 +118,7 @@ private:
 	void DrawObjectives(const FGeometry& AllottedGeometry, FSlateWindowElementList& OutDrawElements, int32& LayerId) const;
 	void DrawEscortStatus(const FGeometry& AllottedGeometry, FSlateWindowElementList& OutDrawElements, int32& LayerId) const;
 	void DrawCombatStatus(const FGeometry& AllottedGeometry, FSlateWindowElementList& OutDrawElements, int32& LayerId) const;
+	void DrawRestPointPrompt(const FGeometry& AllottedGeometry, FSlateWindowElementList& OutDrawElements, int32& LayerId) const;
 
 	ABaseGun* FindCurrentTool() const;
 	float GetResponsiveMinimapSize(const FVector2D& ViewSize) const;

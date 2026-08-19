@@ -15,6 +15,10 @@ class KRUGER_CONCLUSION_API ARangerCharacter : public ABaseCharacter
 public:
     ARangerCharacter();
 
+	UFUNCTION(BlueprintCallable, Category = "Character")
+    void Resupply();
+
+
 protected:
     virtual void BeginPlay() override;
     virtual void Tick(float DeltaTime) override;
@@ -76,6 +80,9 @@ protected:
 public:
     UFUNCTION(BlueprintPure, Category = "Weapon")
     ABaseGun* GetCurrentGun() const { return CurrentGun; }
+
+    UFUNCTION(BlueprintCallable, Category = "Weapon")
+    void SetCurrentGun(ABaseGun* NewGun) { CurrentGun = NewGun; }
 
 private:
     void Move(const FInputActionValue& Value);

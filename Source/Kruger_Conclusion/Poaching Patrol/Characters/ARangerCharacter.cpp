@@ -4,7 +4,8 @@
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Camera/CameraComponent.h"
-#include "BaseGun.h"                
+#include "BaseGun.h"
+#include "Data/PPHealthComponent.h" 
 
 ARangerCharacter::ARangerCharacter()
 {
@@ -155,3 +156,17 @@ void ARangerCharacter::Look(const FInputActionValue& Value)
 void ARangerCharacter::StartSprint(const FInputActionValue& Value) { ToggleSprint(); }
 void ARangerCharacter::StopSprint(const FInputActionValue& Value) { ToggleSprint(); }
 void ARangerCharacter::StartCrouch(const FInputActionValue& Value) { ToggleCrouch(); }
+
+void ARangerCharacter::Resupply()
+{
+    Health = MaxHealth;
+    if (HealthComponent)
+    {
+        HealthComponent->ResetHealth();
+    }
+
+    if (CurrentGun)
+    {
+        CurrentGun->Reload();
+    }
+}
