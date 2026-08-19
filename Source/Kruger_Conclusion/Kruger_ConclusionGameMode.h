@@ -16,11 +16,6 @@ class AKruger_ConclusionGameMode : public AGameModeBase
 
 public:
 	AKruger_ConclusionGameMode();
-
-	virtual void StartPlay() override;
-
-private:
-	void EnsureBuildReadyNavigation();
 };
 
 

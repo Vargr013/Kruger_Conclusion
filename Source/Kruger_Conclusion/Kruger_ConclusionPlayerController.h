@@ -13,6 +13,8 @@ class UUserWidget;
 class UPPPatrolHUDWidget;
 class UPPRoundReportWidget;
 class UPPRestraintMinigameWidget;
+class UPPPauseMenuWidget;
+class UPPGraphicsSettingsWidget;
 class APPPoacherCharacter;
 struct FPPRoundResult;
 enum class EPPRestraintResult : uint8;
@@ -37,6 +39,18 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category="Poaching Patrol|Flow")
 	void ReturnToPoachingPatrolMenu();
+
+	UFUNCTION(BlueprintCallable, Category="Poaching Patrol|Graphics")
+	void OpenGraphicsSettings();
+
+	UFUNCTION(BlueprintCallable, Category="Poaching Patrol|Graphics")
+	void CloseGraphicsSettings();
+
+	UFUNCTION(BlueprintCallable, Category="Poaching Patrol|Pause")
+	void OpenPauseOverlay();
+
+	UFUNCTION(BlueprintCallable, Category="Poaching Patrol|Pause")
+	void ClosePauseOverlay();
 
 	UFUNCTION(BlueprintCallable, Category="Poaching Patrol|Restraint")
 	bool StartPoacherRestraint(APPPoacherCharacter* Poacher);
@@ -88,6 +102,12 @@ protected:
 	TObjectPtr<UPPRestraintMinigameWidget> RestraintMinigameWidget;
 
 	UPROPERTY()
+	TObjectPtr<UPPPauseMenuWidget> PauseMenuWidget;
+
+	UPROPERTY()
+	TObjectPtr<UPPGraphicsSettingsWidget> MainMenuGraphicsWidget;
+
+	UPROPERTY()
 	TWeakObjectPtr<APPPoacherCharacter> ActiveRestraintPoacher;
 
 	TWeakObjectPtr<APawn> ActiveRestraintCaptor;
@@ -102,12 +122,14 @@ protected:
 	void HandleMinimapZoom();
 	void ToggleGameplayPause();
 	bool IsLegacyMainMenuVisible() const;
+	void RefreshMainMenuGraphicsEntry();
 	void RestoreGameplayAfterRestraint();
 	void AbortActiveRestraint();
 
 	void ApplyReplayMenuBypass();
 	void ReloadCurrentPatrolLevel();
 	FTimerHandle ReplayMenuBypassTimer;
+	FTimerHandle MainMenuGraphicsTimer;
 
 	/** Gameplay initialization */
 	virtual void BeginPlay() override;

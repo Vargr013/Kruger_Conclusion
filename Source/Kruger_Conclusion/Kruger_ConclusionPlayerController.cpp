@@ -17,6 +17,8 @@
 #include "PPPatrolHUDWidget.h"
 #include "UI/PPRoundReportWidget.h"
 #include "UI/PPRestraintMinigameWidget.h"
+#include "UI/PPPauseMenuWidget.h"
+#include "UI/PPGraphicsSettingsWidget.h"
 #include "Characters/PPPoacherCharacter.h"
 #include "Kismet/GameplayStatics.h"
 #include "Widgets/Input/SVirtualJoystick.h"
@@ -93,6 +95,18 @@ void AKruger_ConclusionPlayerController::BeginPlay()
 
 	if (IsLocalPlayerController())
 	{
+		MainMenuGraphicsWidget = CreateWidget<UPPGraphicsSettingsWidget>(this, UPPGraphicsSettingsWidget::StaticClass());
+		if (MainMenuGraphicsWidget)
+		{
+			MainMenuGraphicsWidget->SetHeading(NSLOCTEXT("PoachingPatrol", "MainMenuGraphics", "Settings - Graphics"));
+			MainMenuGraphicsWidget->SetAnchorsInViewport(FAnchors(0.5f, 0.82f));
+			MainMenuGraphicsWidget->SetAlignmentInViewport(FVector2D(0.5f, 0.5f));
+			MainMenuGraphicsWidget->SetDesiredSizeInViewport(FVector2D(520.0f, 110.0f));
+			MainMenuGraphicsWidget->AddToPlayerScreen(90);
+			RefreshMainMenuGraphicsEntry();
+			GetWorldTimerManager().SetTimer(MainMenuGraphicsTimer, this, &AKruger_ConclusionPlayerController::RefreshMainMenuGraphicsEntry, 0.2f, true);
+		}
+
 		if (UEnvironmentLevelSubsystem* LevelSubsystem = GetWorld() ? GetWorld()->GetSubsystem<UEnvironmentLevelSubsystem>() : nullptr)
 		{
 			LevelSubsystem->OnRoundEnded.AddUniqueDynamic(this, &AKruger_ConclusionPlayerController::HandlePoachingPatrolRoundEnded);
@@ -115,6 +129,7 @@ void AKruger_ConclusionPlayerController::BeginPlay()
 
 void AKruger_ConclusionPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	GetWorldTimerManager().ClearTimer(MainMenuGraphicsTimer);
 	AbortActiveRestraint();
 	Super::EndPlay(EndPlayReason);
 }
@@ -287,6 +302,27 @@ void AKruger_ConclusionPlayerController::ReturnToPoachingPatrolMenu()
 	ReloadCurrentPatrolLevel();
 }
 
+void AKruger_ConclusionPlayerController::OpenGraphicsSettings()
+{
+	if (MainMenuGraphicsWidget)
+	{
+		MainMenuGraphicsWidget->SetVisibility(ESlateVisibility::Visible);
+		bShowMouseCursor = true;
+		FInputModeGameAndUI InputMode;
+		InputMode.SetWidgetToFocus(MainMenuGraphicsWidget->TakeWidget());
+		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+		SetInputMode(InputMode);
+	}
+}
+
+void AKruger_ConclusionPlayerController::CloseGraphicsSettings()
+{
+	if (MainMenuGraphicsWidget)
+	{
+		MainMenuGraphicsWidget->SetVisibility(ESlateVisibility::Collapsed);
+	}
+}
+
 void AKruger_ConclusionPlayerController::ReloadCurrentPatrolLevel()
 {
 	UGameplayStatics::SetGamePaused(this, false);
@@ -355,12 +391,54 @@ void AKruger_ConclusionPlayerController::ToggleGameplayPause()
 		return;
 	}
 
-	const bool bShouldPause = !IsPaused();
-	if (UGameplayStatics::SetGamePaused(this, bShouldPause))
+	if (PauseMenuWidget)
 	{
-		bShowMouseCursor = false;
-		SetInputMode(FInputModeGameOnly());
+		ClosePauseOverlay();
 	}
+	else
+	{
+		OpenPauseOverlay();
+	}
+}
+
+void AKruger_ConclusionPlayerController::OpenPauseOverlay()
+{
+	if (!IsLocalPlayerController() || PauseMenuWidget || RestraintMinigameWidget || RoundReportWidget || IsLegacyMainMenuVisible())
+	{
+		return;
+	}
+
+	PauseMenuWidget = CreateWidget<UPPPauseMenuWidget>(this, UPPPauseMenuWidget::StaticClass());
+	if (!PauseMenuWidget)
+	{
+		return;
+	}
+	PauseMenuWidget->AddToPlayerScreen(75);
+	if (!UGameplayStatics::SetGamePaused(this, true))
+	{
+		PauseMenuWidget->RemoveFromParent();
+		PauseMenuWidget = nullptr;
+		return;
+	}
+	bShowMouseCursor = true;
+	FInputModeUIOnly InputMode;
+	InputMode.SetWidgetToFocus(PauseMenuWidget->TakeWidget());
+	InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+	SetInputMode(InputMode);
+	PauseMenuWidget->SetKeyboardFocus();
+}
+
+void AKruger_ConclusionPlayerController::ClosePauseOverlay()
+{
+	if (!PauseMenuWidget)
+	{
+		return;
+	}
+	PauseMenuWidget->RemoveFromParent();
+	PauseMenuWidget = nullptr;
+	UGameplayStatics::SetGamePaused(this, false);
+	bShowMouseCursor = false;
+	SetInputMode(FInputModeGameOnly());
 }
 
 bool AKruger_ConclusionPlayerController::IsLegacyMainMenuVisible() const
@@ -378,6 +456,14 @@ bool AKruger_ConclusionPlayerController::IsLegacyMainMenuVisible() const
 	}
 
 	return false;
+}
+
+void AKruger_ConclusionPlayerController::RefreshMainMenuGraphicsEntry()
+{
+	if (MainMenuGraphicsWidget)
+	{
+		MainMenuGraphicsWidget->SetVisibility(IsLegacyMainMenuVisible() ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
+	}
 }
 
 void AKruger_ConclusionPlayerController::HandleMinimapZoom()

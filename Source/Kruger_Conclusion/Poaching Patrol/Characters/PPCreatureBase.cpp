@@ -4,7 +4,7 @@
 #include "Data/PPHealthComponent.h"
 #include "DrawDebugHelpers.h"
 #include "Engine/Engine.h"
-#include "EngineUtils.h"
+#include "EnvironmentLevelSubsystem.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/DamageType.h"
 #include "Kismet/GameplayStatics.h"
@@ -101,11 +101,14 @@ AActor* APPCreatureBase::FindBestAttackTarget() const
 
 	ConsiderTarget(FindPlayerActor());
 
-	if (UWorld* World = GetWorld())
+	if (const UWorld* World = GetWorld())
 	{
-		for (TActorIterator<APPCreatureBase> It(World); It; ++It)
+		if (const UEnvironmentLevelSubsystem* LevelSubsystem = World->GetSubsystem<UEnvironmentLevelSubsystem>())
 		{
-			ConsiderTarget(*It);
+			for (APPCreatureBase* Creature : LevelSubsystem->GetRegisteredCreatures())
+			{
+				ConsiderTarget(Creature);
+			}
 		}
 	}
 
@@ -186,7 +189,8 @@ void APPCreatureBase::StartAIUpdates()
 		this,
 		&APPCreatureBase::UpdateCreatureAI,
 		AIUpdateInterval,
-		true);
+		true,
+		FMath::FRandRange(0.0f, AIUpdateInterval));
 }
 
 void APPCreatureBase::StopAIUpdates()
@@ -295,11 +299,14 @@ AActor* APPCreatureBase::FindBestThreatActor()
 
 	ConsiderThreat(FindPlayerActor());
 
-	if (UWorld* World = GetWorld())
+	if (const UWorld* World = GetWorld())
 	{
-		for (TActorIterator<APPCreatureBase> It(World); It; ++It)
+		if (const UEnvironmentLevelSubsystem* LevelSubsystem = World->GetSubsystem<UEnvironmentLevelSubsystem>())
 		{
-			ConsiderThreat(*It);
+			for (APPCreatureBase* Creature : LevelSubsystem->GetRegisteredCreatures())
+			{
+				ConsiderThreat(Creature);
+			}
 		}
 	}
 

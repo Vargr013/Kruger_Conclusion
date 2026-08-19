@@ -3,6 +3,7 @@
 #include "Misc/AutomationTest.h"
 
 #include "Characters/PPPoacherCharacter.h"
+#include "Characters/PPAnimalCharacter.h"
 #include "Engine/Engine.h"
 #include "Engine/World.h"
 #include "EnvironmentLevelSubsystem.h"
@@ -123,6 +124,37 @@ bool FPPPlayerDownRoundFailureTest::RunTest(const FString& Parameters)
 		const FPPRoundResult FirstResult = Rules->GetFinalRoundResult();
 		Rules->ReportPlayerDowned();
 		TestEqual(TEXT("Duplicate player down is idempotent"), Rules->GetFinalRoundResult().Outcome, FirstResult.Outcome);
+	}
+
+	DestroyCombatTestWorld(World);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FPPRegisteredCreatureCandidatesTest,
+	"KrugerConclusion.PoachingPatrol.AI.RegisteredCreatureCandidates",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FPPRegisteredCreatureCandidatesTest::RunTest(const FString& Parameters)
+{
+	UWorld* World = CreateCombatTestWorld(TEXT("PPRegisteredCreaturesAutomationWorld"));
+	if (!TestNotNull(TEXT("Automation world created"), World))
+	{
+		return false;
+	}
+
+	UEnvironmentLevelSubsystem* Rules = World->GetSubsystem<UEnvironmentLevelSubsystem>();
+	APPPoacherCharacter* Poacher = World->SpawnActor<APPPoacherCharacter>();
+	APPAnimalCharacter* Animal = World->SpawnActor<APPAnimalCharacter>();
+	if (TestNotNull(TEXT("Rules exist"), Rules) && TestNotNull(TEXT("Poacher exists"), Poacher) && TestNotNull(TEXT("Animal exists"), Animal))
+	{
+		Rules->RegisterPoacher(Poacher);
+		Rules->RegisterAnimal(Animal);
+		Rules->RegisterPoacher(Poacher);
+		const TArray<APPCreatureBase*> Candidates = Rules->GetRegisteredCreatures();
+		TestEqual(TEXT("Duplicate registration is filtered"), Candidates.Num(), 2);
+		TestTrue(TEXT("Poacher is returned"), Candidates.Contains(Poacher));
+		TestTrue(TEXT("Animal is returned"), Candidates.Contains(Animal));
 	}
 
 	DestroyCombatTestWorld(World);

@@ -44,6 +44,11 @@ public class Kruger_Conclusion : ModuleRules
 
 		PrivateDependencyModuleNames.AddRange(new string[] { "SlateCore" });
 
+		if (Target.bBuildEditor)
+		{
+			PrivateDependencyModuleNames.AddRange(new string[] { "UnrealEd", "Foliage", "FoliageEdit" });
+		}
+
 		// Uncomment if you are using online features
 		// PrivateDependencyModuleNames.Add("OnlineSubsystem");
 

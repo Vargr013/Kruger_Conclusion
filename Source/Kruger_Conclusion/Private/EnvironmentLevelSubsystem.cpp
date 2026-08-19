@@ -1,6 +1,7 @@
 #include "EnvironmentLevelSubsystem.h"
 
 #include "Characters/PPAnimalCharacter.h"
+#include "Characters/PPCreatureBase.h"
 #include "Characters/PPPoacherCharacter.h"
 #include "Data/PPHealthComponent.h"
 #include "EngineUtils.h"
@@ -373,6 +374,27 @@ TArray<APPAnimalCharacter*> UEnvironmentLevelSubsystem::GetLivingAnimals() const
 		LivingAnimals.Add(Animal);
 	}
 	return LivingAnimals;
+}
+
+TArray<APPCreatureBase*> UEnvironmentLevelSubsystem::GetRegisteredCreatures() const
+{
+	TArray<APPCreatureBase*> Creatures;
+	Creatures.Reserve(RegisteredPoachers.Num() + RegisteredAnimals.Num());
+	for (const TWeakObjectPtr<APPPoacherCharacter>& PoacherPtr : RegisteredPoachers)
+	{
+		if (APPPoacherCharacter* Poacher = PoacherPtr.Get(); IsValid(Poacher))
+		{
+			Creatures.Add(Poacher);
+		}
+	}
+	for (const TWeakObjectPtr<APPAnimalCharacter>& AnimalPtr : RegisteredAnimals)
+	{
+		if (APPAnimalCharacter* Animal = AnimalPtr.Get(); IsValid(Animal))
+		{
+			Creatures.Add(Animal);
+		}
+	}
+	return Creatures;
 }
 
 void UEnvironmentLevelSubsystem::BroadcastStateChanged()

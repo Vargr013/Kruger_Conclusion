@@ -8,6 +8,7 @@
 class AActor;
 class APPAnimalCharacter;
 class APPPoacherCharacter;
+class APPCreatureBase;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnLevelStateChangedSignature);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPPRoundStateChangedSignature, FPPRoundSnapshot, Snapshot);
@@ -67,6 +68,10 @@ public:
 
 	UFUNCTION(BlueprintPure, Category="Poaching Patrol|Minimap")
 	TArray<APPAnimalCharacter*> GetLivingAnimals() const;
+
+	/** Registered, currently valid creature candidates for AI perception/target selection. */
+	UFUNCTION(BlueprintPure, Category="Poaching Patrol|AI")
+	TArray<APPCreatureBase*> GetRegisteredCreatures() const;
 
 	static int32 CalculateRequiredArrests(int32 TotalPoachers, float Threshold);
 

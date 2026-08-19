@@ -165,10 +165,19 @@ void UPPPatrolHUDWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTi
 	}
 }
 
+const FSlateBrush* UPPPatrolHUDWidget::GetCachedWhiteBrush() const
+{
+	if (!CachedWhiteBrush)
+	{
+		CachedWhiteBrush = FCoreStyle::Get().GetBrush(TEXT("WhiteBrush"));
+	}
+	return CachedWhiteBrush;
+}
+
 void UPPPatrolHUDWidget::DrawCombatStatus(const FGeometry& AllottedGeometry, FSlateWindowElementList& OutDrawElements, int32& LayerId) const
 {
 	const FVector2D ViewSize = AllottedGeometry.GetLocalSize();
-	const FSlateBrush* WhiteBrush = FCoreStyle::Get().GetBrush(TEXT("WhiteBrush"));
+	const FSlateBrush* WhiteBrush = GetCachedWhiteBrush();
 	if (DamageFlashRemaining > 0.0f)
 	{
 		const float Alpha = 0.18f * FMath::Clamp(DamageFlashRemaining / 0.35f, 0.0f, 1.0f);
@@ -301,11 +310,11 @@ void UPPPatrolHUDWidget::DrawObjectives(const FGeometry& AllottedGeometry, FSlat
 		return;
 	}
 
-	const FSlateBrush* WhiteBrush = FCoreStyle::Get().GetBrush(TEXT("WhiteBrush"));
+	const FSlateBrush* WhiteBrush = GetCachedWhiteBrush();
 	const FVector2D Origin(24.0f, 76.0f);
 	const FVector2D Size(368.0f, 126.0f);
-	const FSlateFontInfo HeadingFont = FCoreStyle::GetDefaultFontStyle(TEXT("Bold"), 16);
-	const FSlateFontInfo DetailFont = FCoreStyle::GetDefaultFontStyle(TEXT("Regular"), 12);
+	static const FSlateFontInfo HeadingFont = FCoreStyle::GetDefaultFontStyle(TEXT("Bold"), 16);
+	static const FSlateFontInfo DetailFont = FCoreStyle::GetDefaultFontStyle(TEXT("Regular"), 12);
 	DrawSafariPanel(AllottedGeometry, OutDrawElements, LayerId, WhiteBrush, Origin, Size, false);
 
 	FSlateDrawElement::MakeText(
@@ -349,9 +358,9 @@ void UPPPatrolHUDWidget::DrawEscortStatus(const FGeometry& AllottedGeometry, FSl
 	const FVector2D ViewSize = AllottedGeometry.GetLocalSize();
 	const FVector2D Size(440.0f, CachedEscortStatus.bUnderEscapePressure ? 116.0f : 86.0f);
 	const FVector2D Origin((ViewSize.X - Size.X) * 0.5f, ViewSize.Y - Size.Y - 28.0f);
-	const FSlateBrush* WhiteBrush = FCoreStyle::Get().GetBrush(TEXT("WhiteBrush"));
-	const FSlateFontInfo HeadingFont = FCoreStyle::GetDefaultFontStyle(TEXT("Bold"), 15);
-	const FSlateFontInfo DetailFont = FCoreStyle::GetDefaultFontStyle(TEXT("Regular"), 12);
+	const FSlateBrush* WhiteBrush = GetCachedWhiteBrush();
+	static const FSlateFontInfo HeadingFont = FCoreStyle::GetDefaultFontStyle(TEXT("Bold"), 15);
+	static const FSlateFontInfo DetailFont = FCoreStyle::GetDefaultFontStyle(TEXT("Regular"), 12);
 	DrawSafariPanel(AllottedGeometry, OutDrawElements, LayerId, WhiteBrush, Origin, Size, false);
 
 	FSlateDrawElement::MakeText(
@@ -390,7 +399,7 @@ void UPPPatrolHUDWidget::DrawEscortStatus(const FGeometry& AllottedGeometry, FSl
 
 void UPPPatrolHUDWidget::DrawControlsHint(const FGeometry& AllottedGeometry, FSlateWindowElementList& OutDrawElements, int32& LayerId) const
 {
-	const FSlateBrush* WhiteBrush = FCoreStyle::Get().GetBrush(TEXT("WhiteBrush"));
+	const FSlateBrush* WhiteBrush = GetCachedWhiteBrush();
 	const FVector2D ViewSize = AllottedGeometry.GetLocalSize();
 	const float ResponsiveMinimapSize = GetResponsiveMinimapSize(ViewSize);
 	const FVector2D MapOrigin(
@@ -414,7 +423,7 @@ void UPPPatrolHUDWidget::DrawControlsHint(const FGeometry& AllottedGeometry, FSl
 		FMath::Max(ResponsiveMinimapSize, 168.0f),
 		PanelPaddingY * 2.0f + LineHeight * static_cast<float>(LineCount));
 	const FVector2D Origin(MapOrigin.X, MapOrigin.Y - GapAboveMinimap - Size.Y);
-	const FSlateFontInfo DetailFont = FCoreStyle::GetDefaultFontStyle(TEXT("Regular"), 11);
+	static const FSlateFontInfo DetailFont = FCoreStyle::GetDefaultFontStyle(TEXT("Regular"), 11);
 
 	DrawSafariPanel(AllottedGeometry, OutDrawElements, LayerId, WhiteBrush, Origin, Size, true);
 
@@ -442,7 +451,7 @@ void UPPPatrolHUDWidget::DrawMinimap(const FGeometry& AllottedGeometry, FSlateWi
 		return;
 	}
 
-	const FSlateBrush* WhiteBrush = FCoreStyle::Get().GetBrush(TEXT("WhiteBrush"));
+	const FSlateBrush* WhiteBrush = GetCachedWhiteBrush();
 	const FVector2D ViewSize = AllottedGeometry.GetLocalSize();
 	const float ResponsiveMinimapSize = GetResponsiveMinimapSize(ViewSize);
 	const FVector2D MapSize(ResponsiveMinimapSize, ResponsiveMinimapSize);
@@ -628,9 +637,9 @@ void UPPPatrolHUDWidget::DrawCompass(const FGeometry& AllottedGeometry, FSlateWi
 	const FVector2D Start((ViewSize.X - LocalCompassWidth) * 0.5f, CompassTopOffset);
 	const FVector2D CompassSize(LocalCompassWidth, 34.0f);
 	const FVector2D Center(Start.X + LocalCompassWidth * 0.5f, Start.Y + 17.0f);
-	const FSlateBrush* WhiteBrush = FCoreStyle::Get().GetBrush(TEXT("WhiteBrush"));
-	const FSlateFontInfo CardinalFont = FCoreStyle::GetDefaultFontStyle(TEXT("Bold"), 12);
-	const FSlateFontInfo IntercardinalFont = FCoreStyle::GetDefaultFontStyle(TEXT("Regular"), 10);
+	const FSlateBrush* WhiteBrush = GetCachedWhiteBrush();
+	static const FSlateFontInfo CardinalFont = FCoreStyle::GetDefaultFontStyle(TEXT("Bold"), 12);
+	static const FSlateFontInfo IntercardinalFont = FCoreStyle::GetDefaultFontStyle(TEXT("Regular"), 10);
 	const float VisibleDegrees = 110.0f;
 	const float HalfWidth = LocalCompassWidth * 0.5f;
 
@@ -795,8 +804,8 @@ void UPPPatrolHUDWidget::DrawPlayerHealth(const FGeometry& AllottedGeometry, FSl
 	const FVector2D BarSize(Size.X - 24.0f, 8.0f);
 	const FVector2D ThumbSize(4.0f, 18.0f);
 	const float ThumbX = BarOrigin.X + (BarSize.X * HealthPercent) - (ThumbSize.X * 0.5f);
-	const FSlateBrush* WhiteBrush = FCoreStyle::Get().GetBrush(TEXT("WhiteBrush"));
-	const FSlateFontInfo LabelFont = FCoreStyle::GetDefaultFontStyle(TEXT("Regular"), 11);
+	const FSlateBrush* WhiteBrush = GetCachedWhiteBrush();
+	static const FSlateFontInfo LabelFont = FCoreStyle::GetDefaultFontStyle(TEXT("Regular"), 11);
 	const FLinearColor HealthColor = HealthPercent <= 0.3f
 		? SafariDangerColor
 		: SafariGreenColor;
@@ -848,9 +857,9 @@ void UPPPatrolHUDWidget::DrawToolCount(const FGeometry& AllottedGeometry, FSlate
 	const FVector2D ViewSize = AllottedGeometry.GetLocalSize();
 	const FVector2D Size(176.0f, 42.0f);
 	const FVector2D Origin(ViewSize.X - Size.X - ToolCountOffset.X, ViewSize.Y - Size.Y - ToolCountOffset.Y);
-	const FSlateBrush* WhiteBrush = FCoreStyle::Get().GetBrush(TEXT("WhiteBrush"));
-	const FSlateFontInfo LabelFont = FCoreStyle::GetDefaultFontStyle(TEXT("Regular"), 11);
-	const FSlateFontInfo CountFont = FCoreStyle::GetDefaultFontStyle(TEXT("Bold"), 19);
+	const FSlateBrush* WhiteBrush = GetCachedWhiteBrush();
+	static const FSlateFontInfo LabelFont = FCoreStyle::GetDefaultFontStyle(TEXT("Regular"), 11);
+	static const FSlateFontInfo CountFont = FCoreStyle::GetDefaultFontStyle(TEXT("Bold"), 19);
 
 	DrawSafariPanel(AllottedGeometry, OutDrawElements, LayerId, WhiteBrush, Origin, Size, true);
 

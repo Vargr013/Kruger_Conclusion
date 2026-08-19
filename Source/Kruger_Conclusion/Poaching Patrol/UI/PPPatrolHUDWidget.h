@@ -12,6 +12,7 @@ class APPArrestZone;
 class APPPoacherCharacter;
 class APPRestPoint;
 class UPPMinimapDefinition;
+struct FSlateBrush;
 
 UCLASS()
 class KRUGER_CONCLUSION_API UPPPatrolHUDWidget : public UUserWidget
@@ -124,10 +125,12 @@ private:
 	float GetResponsiveMinimapSize(const FVector2D& ViewSize) const;
 	FVector2D WorldToMinimap(const FVector& WorldLocation, const APawn* PlayerPawn, float MapRadius) const;
 	void RefreshMinimapActors();
+	const FSlateBrush* GetCachedWhiteBrush() const;
 
 	TArray<FPPObjectiveState> CachedObjectives;
 	FPPEscortStatus CachedEscortStatus;
 	float StatusRefreshAccumulator = 0.0f;
+	mutable const FSlateBrush* CachedWhiteBrush = nullptr;
 	bool bHasEscortStatus = false;
 	int32 CurrentMinimapZoomIndex = 1;
 	TArray<TWeakObjectPtr<APPPoacherCharacter>> CachedMinimapPoachers;
