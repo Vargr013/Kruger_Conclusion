@@ -29,6 +29,10 @@ public:
 	void ReportPoacherPermanentlyEscaped(APPPoacherCharacter* Poacher);
 	void ReportAnimalPoached(APPAnimalCharacter* Animal);
 	void ReportPlayerDowned();
+	void StartPatrol();
+	bool HasPatrolStarted() const { return bPatrolStarted; }
+	float GetPatrolSecondsRemaining() const;
+	virtual void Deinitialize() override;
 
 	bool TryAcquirePlayerAttackSlot(APPPoacherCharacter* Poacher);
 	void ReleasePlayerAttackSlot(APPPoacherCharacter* Poacher);
@@ -96,10 +100,19 @@ private:
 	void BroadcastStateChanged();
 	void CheckWinCondition();
 	void FinishRound(EPPRoundEndReason Reason);
+	void CheckPatrolTime();
 	void ReleaseAllPlayerAttackSlots();
 
 	UPROPERTY(Config, EditAnywhere, Category="Poaching Patrol|Round", meta=(ClampMin="0.0", ClampMax="1.0"))
 	float WinThresholdPercentage = 0.50f;
+
+	UPROPERTY(Config, EditAnywhere, Category="Poaching Patrol|Round", meta=(ClampMin="1.0"))
+	float PatrolDurationSeconds = 600.0f;
+
+	FTimerHandle PatrolTimerHandle;
+	float PatrolEndTime = 0.0f;
+	float FinalSecondsRemaining = 0.0f;
+	bool bPatrolStarted = false;
 
 	UPROPERTY(Config, EditAnywhere, Category="Poaching Patrol|Combat", meta=(ClampMin="1", ClampMax="8"))
 	int32 MaxConcurrentPlayerAttackers = 2;

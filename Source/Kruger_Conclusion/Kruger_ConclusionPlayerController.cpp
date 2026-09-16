@@ -127,6 +127,21 @@ void AKruger_ConclusionPlayerController::BeginPlay()
 	}
 }
 
+void AKruger_ConclusionPlayerController::PlayerTick(float DeltaTime)
+{
+	Super::PlayerTick(DeltaTime);
+	if (!IsLocalPlayerController() || IsPaused() || bShowMouseCursor || !GetPawn())
+	{
+		return;
+	}
+	UEnvironmentLevelSubsystem* Rules = GetWorld()->GetSubsystem<UEnvironmentLevelSubsystem>();
+	// I waited until the menu closed so its opening frame did not start the clock.
+	if (Rules && !Rules->HasPatrolStarted() && !Rules->HasRoundEnded() && !IsLegacyMainMenuVisible())
+	{
+		Rules->StartPatrol();
+	}
+}
+
 void AKruger_ConclusionPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	GetWorldTimerManager().ClearTimer(MainMenuGraphicsTimer);

@@ -5,6 +5,7 @@
 #include "Characters/PPPoacherCharacter.h"
 #include "Data/PPHealthComponent.h"
 #include "EngineUtils.h"
+#include "TimerManager.h"
 
 void UEnvironmentLevelSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 {
@@ -16,6 +17,10 @@ void UEnvironmentLevelSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 
 void UEnvironmentLevelSubsystem::ResetRoundState()
 {
+	GetWorld()->GetTimerManager().ClearTimer(PatrolTimerHandle);
+	bPatrolStarted = false;
+	PatrolEndTime = 0.0f;
+	FinalSecondsRemaining = 0.0f;
 	RegisteredPoachers.Reset();
 	RegisteredAnimals.Reset();
 	ArrestedPoachers.Reset();
@@ -103,6 +108,45 @@ void UEnvironmentLevelSubsystem::ReportAnimalPoached(APPAnimalCharacter* Animal)
 void UEnvironmentLevelSubsystem::ReportPlayerDowned()
 {
 	FinishRound(EPPRoundEndReason::PlayerDowned);
+}
+
+void UEnvironmentLevelSubsystem::StartPatrol()
+{
+	if (bPatrolStarted || bRoundEnded || RegisteredPoachers.IsEmpty() || !GetWorld())
+	{
+		return;
+	}
+	// I used world time so pausing and restraint did not use patrol time.
+	bPatrolStarted = true;
+	PatrolEndTime = GetWorld()->GetTimeSeconds() + FMath::Max(1.0f, PatrolDurationSeconds);
+	GetWorld()->GetTimerManager().SetTimer(PatrolTimerHandle, this, &UEnvironmentLevelSubsystem::CheckPatrolTime, 0.1f, true);
+}
+
+float UEnvironmentLevelSubsystem::GetPatrolSecondsRemaining() const
+{
+	if (bRoundEnded)
+	{
+		return FinalSecondsRemaining;
+	}
+	return bPatrolStarted && GetWorld() ? FMath::Max(0.0f, PatrolEndTime - GetWorld()->GetTimeSeconds())
+		: FMath::Max(1.0f, PatrolDurationSeconds);
+}
+
+void UEnvironmentLevelSubsystem::CheckPatrolTime()
+{
+	if (bPatrolStarted && !bRoundEnded && GetPatrolSecondsRemaining() <= 0.0f)
+	{
+		FinishRound(EPPRoundEndReason::TimeExpired);
+	}
+}
+
+void UEnvironmentLevelSubsystem::Deinitialize()
+{
+	if (GetWorld())
+	{
+		GetWorld()->GetTimerManager().ClearTimer(PatrolTimerHandle);
+	}
+	Super::Deinitialize();
 }
 
 bool UEnvironmentLevelSubsystem::TryAcquirePlayerAttackSlot(APPPoacherCharacter* Poacher)
@@ -253,8 +297,8 @@ TArray<FPPObjectiveState> UEnvironmentLevelSubsystem::GetObjectivesForPlayer(AAc
 		? FText::FromString(TEXT("Resolve the remaining poachers"))
 		: FText::Format(NSLOCTEXT("PoachingPatrol", "ArrestQuota", "Arrest at least {0} of {1} poachers"), Snapshot.RequiredArrests, Snapshot.TotalPoachers);
 	Primary.Detail = Snapshot.bQuotaMet && Snapshot.ActivePoachers > 0
-		? FText::Format(NSLOCTEXT("PoachingPatrol", "RemainingPatrolProgress", "Remaining: {0} - resolve all to finish early"), Snapshot.ActivePoachers)
-		: FText::Format(NSLOCTEXT("PoachingPatrol", "ArrestDeliveryProgress", "Arrested: {0} / {1} - deliver captives to a camp"), Snapshot.PoachersArrested, Snapshot.RequiredArrests);
+		? FText::Format(NSLOCTEXT("PoachingPatrol", "RemainingTimedProgress", "Remaining: {0} - finish before time runs out"), Snapshot.ActivePoachers)
+		: FText::Format(NSLOCTEXT("PoachingPatrol", "ShortDeliveryProgress", "Arrests: {0}/{1} - deliver captives to camp"), Snapshot.PoachersArrested, Snapshot.RequiredArrests);
 	Primary.CurrentValue = Snapshot.bQuotaMet && Snapshot.ActivePoachers > 0 ? 0 : Snapshot.PoachersArrested;
 	Primary.TargetValue = Snapshot.bQuotaMet && Snapshot.ActivePoachers > 0 ? Snapshot.ActivePoachers : Snapshot.RequiredArrests;
 	Primary.ProgressState = Snapshot.bQuotaMet && Snapshot.ActivePoachers == 0 ? EPPObjectiveProgressState::Completed : EPPObjectiveProgressState::Active;
@@ -414,6 +458,8 @@ void UEnvironmentLevelSubsystem::FinishRound(EPPRoundEndReason Reason)
 	{
 		return;
 	}
+	FinalSecondsRemaining = GetPatrolSecondsRemaining();
+	GetWorld()->GetTimerManager().ClearTimer(PatrolTimerHandle);
 	bRoundEnded = true;
 	CancelAllPoacherAttackWindups();
 	ReleaseAllPlayerAttackSlots();

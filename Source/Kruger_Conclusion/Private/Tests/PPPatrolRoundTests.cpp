@@ -8,6 +8,9 @@
 #include "Engine/Engine.h"
 #include "Engine/World.h"
 #include "EnvironmentLevelSubsystem.h"
+#include "GameFramework/WorldSettings.h"
+#include "GameFramework/PlayerState.h"
+#include "UObject/UnrealType.h"
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FPPPatrolRequiredArrestsTest,
@@ -123,6 +126,58 @@ bool FPPPatrolRoundStateTest::RunTest(const FString& Parameters)
 
 	World->DestroyWorld(false);
 	GEngine->DestroyWorldContext(World);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FPPPatrolTimerTest,
+	"KrugerConclusion.PoachingPatrol.Round.Timer", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FPPPatrolTimerTest::RunTest(const FString& Parameters)
+{
+	for (const bool bMeetQuota : {false, true})
+	{
+		UWorld* World = UWorld::CreateWorld(EWorldType::Game, false);
+		GEngine->CreateNewWorldContext(EWorldType::Game).SetCurrentWorld(World);
+		UEnvironmentLevelSubsystem* Rules = World->GetSubsystem<UEnvironmentLevelSubsystem>();
+		FFloatProperty* Duration = FindFProperty<FFloatProperty>(Rules->GetClass(), TEXT("PatrolDurationSeconds"));
+		Duration->SetPropertyValue_InContainer(Rules, 2.0f);
+		APPPoacherCharacter* First = World->SpawnActor<APPPoacherCharacter>();
+		APPPoacherCharacter* Second = World->SpawnActor<APPPoacherCharacter>();
+		Rules->RegisterPoacher(First);
+		Rules->RegisterPoacher(Second);
+		World->Tick(LEVELTICK_All, 1.0f);
+		TestEqual(TEXT("Waiting for gameplay did not consume time"), Rules->GetPatrolSecondsRemaining(), 2.0f);
+		Rules->StartPatrol();
+		World->Tick(LEVELTICK_All, 0.5f);
+		const float BeforePause = Rules->GetPatrolSecondsRemaining();
+		Rules->StartPatrol();
+		TestEqual(TEXT("Starting twice did not reset the day"), Rules->GetPatrolSecondsRemaining(), BeforePause);
+		World->GetWorldSettings()->SetPauserPlayerState(World->SpawnActor<APlayerState>());
+		World->Tick(LEVELTICK_All, 1.0f);
+		TestEqual(TEXT("Pause preserved the remaining time"), Rules->GetPatrolSecondsRemaining(), BeforePause);
+		World->GetWorldSettings()->SetPauserPlayerState(nullptr);
+		if (bMeetQuota)
+		{
+			Rules->ReportPoacherArrested(First);
+		}
+		Second->SetPoacherState(EPPPoacherState::Captured);
+		for (int32 Step = 0; Step < 25; ++Step)
+		{
+			// I advanced the frame counter because the timer manager only ticked once per frame.
+			++GFrameCounter;
+			World->Tick(LEVELTICK_All, 0.1f);
+		}
+		TestTrue(TEXT("Timer finished the patrol with an unresolved captive"), Rules->HasRoundEnded());
+		TestEqual(TEXT("Expiry had its own reason"), Rules->GetFinalRoundResult().EndReason, EPPRoundEndReason::TimeExpired);
+		TestEqual(TEXT("Only delivered arrests decided success"), Rules->GetFinalRoundResult().Outcome,
+			bMeetQuota ? EPPRoundOutcome::Success : EPPRoundOutcome::Failure);
+		Rules->ReportPoacherArrested(Second);
+		Rules->ReportPlayerDowned();
+		TestEqual(TEXT("Late events preserved expiry"), Rules->GetFinalRoundResult().EndReason, EPPRoundEndReason::TimeExpired);
+		TestEqual(TEXT("Finished timer stayed at zero"), Rules->GetPatrolSecondsRemaining(), 0.0f);
+		World->DestroyWorld(false);
+		GEngine->DestroyWorldContext(World);
+	}
 	return true;
 }
 

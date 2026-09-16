@@ -99,6 +99,7 @@ int32 UPPPatrolHUDWidget::NativePaint(
 	DrawControlsHint(AllottedGeometry, OutDrawElements, LayerId);
 	DrawCompass(AllottedGeometry, OutDrawElements, LayerId);
 	DrawPlayerHealth(AllottedGeometry, OutDrawElements, LayerId);
+	DrawPatrolTimer(AllottedGeometry, OutDrawElements, LayerId);
 	DrawToolCount(AllottedGeometry, OutDrawElements, LayerId);
 	DrawObjectives(AllottedGeometry, OutDrawElements, LayerId);
 	DrawEscortStatus(AllottedGeometry, OutDrawElements, LayerId);
@@ -781,6 +782,27 @@ void UPPPatrolHUDWidget::DrawCompass(const FGeometry& AllottedGeometry, FSlateWi
 	DrawHudLine(AllottedGeometry, OutDrawElements, LayerId, Center + FVector2D(0.0f, -13.0f), Center + FVector2D(0.0f, 13.0f), SafariMarkerColor, 2.0f);
 	DrawHudLine(AllottedGeometry, OutDrawElements, LayerId, Center + FVector2D(-7.0f, -12.0f), Center + FVector2D(0.0f, -5.0f), SafariMarkerColor, 1.4f);
 	DrawHudLine(AllottedGeometry, OutDrawElements, LayerId, Center + FVector2D(7.0f, -12.0f), Center + FVector2D(0.0f, -5.0f), SafariMarkerColor, 1.4f);
+}
+
+void UPPPatrolHUDWidget::DrawPatrolTimer(const FGeometry& AllottedGeometry, FSlateWindowElementList& OutDrawElements, int32& LayerId) const
+{
+	const UEnvironmentLevelSubsystem* Rules = GetWorld() ? GetWorld()->GetSubsystem<UEnvironmentLevelSubsystem>() : nullptr;
+	if (!Rules || !Rules->HasPatrolStarted() || Rules->HasRoundEnded())
+	{
+		return;
+	}
+	const int32 Seconds = FMath::CeilToInt(Rules->GetPatrolSecondsRemaining());
+	const FVector2D Origin(24.0f, 212.0f);
+	const FVector2D Size(368.0f, 56.0f);
+	DrawSafariPanel(AllottedGeometry, OutDrawElements, LayerId, GetCachedWhiteBrush(), Origin, Size, false);
+	const FLinearColor Color = Seconds <= 30 ? SafariDangerColor : Seconds <= 120 ? SafariMarkerColor : SafariTextColor;
+	const FString Label = FString::Printf(TEXT("PATROL ENDS IN  %02d:%02d"), Seconds / 60, Seconds % 60);
+	FSlateDrawElement::MakeText(OutDrawElements, LayerId++, AllottedGeometry.ToPaintGeometry(Size, FSlateLayoutTransform(Origin + FVector2D(14.0f, 6.0f))),
+		Label, FCoreStyle::GetDefaultFontStyle(TEXT("Bold"), 17), ESlateDrawEffect::None, Color);
+	const TCHAR* Warning = Seconds <= 30 ? TEXT("FINAL 30 SECONDS - DELIVER CAPTIVES")
+		: Seconds <= 120 ? TEXT("TIME LOW - RETURN TO AN ARREST CAMP") : TEXT("Only delivered poachers count as arrests");
+	FSlateDrawElement::MakeText(OutDrawElements, LayerId++, AllottedGeometry.ToPaintGeometry(Size, FSlateLayoutTransform(Origin + FVector2D(14.0f, 32.0f))),
+		Warning, FCoreStyle::GetDefaultFontStyle(TEXT("Regular"), 11), ESlateDrawEffect::None, Color);
 }
 
 void UPPPatrolHUDWidget::DrawPlayerHealth(const FGeometry& AllottedGeometry, FSlateWindowElementList& OutDrawElements, int32& LayerId) const
