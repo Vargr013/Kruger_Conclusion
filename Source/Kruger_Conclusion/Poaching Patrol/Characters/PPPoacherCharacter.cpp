@@ -1,6 +1,7 @@
 #include "Characters/PPPoacherCharacter.h"
 
 #include "Characters/PPAnimalCharacter.h"
+#include "Components/CapsuleComponent.h"
 #include "BaseProjectile.h"
 #include "Data/PPHealthComponent.h"
 #include <EnvironmentLevelSubsystem.h>
@@ -100,6 +101,14 @@ void APPPoacherCharacter::BeginPlay()
 
 void APPPoacherCharacter::UpdateCreatureAI()
 {
+	const UEnvironmentLevelSubsystem* Rules = GetWorld() ? GetWorld()->GetSubsystem<UEnvironmentLevelSubsystem>() : nullptr;
+	if (IsActorHealthDepleted(this) || (Rules && Rules->HasRoundEnded()))
+	{
+		CancelAnimalHunt();
+		CancelPlayerAttack();
+		StopMovement();
+		return;
+	}
 	if (CurrentPoacherState == EPPPoacherState::Arrested)
 	{
 		return;
@@ -193,11 +202,8 @@ void APPPoacherCharacter::UpdateCreatureAI()
 		return;
 	}
 
-	if (AActor* AttackTarget = FindBestAttackTarget())
+	if (UpdateAnimalHunt(CurrentTime))
 	{
-		CurrentTargetActor = AttackTarget;
-		SetPoacherState(EPPPoacherState::DisguisedRoaming);
-		TryAttackTarget(AttackTarget);
 		return;
 	}
 
@@ -220,6 +226,100 @@ void APPPoacherCharacter::UpdateCreatureAI()
 	{
 		StartDisguisedIdle();
 	}
+}
+
+void APPPoacherCharacter::CancelAnimalHunt()
+{
+	bAnimalAttackPending = false;
+	HuntingTarget.Reset();
+	RefreshPoacherMoveSpeed();
+}
+
+bool APPPoacherCharacter::IsAnimalWithinReach(const APPAnimalCharacter* Animal) const
+{
+	if (!IsValid(Animal))
+	{
+		return false;
+	}
+	// I measured the gap between capsules so larger animals could still be reached.
+	const UCapsuleComponent* Ours = GetCapsuleComponent();
+	const UCapsuleComponent* Theirs = Animal->GetCapsuleComponent();
+	const float Gap = FMath::Max(0.0f, FVector::Dist2D(GetActorLocation(), Animal->GetActorLocation())
+		- Ours->GetScaledCapsuleRadius() - Theirs->GetScaledCapsuleRadius());
+	const float HeightGap = FMath::Abs(GetActorLocation().Z - Animal->GetActorLocation().Z);
+	return Gap <= AnimalAttackReach && HeightGap <= Ours->GetScaledCapsuleHalfHeight() + Theirs->GetScaledCapsuleHalfHeight();
+}
+
+bool APPPoacherCharacter::UpdateAnimalHunt(float CurrentTime)
+{
+	APPAnimalCharacter* Animal = HuntingTarget.Get();
+	if (!CanAttackTarget(Animal))
+	{
+		CancelAnimalHunt();
+		Animal = Cast<APPAnimalCharacter>(FindBestAttackTarget());
+		if (!Animal || (Animal == RejectedHuntingTarget.Get() && CurrentTime < HuntingRetryTime))
+		{
+			return false;
+		}
+		HuntingTarget = Animal;
+		HuntingStartedTime = CurrentTime;
+	}
+	if (CurrentTime - HuntingStartedTime > 20.0f || FVector::DistSquared(GetActorLocation(), Animal->GetActorLocation()) > FMath::Square(SightThreatRadius * 1.5f))
+	{
+		RejectedHuntingTarget = Animal;
+		HuntingRetryTime = CurrentTime + 3.0f;
+		CancelAnimalHunt();
+		StopMovement();
+		return false;
+	}
+	CurrentTargetActor = Animal;
+	SetPoacherState(EPPPoacherState::DisguisedRoaming);
+	SetCreatureMoveSpeed(GetAdjustedPoacherMoveSpeed(HuntingMoveSpeed));
+	const bool bCanHit = IsAnimalWithinReach(Animal) && HasClearLineOfSightTo(Animal);
+	if (bAnimalAttackPending)
+	{
+		if (bCanHit)
+		{
+			StopMovement();
+		}
+		else
+		{
+			MoveToLocation(Animal->GetActorLocation(), FMath::Max(1.0f, AnimalAttackReach * 0.5f));
+		}
+		if (CurrentTime >= AnimalAttackResolveTime)
+		{
+			bAnimalAttackPending = false;
+			AnimalAttackReadyTime = CurrentTime + FMath::Max(0.1f, AnimalAttackCooldown);
+			if (bCanHit)
+			{
+				UGameplayStatics::ApplyDamage(Animal, AnimalAttackDamage, GetController(), this, UDamageType::StaticClass());
+			}
+		}
+		return true;
+	}
+	if (!bCanHit)
+	{
+		const float Acceptance = FMath::Max(1.0f, AnimalAttackReach * 0.5f);
+		if (!MoveToLocation(Animal->GetActorLocation(), Acceptance))
+		{
+			RejectedHuntingTarget = Animal;
+			HuntingRetryTime = CurrentTime + 3.0f;
+			CancelAnimalHunt();
+			return false;
+		}
+		return true;
+	}
+	StopMovement();
+	if (CurrentTime >= AnimalAttackReadyTime)
+	{
+		bAnimalAttackPending = true;
+		AnimalAttackResolveTime = CurrentTime + FMath::Max(0.1f, AnimalAttackWindup);
+		if (UEnvironmentLevelSubsystem* LevelRules = GetWorld()->GetSubsystem<UEnvironmentLevelSubsystem>())
+		{
+			LevelRules->ReportAnimalThreat(Animal);
+		}
+	}
+	return true;
 }
 
 bool APPPoacherCharacter::IsValidThreatActor_Implementation(AActor* PotentialThreat) const
@@ -260,6 +360,10 @@ void APPPoacherCharacter::EnterRoamState()
 
 void APPPoacherCharacter::SetPoacherState(EPPPoacherState NewState)
 {
+	if (NewState != EPPPoacherState::DisguisedRoaming && NewState != EPPPoacherState::Alert)
+	{
+		CancelAnimalHunt();
+	}
 	if (CurrentPoacherState == NewState)
 	{
 		return;
@@ -526,6 +630,7 @@ void APPPoacherCharacter::ResolvePlayerAttack()
 
 void APPPoacherCharacter::CancelPlayerAttack()
 {
+	CancelAnimalHunt();
 	if (GetWorld())
 	{
 		GetWorldTimerManager().ClearTimer(PlayerAttackWindupTimerHandle);

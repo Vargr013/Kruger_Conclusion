@@ -151,10 +151,11 @@ void UPPRoundReportWidget::RefreshText()
 		Snapshot.RequiredArrests,
 		Snapshot.CaptureRate * 100.0f)));
 	AnimalText->SetText(FText::FromString(FString::Printf(
-		TEXT("WILDLIFE REPORT\n%d of %d animals saved  |  %d poached"),
+		TEXT("WILDLIFE REPORT\n%d of %d survived  |  %d poached  |  %d other losses"),
 		Snapshot.AnimalsAlive,
 		Snapshot.TotalAnimals,
-		Snapshot.AnimalsPoached)));
+		Snapshot.AnimalsPoached,
+		FMath::Max(0, Snapshot.AnimalsLost - Snapshot.AnimalsPoached))));
 	const TCHAR* Reason = TEXT("End-of-day field report");
 	switch (RoundResult.EndReason)
 	{

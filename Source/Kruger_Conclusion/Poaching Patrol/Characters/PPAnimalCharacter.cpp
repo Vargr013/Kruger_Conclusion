@@ -333,7 +333,8 @@ void APPAnimalCharacter::HandleHealthDepleted()
 	{
 		if (UEnvironmentLevelSubsystem* LevelSubsystem = World->GetSubsystem<UEnvironmentLevelSubsystem>())
 		{
-			LevelSubsystem->ReportAnimalPoached(this);
+			// I kept predator losses separate from confirmed poacher kills.
+			LevelSubsystem->ReportAnimalLost(this, Cast<APPPoacherCharacter>(LastDamageCauser) != nullptr);
 		}
 
 		if (bRemoveAfterPoached)

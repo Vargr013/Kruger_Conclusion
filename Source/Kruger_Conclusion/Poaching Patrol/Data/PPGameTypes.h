@@ -175,6 +175,9 @@ struct KRUGER_CONCLUSION_API FPPRoundSnapshot
 	int32 AnimalsPoached = 0;
 
 	UPROPERTY(BlueprintReadOnly, Category="Poaching Patrol|Round")
+	int32 AnimalsLost = 0;
+
+	UPROPERTY(BlueprintReadOnly, Category="Poaching Patrol|Round")
 	int32 RequiredArrests = 0;
 
 	UPROPERTY(BlueprintReadOnly, Category="Poaching Patrol|Round")

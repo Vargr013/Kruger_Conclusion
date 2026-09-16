@@ -26,6 +26,9 @@ void UEnvironmentLevelSubsystem::ResetRoundState()
 	ArrestedPoachers.Reset();
 	PermanentlyEscapedPoachers.Reset();
 	PoachedAnimals.Reset();
+	LostAnimals.Reset();
+	ThreatenedAnimal.Reset();
+	AnimalThreatTime = -1000.0f;
 	PlayerAttackSlotOwners.Reset();
 	bRoundEnded = false;
 	FinalRoundResult = FPPRoundResult();
@@ -96,13 +99,37 @@ void UEnvironmentLevelSubsystem::ReportPoacherPermanentlyEscaped(APPPoacherChara
 
 void UEnvironmentLevelSubsystem::ReportAnimalPoached(APPAnimalCharacter* Animal)
 {
-	if (!IsValid(Animal) || bRoundEnded || PoachedAnimals.Contains(Animal))
+	ReportAnimalLost(Animal, true);
+}
+
+void UEnvironmentLevelSubsystem::ReportAnimalLost(APPAnimalCharacter* Animal, bool bKilledByPoacher)
+{
+	if (!IsValid(Animal) || bRoundEnded || LostAnimals.Contains(Animal))
 	{
 		return;
 	}
 	RegisterAnimal(Animal);
-	PoachedAnimals.Add(Animal);
+	LostAnimals.Add(Animal);
+	if (bKilledByPoacher)
+	{
+		PoachedAnimals.Add(Animal);
+	}
 	BroadcastStateChanged();
+}
+
+void UEnvironmentLevelSubsystem::ReportAnimalThreat(APPAnimalCharacter* Animal)
+{
+	if (IsValid(Animal) && !bRoundEnded && GetWorld()->GetTimeSeconds() - AnimalThreatTime >= 3.0f)
+	{
+		ThreatenedAnimal = Animal;
+		AnimalThreatTime = GetWorld()->GetTimeSeconds();
+	}
+}
+
+APPAnimalCharacter* UEnvironmentLevelSubsystem::GetThreatenedAnimal() const
+{
+	APPAnimalCharacter* Animal = ThreatenedAnimal.Get();
+	return !bRoundEnded && IsValid(Animal) && !LostAnimals.Contains(Animal) && GetWorld()->GetTimeSeconds() - AnimalThreatTime < 4.0f ? Animal : nullptr;
 }
 
 void UEnvironmentLevelSubsystem::ReportPlayerDowned()
@@ -254,9 +281,9 @@ void UEnvironmentLevelSubsystem::OnAnimalPoached()
 	{
 		APPAnimalCharacter* Animal = AnimalPtr.Get();
 		const UPPHealthComponent* Health = IsValid(Animal) ? Animal->FindComponentByClass<UPPHealthComponent>() : nullptr;
-		if (Health && Health->IsDead() && !PoachedAnimals.Contains(Animal))
+		if (Health && Health->IsDead() && !LostAnimals.Contains(Animal))
 		{
-			ReportAnimalPoached(Animal);
+			ReportAnimalLost(Animal, false);
 			return;
 		}
 	}
@@ -276,7 +303,8 @@ FPPRoundSnapshot UEnvironmentLevelSubsystem::GetRoundSnapshot() const
 	Snapshot.ActivePoachers = FMath::Max(0, Snapshot.TotalPoachers - Snapshot.PoachersArrested - Snapshot.PoachersPermanentlyEscaped);
 	Snapshot.TotalAnimals = RegisteredAnimals.Num();
 	Snapshot.AnimalsPoached = FMath::Min(Snapshot.TotalAnimals, PoachedAnimals.Num());
-	Snapshot.AnimalsAlive = FMath::Max(0, Snapshot.TotalAnimals - Snapshot.AnimalsPoached);
+	Snapshot.AnimalsLost = FMath::Min(Snapshot.TotalAnimals, LostAnimals.Num());
+	Snapshot.AnimalsAlive = FMath::Max(0, Snapshot.TotalAnimals - Snapshot.AnimalsLost);
 	Snapshot.RequiredArrests = CalculateRequiredArrests(Snapshot.TotalPoachers, WinThresholdPercentage);
 	Snapshot.CaptureRate = Snapshot.TotalPoachers > 0
 		? static_cast<float>(Snapshot.PoachersArrested) / static_cast<float>(Snapshot.TotalPoachers)
@@ -308,7 +336,7 @@ TArray<FPPObjectiveState> UEnvironmentLevelSubsystem::GetObjectivesForPlayer(AAc
 	Conservation.Identifier = TEXT("ConservationStatus");
 	Conservation.Kind = EPPObjectiveKind::ConservationStatus;
 	Conservation.Title = FText::Format(NSLOCTEXT("PoachingPatrol", "AnimalsSafe", "Animals safe: {0} of {1}"), Snapshot.AnimalsAlive, Snapshot.TotalAnimals);
-	Conservation.Detail = FText::Format(NSLOCTEXT("PoachingPatrol", "AnimalsPoached", "Animals poached: {0}"), Snapshot.AnimalsPoached);
+	Conservation.Detail = FText::Format(NSLOCTEXT("PoachingPatrol", "AnimalsLost", "Animals lost: {0} - confirmed poached: {1}"), Snapshot.AnimalsLost, Snapshot.AnimalsPoached);
 	Conservation.CurrentValue = Snapshot.AnimalsAlive;
 	Conservation.TargetValue = Snapshot.TotalAnimals;
 	Conservation.bRequired = false;

@@ -179,6 +179,20 @@ void UPPPatrolHUDWidget::DrawCombatStatus(const FGeometry& AllottedGeometry, FSl
 {
 	const FVector2D ViewSize = AllottedGeometry.GetLocalSize();
 	const FSlateBrush* WhiteBrush = GetCachedWhiteBrush();
+	const UEnvironmentLevelSubsystem* Rules = GetWorld() ? GetWorld()->GetSubsystem<UEnvironmentLevelSubsystem>() : nullptr;
+	const APPAnimalCharacter* Threatened = Rules ? Rules->GetThreatenedAnimal() : nullptr;
+	const APawn* Ranger = GetOwningPlayer() ? GetOwningPlayer()->GetPawn() : nullptr;
+	if (Threatened && Ranger)
+	{
+		const FVector2D WarningSize(320.0f, 60.0f);
+		const FVector2D WarningOrigin(ViewSize.X - WarningSize.X - 24.0f, 76.0f);
+		DrawSafariPanel(AllottedGeometry, OutDrawElements, LayerId, WhiteBrush, WarningOrigin, WarningSize, false);
+		FSlateDrawElement::MakeText(OutDrawElements, LayerId++, AllottedGeometry.ToPaintGeometry(WarningSize, FSlateLayoutTransform(WarningOrigin + FVector2D(12, 8))),
+			TEXT("ANIMAL UNDER ATTACK"), FCoreStyle::GetDefaultFontStyle(TEXT("Bold"), 16), ESlateDrawEffect::None, SafariDangerColor);
+		FSlateDrawElement::MakeText(OutDrawElements, LayerId++, AllottedGeometry.ToPaintGeometry(WarningSize, FSlateLayoutTransform(WarningOrigin + FVector2D(12, 34))),
+			FString::Printf(TEXT("%.0f m away - intervene to protect it"), FVector::Distance(Ranger->GetActorLocation(), Threatened->GetActorLocation()) / 100.0f),
+			FCoreStyle::GetDefaultFontStyle(TEXT("Regular"), 12), ESlateDrawEffect::None, SafariTextColor);
+	}
 	if (DamageFlashRemaining > 0.0f)
 	{
 		const float Alpha = 0.18f * FMath::Clamp(DamageFlashRemaining / 0.35f, 0.0f, 1.0f);

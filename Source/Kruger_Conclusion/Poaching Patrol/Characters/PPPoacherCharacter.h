@@ -7,6 +7,7 @@
 #include "PPPoacherCharacter.generated.h"
 
 class AActor;
+class APPAnimalCharacter;
 
 UCLASS()
 class KRUGER_CONCLUSION_API APPPoacherCharacter : public APPCreatureBase, public IPPInteractableInterface
@@ -50,6 +51,29 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Poacher|Combat")
 	float AttackWindupDuration = 0.6f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Poacher|Hunting", meta=(ClampMin="0.0"))
+	float HuntingMoveSpeed = 550.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Poacher|Hunting", meta=(ClampMin="1.0"))
+	float AnimalAttackReach = 150.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Poacher|Hunting", meta=(ClampMin="0.1"))
+	float AnimalAttackWindup = 1.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Poacher|Hunting", meta=(ClampMin="0.1"))
+	float AnimalAttackCooldown = 2.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Poacher|Hunting", meta=(ClampMin="1.0"))
+	float AnimalAttackDamage = 25.0f;
+
+	TWeakObjectPtr<APPAnimalCharacter> HuntingTarget;
+	TWeakObjectPtr<APPAnimalCharacter> RejectedHuntingTarget;
+	float HuntingStartedTime = 0.0f;
+	float HuntingRetryTime = 0.0f;
+	float AnimalAttackReadyTime = 0.0f;
+	float AnimalAttackResolveTime = 0.0f;
+	bool bAnimalAttackPending = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Poacher|Combat", meta=(ClampMin="0.0", ClampMax="1.0"))
 	float ProjectileSubdualHealthFraction = 0.40f;
@@ -154,6 +178,8 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category="Poacher|Combat")
 	void CancelPlayerAttack();
+	void CancelAnimalHunt();
+	bool IsAnimalAttackPending() const { return bAnimalAttackPending; }
 
 	UFUNCTION(BlueprintCallable, Category="Poacher|Combat")
 	void EnterSubduedState(float Duration = 4.0f, bool bFromProjectile = false);
@@ -262,6 +288,8 @@ public:
 
 protected:
 	void UpdateIdleLocalWander(float CurrentTime);
+	bool UpdateAnimalHunt(float CurrentTime);
+	bool IsAnimalWithinReach(const APPAnimalCharacter* Animal) const;
 	void UpdatePlayerCombat(AActor* PlayerActor, float CurrentTime);
 	bool CanDetectPlayerForCombat(AActor* PlayerActor) const;
 	bool HasClearLineOfSightTo(AActor* TargetActor) const;

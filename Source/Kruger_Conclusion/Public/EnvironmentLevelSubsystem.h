@@ -28,6 +28,9 @@ public:
 	void ReportPoacherArrested(APPPoacherCharacter* Poacher);
 	void ReportPoacherPermanentlyEscaped(APPPoacherCharacter* Poacher);
 	void ReportAnimalPoached(APPAnimalCharacter* Animal);
+	void ReportAnimalLost(APPAnimalCharacter* Animal, bool bKilledByPoacher);
+	void ReportAnimalThreat(APPAnimalCharacter* Animal);
+	APPAnimalCharacter* GetThreatenedAnimal() const;
 	void ReportPlayerDowned();
 	void StartPatrol();
 	bool HasPatrolStarted() const { return bPatrolStarted; }
@@ -122,6 +125,9 @@ private:
 	TSet<TWeakObjectPtr<APPPoacherCharacter>> ArrestedPoachers;
 	TSet<TWeakObjectPtr<APPPoacherCharacter>> PermanentlyEscapedPoachers;
 	TSet<TWeakObjectPtr<APPAnimalCharacter>> PoachedAnimals;
+	TSet<TWeakObjectPtr<APPAnimalCharacter>> LostAnimals;
+	TWeakObjectPtr<APPAnimalCharacter> ThreatenedAnimal;
+	float AnimalThreatTime = -1000.0f;
 	TSet<TWeakObjectPtr<APPPoacherCharacter>> PlayerAttackSlotOwners;
 
 	UPROPERTY()
