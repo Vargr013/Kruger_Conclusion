@@ -72,6 +72,15 @@ enum class EPPRoundOutcome : uint8
 	Failure UMETA(DisplayName="Failure")
 };
 
+UENUM(BlueprintType)
+enum class EPPRoundEndReason : uint8
+{
+	None,
+	AllPoachersResolved,
+	PlayerDowned,
+	TimeExpired
+};
+
 USTRUCT(BlueprintType)
 struct KRUGER_CONCLUSION_API FPPObjectiveState
 {
@@ -182,6 +191,9 @@ struct KRUGER_CONCLUSION_API FPPRoundResult
 
 	UPROPERTY(BlueprintReadOnly, Category="Poaching Patrol|Round")
 	EPPRoundOutcome Outcome = EPPRoundOutcome::InProgress;
+
+	UPROPERTY(BlueprintReadOnly, Category="Poaching Patrol|Round")
+	EPPRoundEndReason EndReason = EPPRoundEndReason::None;
 
 	UPROPERTY(BlueprintReadOnly, Category="Poaching Patrol|Round")
 	FPPRoundSnapshot Snapshot;

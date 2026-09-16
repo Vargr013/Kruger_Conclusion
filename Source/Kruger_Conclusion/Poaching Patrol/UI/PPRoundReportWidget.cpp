@@ -140,7 +140,9 @@ void UPPRoundReportWidget::RefreshText()
 	const FPPRoundSnapshot& Snapshot = RoundResult.Snapshot;
 	const bool bSuccess = RoundResult.Outcome == EPPRoundOutcome::Success;
 	MastheadText->SetText(FText::FromString(TEXT("THE KRUGER DAILY")));
-	HeadlineText->SetText(FText::FromString(bSuccess ? TEXT("RANGER PATROL SECURES THE RESERVE") : TEXT("POACHING QUOTA MISSED")));
+	const bool bPlayerDowned = RoundResult.EndReason == EPPRoundEndReason::PlayerDowned;
+	HeadlineText->SetText(FText::FromString(bPlayerDowned ? TEXT("RANGER DOWN - PATROL ENDED")
+		: bSuccess ? TEXT("RANGER PATROL SECURES THE RESERVE") : TEXT("ARREST QUOTA MISSED")));
 	OutcomeText->SetText(FText::FromString(bSuccess ? TEXT("DAY RESULT: PATROL SUCCESS") : TEXT("DAY RESULT: PATROL FAILED")));
 	PoacherText->SetText(FText::FromString(FString::Printf(
 		TEXT("POACHERS ARRESTED\n%d of %d caught  |  %d required  |  %.0f%% capture rate"),
@@ -153,7 +155,15 @@ void UPPRoundReportWidget::RefreshText()
 		Snapshot.AnimalsAlive,
 		Snapshot.TotalAnimals,
 		Snapshot.AnimalsPoached)));
-	FooterText->SetText(FText::FromString(TEXT("Skukuza Reserve • End-of-day field report")));
+	const TCHAR* Reason = TEXT("End-of-day field report");
+	switch (RoundResult.EndReason)
+	{
+	case EPPRoundEndReason::AllPoachersResolved: Reason = TEXT("All poachers were arrested or permanently lost."); break;
+	case EPPRoundEndReason::PlayerDowned: Reason = TEXT("The ranger ran out of health."); break;
+	case EPPRoundEndReason::TimeExpired: Reason = TEXT("Patrol time ran out. Only delivered arrests counted."); break;
+	default: break;
+	}
+	FooterText->SetText(FText::FromString(Reason));
 }
 
 void UPPRoundReportWidget::HandleReplayClicked()

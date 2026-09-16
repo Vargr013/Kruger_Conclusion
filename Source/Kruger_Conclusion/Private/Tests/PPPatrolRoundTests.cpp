@@ -114,6 +114,9 @@ bool FPPPatrolRoundStateTest::RunTest(const FString& Parameters)
 		TestEqual(TEXT("Two of three arrests meets the rounded quota"), Rules->GetFinalRoundResult().Outcome, EPPRoundOutcome::Success);
 
 		const FPPRoundResult FirstResult = Rules->GetFinalRoundResult();
+		TestEqual(TEXT("Resolved poachers explains the ending"), FirstResult.EndReason, EPPRoundEndReason::AllPoachersResolved);
+		Rules->ReportPlayerDowned();
+		TestEqual(TEXT("Late damage cannot replace the ending reason"), Rules->GetFinalRoundResult().EndReason, FirstResult.EndReason);
 		Rules->ReportPoacherPermanentlyEscaped(PoacherC);
 		TestEqual(TEXT("Final result remains immutable"), Rules->GetFinalRoundResult().Snapshot.PoachersPermanentlyEscaped, FirstResult.Snapshot.PoachersPermanentlyEscaped);
 	}

@@ -122,6 +122,7 @@ bool FPPPlayerDownRoundFailureTest::RunTest(const FString& Parameters)
 		TestTrue(TEXT("Player down ends the round"), Rules->HasRoundEnded());
 		TestEqual(TEXT("Player down is a failure"), Rules->GetFinalRoundResult().Outcome, EPPRoundOutcome::Failure);
 		const FPPRoundResult FirstResult = Rules->GetFinalRoundResult();
+		TestEqual(TEXT("Player down has its own ending reason"), FirstResult.EndReason, EPPRoundEndReason::PlayerDowned);
 		Rules->ReportPlayerDowned();
 		TestEqual(TEXT("Duplicate player down is idempotent"), Rules->GetFinalRoundResult().Outcome, FirstResult.Outcome);
 	}

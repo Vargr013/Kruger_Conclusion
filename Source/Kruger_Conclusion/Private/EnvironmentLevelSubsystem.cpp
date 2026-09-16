@@ -102,18 +102,7 @@ void UEnvironmentLevelSubsystem::ReportAnimalPoached(APPAnimalCharacter* Animal)
 
 void UEnvironmentLevelSubsystem::ReportPlayerDowned()
 {
-	if (bRoundEnded)
-	{
-		return;
-	}
-
-	bRoundEnded = true;
-	CancelAllPoacherAttackWindups();
-	ReleaseAllPlayerAttackSlots();
-	FinalRoundResult.Snapshot = GetRoundSnapshot();
-	FinalRoundResult.Outcome = EPPRoundOutcome::Failure;
-	OnRoundEnded.Broadcast(FinalRoundResult);
-	OnLevelLost.Broadcast();
+	FinishRound(EPPRoundEndReason::PlayerDowned);
 }
 
 bool UEnvironmentLevelSubsystem::TryAcquirePlayerAttackSlot(APPPoacherCharacter* Poacher)
@@ -264,8 +253,8 @@ TArray<FPPObjectiveState> UEnvironmentLevelSubsystem::GetObjectivesForPlayer(AAc
 		? FText::FromString(TEXT("Resolve the remaining poachers"))
 		: FText::Format(NSLOCTEXT("PoachingPatrol", "ArrestQuota", "Arrest at least {0} of {1} poachers"), Snapshot.RequiredArrests, Snapshot.TotalPoachers);
 	Primary.Detail = Snapshot.bQuotaMet && Snapshot.ActivePoachers > 0
-		? FText::Format(NSLOCTEXT("PoachingPatrol", "RemainingProgress", "Remaining: {0}"), Snapshot.ActivePoachers)
-		: FText::Format(NSLOCTEXT("PoachingPatrol", "ArrestProgress", "Arrested: {0} / {1}"), Snapshot.PoachersArrested, Snapshot.RequiredArrests);
+		? FText::Format(NSLOCTEXT("PoachingPatrol", "RemainingPatrolProgress", "Remaining: {0} - resolve all to finish early"), Snapshot.ActivePoachers)
+		: FText::Format(NSLOCTEXT("PoachingPatrol", "ArrestDeliveryProgress", "Arrested: {0} / {1} - deliver captives to a camp"), Snapshot.PoachersArrested, Snapshot.RequiredArrests);
 	Primary.CurrentValue = Snapshot.bQuotaMet && Snapshot.ActivePoachers > 0 ? 0 : Snapshot.PoachersArrested;
 	Primary.TargetValue = Snapshot.bQuotaMet && Snapshot.ActivePoachers > 0 ? Snapshot.ActivePoachers : Snapshot.RequiredArrests;
 	Primary.ProgressState = Snapshot.bQuotaMet && Snapshot.ActivePoachers == 0 ? EPPObjectiveProgressState::Completed : EPPObjectiveProgressState::Active;
@@ -415,11 +404,23 @@ void UEnvironmentLevelSubsystem::CheckWinCondition()
 		return;
 	}
 
+	FinishRound(EPPRoundEndReason::AllPoachersResolved);
+}
+
+void UEnvironmentLevelSubsystem::FinishRound(EPPRoundEndReason Reason)
+{
+	// I kept every ending here so the first result could not be overwritten.
+	if (bRoundEnded)
+	{
+		return;
+	}
 	bRoundEnded = true;
 	CancelAllPoacherAttackWindups();
 	ReleaseAllPlayerAttackSlots();
-	FinalRoundResult.Snapshot = Snapshot;
-	FinalRoundResult.Outcome = Snapshot.bQuotaMet ? EPPRoundOutcome::Success : EPPRoundOutcome::Failure;
+	FinalRoundResult.Snapshot = GetRoundSnapshot();
+	FinalRoundResult.EndReason = Reason;
+	FinalRoundResult.Outcome = Reason != EPPRoundEndReason::PlayerDowned && FinalRoundResult.Snapshot.bQuotaMet
+		? EPPRoundOutcome::Success : EPPRoundOutcome::Failure;
 	OnRoundEnded.Broadcast(FinalRoundResult);
 
 	if (FinalRoundResult.Outcome == EPPRoundOutcome::Success)

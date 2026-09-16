@@ -95,6 +95,7 @@ private:
 	void ScanPlacedActors();
 	void BroadcastStateChanged();
 	void CheckWinCondition();
+	void FinishRound(EPPRoundEndReason Reason);
 	void ReleaseAllPlayerAttackSlots();
 
 	UPROPERTY(Config, EditAnywhere, Category="Poaching Patrol|Round", meta=(ClampMin="0.0", ClampMax="1.0"))
