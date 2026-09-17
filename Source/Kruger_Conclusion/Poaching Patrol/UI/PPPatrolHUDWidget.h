@@ -71,7 +71,13 @@ protected:
 	FVector2D ToolCountOffset = FVector2D(24.0f, 24.0f);
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Poaching Patrol HUD|Layout")
-	FVector2D HealthOffset = FVector2D(24.0f, 74.0f);
+	FVector2D HealthPanelSize = FVector2D(260.0f, 48.0f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Poaching Patrol HUD|Layout")
+	FVector2D AmmoPanelSize = FVector2D(260.0f, 64.0f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Poaching Patrol HUD|Layout", meta=(ClampMin="0.0"))
+	float StatusPanelGap = 10.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Poaching Patrol HUD|Minimap")
 	TArray<float> MinimapZoomRadii = {4000.0f, 8000.0f, 14000.0f};

@@ -879,14 +879,17 @@ void UPPPatrolHUDWidget::DrawPlayerHealth(const FGeometry& AllottedGeometry, FSl
 	const float HealthPercent = CurrentHealth / MaxHealth;
 
 	const FVector2D ViewSize = AllottedGeometry.GetLocalSize();
-	const FVector2D Size(176.0f, 28.0f);
-	const FVector2D Origin(ViewSize.X - Size.X - HealthOffset.X, ViewSize.Y - Size.Y - HealthOffset.Y);
-	const FVector2D BarOrigin = Origin + FVector2D(12.0f, 10.0f);
-	const FVector2D BarSize(Size.X - 24.0f, 8.0f);
-	const FVector2D ThumbSize(4.0f, 18.0f);
+	const float Scale = FMath::Clamp(ViewSize.Y / 1080.0f, 0.85f, 1.25f);
+	const FVector2D Size(FMath::Max(220.0f, HealthPanelSize.X) * Scale, FMath::Max(48.0f, HealthPanelSize.Y) * Scale);
+	// I used the ammo panel as the anchor so resizing either panel kept the gap clear.
+	const float BottomOffset = ToolCountOffset.Y + (FMath::Max(64.0f, AmmoPanelSize.Y) + FMath::Max(0.0f, StatusPanelGap)) * Scale;
+	const FVector2D Origin(ViewSize.X - Size.X - ToolCountOffset.X, ViewSize.Y - Size.Y - BottomOffset);
+	const FVector2D BarOrigin = Origin + FVector2D(12.0f, 25.0f) * Scale;
+	const FVector2D BarSize(Size.X - 24.0f * Scale, 16.0f * Scale);
+	const FVector2D ThumbSize(4.0f * Scale, 20.0f * Scale);
 	const float ThumbX = BarOrigin.X + (BarSize.X * HealthPercent) - (ThumbSize.X * 0.5f);
 	const FSlateBrush* WhiteBrush = GetCachedWhiteBrush();
-	static const FSlateFontInfo LabelFont = FCoreStyle::GetDefaultFontStyle(TEXT("Regular"), 11);
+	const FSlateFontInfo LabelFont = FCoreStyle::GetDefaultFontStyle(TEXT("Bold"), FMath::RoundToInt(15.0f * Scale));
 	const FLinearColor HealthColor = HealthPercent <= 0.3f
 		? SafariDangerColor
 		: SafariGreenColor;
@@ -896,7 +899,7 @@ void UPPPatrolHUDWidget::DrawPlayerHealth(const FGeometry& AllottedGeometry, FSl
 	FSlateDrawElement::MakeText(
 		OutDrawElements,
 		LayerId++,
-		AllottedGeometry.ToPaintGeometry(FVector2D(76.0f, 14.0f), FSlateLayoutTransform(Origin + FVector2D(12.0f, -5.0f))),
+		AllottedGeometry.ToPaintGeometry(FVector2D(Size.X - 24.0f * Scale, 20.0f * Scale), FSlateLayoutTransform(Origin + FVector2D(12.0f, 3.0f) * Scale)),
 		TEXT("HEALTH"),
 		LabelFont,
 		ESlateDrawEffect::None,
@@ -921,7 +924,7 @@ void UPPPatrolHUDWidget::DrawPlayerHealth(const FGeometry& AllottedGeometry, FSl
 	FSlateDrawElement::MakeBox(
 		OutDrawElements,
 		LayerId++,
-		AllottedGeometry.ToPaintGeometry(ThumbSize, FSlateLayoutTransform(FVector2D(ThumbX, BarOrigin.Y - 5.0f))),
+		AllottedGeometry.ToPaintGeometry(ThumbSize, FSlateLayoutTransform(FVector2D(ThumbX, BarOrigin.Y - 2.0f * Scale))),
 		WhiteBrush,
 		ESlateDrawEffect::None,
 		SafariTextColor);
@@ -936,18 +939,19 @@ void UPPPatrolHUDWidget::DrawToolCount(const FGeometry& AllottedGeometry, FSlate
 	}
 
 	const FVector2D ViewSize = AllottedGeometry.GetLocalSize();
-	const FVector2D Size(176.0f, 42.0f);
+	const float Scale = FMath::Clamp(ViewSize.Y / 1080.0f, 0.85f, 1.25f);
+	const FVector2D Size(FMath::Max(220.0f, AmmoPanelSize.X) * Scale, FMath::Max(64.0f, AmmoPanelSize.Y) * Scale);
 	const FVector2D Origin(ViewSize.X - Size.X - ToolCountOffset.X, ViewSize.Y - Size.Y - ToolCountOffset.Y);
 	const FSlateBrush* WhiteBrush = GetCachedWhiteBrush();
-	static const FSlateFontInfo LabelFont = FCoreStyle::GetDefaultFontStyle(TEXT("Regular"), 11);
-	static const FSlateFontInfo CountFont = FCoreStyle::GetDefaultFontStyle(TEXT("Bold"), 19);
+	const FSlateFontInfo LabelFont = FCoreStyle::GetDefaultFontStyle(TEXT("Bold"), FMath::RoundToInt(15.0f * Scale));
+	const FSlateFontInfo CountFont = FCoreStyle::GetDefaultFontStyle(TEXT("Bold"), FMath::RoundToInt(28.0f * Scale));
 
 	DrawSafariPanel(AllottedGeometry, OutDrawElements, LayerId, WhiteBrush, Origin, Size, true);
 
 	FSlateDrawElement::MakeText(
 		OutDrawElements,
 		LayerId++,
-		AllottedGeometry.ToPaintGeometry(FVector2D(Size.X - 24.0f, 14.0f), FSlateLayoutTransform(Origin + FVector2D(12.0f, 5.0f))),
+		AllottedGeometry.ToPaintGeometry(FVector2D(Size.X - 24.0f * Scale, 20.0f * Scale), FSlateLayoutTransform(Origin + FVector2D(12.0f, 4.0f) * Scale)),
 		Tool->GetToolDisplayName().ToString().ToUpper(),
 		LabelFont,
 		ESlateDrawEffect::None,
@@ -956,7 +960,7 @@ void UPPPatrolHUDWidget::DrawToolCount(const FGeometry& AllottedGeometry, FSlate
 	FSlateDrawElement::MakeText(
 		OutDrawElements,
 		LayerId++,
-		AllottedGeometry.ToPaintGeometry(FVector2D(Size.X - 24.0f, 22.0f), FSlateLayoutTransform(Origin + FVector2D(12.0f, 18.0f))),
+		AllottedGeometry.ToPaintGeometry(FVector2D(Size.X - 24.0f * Scale, 36.0f * Scale), FSlateLayoutTransform(Origin + FVector2D(12.0f, 23.0f) * Scale)),
 		FString::Printf(TEXT("%d / %d"), Tool->GetRemainingUses(), Tool->GetMaxUses()),
 		CountFont,
 		ESlateDrawEffect::None,
