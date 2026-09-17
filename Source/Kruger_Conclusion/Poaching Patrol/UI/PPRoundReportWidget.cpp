@@ -1,4 +1,5 @@
 #include "UI/PPRoundReportWidget.h"
+#include "UI/PPUIStyle.h"
 
 #include "Kruger_ConclusionPlayerController.h"
 #include "Blueprint/WidgetTree.h"
@@ -61,7 +62,7 @@ void UPPRoundReportWidget::BuildDefaultWidgetTree()
 	}
 
 	UBorder* PaperBorder = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("Newspaper"));
-	PaperBorder->SetBrushColor(Paper);
+	PaperBorder->SetBrush(PPUIStyle::PanelBrush(Paper));
 	PaperBorder->SetPadding(FMargin(30.0f));
 	if (UCanvasPanelSlot* PaperSlot = Canvas->AddChildToCanvas(PaperBorder))
 	{
@@ -94,7 +95,7 @@ void UPPRoundReportWidget::BuildDefaultWidgetTree()
 	auto AddButton = [this, ButtonRow, Ink, Paper](const TCHAR* ButtonName, const TCHAR* Label, void (UPPRoundReportWidget::*Handler)())
 	{
 		UButton* Button = WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), ButtonName);
-		Button->SetBackgroundColor(Ink);
+		PPUIStyle::OutlineButton(Button);
 		UTextBlock* LabelText = WidgetTree->ConstructWidget<UTextBlock>();
 		LabelText->SetText(FText::FromString(Label));
 		LabelText->SetColorAndOpacity(FSlateColor(Paper));

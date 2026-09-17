@@ -1,4 +1,5 @@
 #include "UI/PPPauseMenuWidget.h"
+#include "UI/PPUIStyle.h"
 
 #include "Kruger_ConclusionPlayerController.h"
 #include "Blueprint/WidgetTree.h"
@@ -17,10 +18,11 @@ namespace
 	UButton* AddMenuButton(UWidgetTree* Tree, UVerticalBox* Box, const TCHAR* Name, const FText& Label)
 	{
 		UButton* Button = Tree->ConstructWidget<UButton>(UButton::StaticClass(), FName(Name));
+		PPUIStyle::OutlineButton(Button);
 		UTextBlock* Text = Tree->ConstructWidget<UTextBlock>();
 		Text->SetText(Label);
 		Text->SetJustification(ETextJustify::Center);
-		Text->SetFont(FSlateFontInfo(FCoreStyle::GetDefaultFont(), 22));
+		Text->SetFont(PPUIStyle::Font(TEXT("Bold"), 22));
 		Button->AddChild(Text);
 		Box->AddChildToVerticalBox(Button)->SetPadding(FMargin(8.0f));
 		return Button;
@@ -35,7 +37,7 @@ void UPPPauseMenuWidget::NativeOnInitialized()
 		UCanvasPanel* Canvas = WidgetTree->ConstructWidget<UCanvasPanel>(UCanvasPanel::StaticClass(), TEXT("PauseCanvas"));
 		WidgetTree->RootWidget = Canvas;
 		UBorder* Backdrop = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("PauseBackdrop"));
-		Backdrop->SetBrushColor(FLinearColor(0.015f, 0.025f, 0.02f, 0.94f));
+		Backdrop->SetBrush(PPUIStyle::PanelBrush(FLinearColor(0.11f, 0.085f, 0.045f, 0.96f)));
 		Canvas->AddChildToCanvas(Backdrop)->SetAnchors(FAnchors(0.32f, 0.18f, 0.68f, 0.82f));
 
 		UVerticalBox* Menu = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("PauseMenu"));
@@ -43,7 +45,7 @@ void UPPPauseMenuWidget::NativeOnInitialized()
 		UTextBlock* Title = WidgetTree->ConstructWidget<UTextBlock>();
 		Title->SetText(NSLOCTEXT("PoachingPatrol", "Paused", "Paused"));
 		Title->SetJustification(ETextJustify::Center);
-		Title->SetFont(FSlateFontInfo(FCoreStyle::GetDefaultFont(), 32));
+		Title->SetFont(PPUIStyle::Font(TEXT("Bold"), 32));
 		Menu->AddChildToVerticalBox(Title)->SetPadding(FMargin(12.0f));
 
 		ResumeButton = AddMenuButton(WidgetTree, Menu, TEXT("Resume"), NSLOCTEXT("PoachingPatrol", "Resume", "Resume"));

@@ -1,4 +1,5 @@
 #include "UI/PPRestraintMinigameWidget.h"
+#include "UI/PPUIStyle.h"
 
 #include "Characters/PPPoacherCharacter.h"
 #include "Blueprint/WidgetTree.h"
@@ -143,9 +144,9 @@ int32 UPPRestraintMinigameWidget::NativePaint(
 		ESlateDrawEffect::None,
 		FLinearColor(0.005f, 0.008f, 0.006f, 0.68f));
 
-	const FSlateFontInfo HeadingFont = FCoreStyle::GetDefaultFontStyle(TEXT("Bold"), 28);
-	const FSlateFontInfo DetailFont = FCoreStyle::GetDefaultFontStyle(TEXT("Bold"), 17);
-	const FSlateFontInfo NumberFont = FCoreStyle::GetDefaultFontStyle(TEXT("Bold"), 24);
+	const FSlateFontInfo HeadingFont = PPUIStyle::Font(TEXT("Bold"), 28);
+	const FSlateFontInfo DetailFont = PPUIStyle::Font(TEXT("Bold"), 17);
+	const FSlateFontInfo NumberFont = PPUIStyle::Font(TEXT("Bold"), 24);
 	const FLinearColor PaperColor(0.90f, 0.84f, 0.65f, 1.0f);
 	const FLinearColor HitColor(0.20f, 0.92f, 0.42f, 1.0f);
 	const FLinearColor MissColor(0.96f, 0.22f, 0.12f, 1.0f);
@@ -367,6 +368,15 @@ void UPPRestraintMinigameWidget::DrawRing(
 		const float Angle = UE_TWO_PI * static_cast<float>(Segment) / static_cast<float>(SegmentCount);
 		Points.Add(Center + FVector2D(FMath::Cos(Angle), FMath::Sin(Angle)) * Radius);
 	}
+	FSlateDrawElement::MakeLines(
+		OutDrawElements,
+		LayerId,
+		AllottedGeometry.ToPaintGeometry(),
+		Points,
+		ESlateDrawEffect::None,
+		PPUIStyle::Ink,
+		true,
+		Thickness + 4.0f);
 	FSlateDrawElement::MakeLines(
 		OutDrawElements,
 		LayerId,

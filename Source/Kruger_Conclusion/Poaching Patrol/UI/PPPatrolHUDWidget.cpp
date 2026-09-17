@@ -1,4 +1,5 @@
 #include "PPPatrolHUDWidget.h"
+#include "UI/PPUIStyle.h"
 
 #include "BaseGun.h"
 #include "EnvironmentLevelSubsystem.h"
@@ -75,6 +76,7 @@ namespace
 
 		DrawHudLine(AllottedGeometry, OutDrawElements, LayerId, Origin, Origin + FVector2D(Size.X, 0.0f), SafariBorderColor, 1.0f);
 		DrawHudLine(AllottedGeometry, OutDrawElements, LayerId, Origin + FVector2D(0.0f, Size.Y), Origin + Size, SafariBorderColor, 1.0f);
+		PPUIStyle::DrawOutline(AllottedGeometry, OutDrawElements, LayerId, Origin, Size);
 	}
 }
 
@@ -188,10 +190,10 @@ void UPPPatrolHUDWidget::DrawCombatStatus(const FGeometry& AllottedGeometry, FSl
 		const FVector2D WarningOrigin(ViewSize.X - WarningSize.X - 24.0f, 76.0f);
 		DrawSafariPanel(AllottedGeometry, OutDrawElements, LayerId, WhiteBrush, WarningOrigin, WarningSize, false);
 		FSlateDrawElement::MakeText(OutDrawElements, LayerId++, AllottedGeometry.ToPaintGeometry(WarningSize, FSlateLayoutTransform(WarningOrigin + FVector2D(12, 8))),
-			TEXT("ANIMAL UNDER ATTACK"), FCoreStyle::GetDefaultFontStyle(TEXT("Bold"), 16), ESlateDrawEffect::None, SafariDangerColor);
+			TEXT("ANIMAL UNDER ATTACK"), PPUIStyle::Font(TEXT("Bold"), 16), ESlateDrawEffect::None, SafariDangerColor);
 		FSlateDrawElement::MakeText(OutDrawElements, LayerId++, AllottedGeometry.ToPaintGeometry(WarningSize, FSlateLayoutTransform(WarningOrigin + FVector2D(12, 34))),
 			FString::Printf(TEXT("%.0f m away - intervene to protect it"), FVector::Distance(Ranger->GetActorLocation(), Threatened->GetActorLocation()) / 100.0f),
-			FCoreStyle::GetDefaultFontStyle(TEXT("Regular"), 12), ESlateDrawEffect::None, SafariTextColor);
+			PPUIStyle::Font(TEXT("Regular"), 12), ESlateDrawEffect::None, SafariTextColor);
 	}
 	if (DamageFlashRemaining > 0.0f)
 	{
@@ -214,7 +216,7 @@ void UPPPatrolHUDWidget::DrawCombatStatus(const FGeometry& AllottedGeometry, FSl
 	const FVector2D Size(300.0f, bIncomingAttack ? 64.0f : 38.0f);
 	const FVector2D Origin((ViewSize.X - Size.X) * 0.5f, 86.0f);
 	DrawSafariPanel(AllottedGeometry, OutDrawElements, LayerId, WhiteBrush, Origin, Size, true);
-	const FSlateFontInfo LabelFont = FCoreStyle::GetDefaultFontStyle(TEXT("Bold"), bIncomingAttack ? 17 : 14);
+	const FSlateFontInfo LabelFont = PPUIStyle::Font(TEXT("Bold"), bIncomingAttack ? 17 : 14);
 	FLinearColor WarningColor = SafariDangerColor;
 	if (bIncomingAttack && GetWorld())
 	{
@@ -289,7 +291,7 @@ void UPPPatrolHUDWidget::DrawRestPointPrompt(const FGeometry& AllottedGeometry, 
 	const FVector2D Origin((ViewSize.X - Size.X) * 0.5f, ViewSize.Y * 0.62f);
 	DrawSafariPanel(AllottedGeometry, OutDrawElements, LayerId, WhiteBrush, Origin, Size, false);
 
-	const FSlateFontInfo LabelFont = FCoreStyle::GetDefaultFontStyle(TEXT("Bold"), 16);
+	const FSlateFontInfo LabelFont = PPUIStyle::Font(TEXT("Bold"), 16);
 	FSlateDrawElement::MakeText(
 		OutDrawElements,
 		LayerId++,
@@ -328,8 +330,8 @@ void UPPPatrolHUDWidget::DrawObjectives(const FGeometry& AllottedGeometry, FSlat
 	const FSlateBrush* WhiteBrush = GetCachedWhiteBrush();
 	const FVector2D Origin(24.0f, 76.0f);
 	const FVector2D Size(368.0f, 126.0f);
-	static const FSlateFontInfo HeadingFont = FCoreStyle::GetDefaultFontStyle(TEXT("Bold"), 16);
-	static const FSlateFontInfo DetailFont = FCoreStyle::GetDefaultFontStyle(TEXT("Regular"), 12);
+	static const FSlateFontInfo HeadingFont = PPUIStyle::Font(TEXT("Bold"), 16);
+	static const FSlateFontInfo DetailFont = PPUIStyle::Font(TEXT("Regular"), 12);
 	DrawSafariPanel(AllottedGeometry, OutDrawElements, LayerId, WhiteBrush, Origin, Size, false);
 
 	FSlateDrawElement::MakeText(
@@ -374,8 +376,8 @@ void UPPPatrolHUDWidget::DrawEscortStatus(const FGeometry& AllottedGeometry, FSl
 	const FVector2D Size(440.0f, CachedEscortStatus.bUnderEscapePressure ? 116.0f : 86.0f);
 	const FVector2D Origin((ViewSize.X - Size.X) * 0.5f, ViewSize.Y - Size.Y - 28.0f);
 	const FSlateBrush* WhiteBrush = GetCachedWhiteBrush();
-	static const FSlateFontInfo HeadingFont = FCoreStyle::GetDefaultFontStyle(TEXT("Bold"), 15);
-	static const FSlateFontInfo DetailFont = FCoreStyle::GetDefaultFontStyle(TEXT("Regular"), 12);
+	static const FSlateFontInfo HeadingFont = PPUIStyle::Font(TEXT("Bold"), 15);
+	static const FSlateFontInfo DetailFont = PPUIStyle::Font(TEXT("Regular"), 12);
 	DrawSafariPanel(AllottedGeometry, OutDrawElements, LayerId, WhiteBrush, Origin, Size, false);
 
 	FSlateDrawElement::MakeText(
@@ -438,7 +440,7 @@ void UPPPatrolHUDWidget::DrawControlsHint(const FGeometry& AllottedGeometry, FSl
 		FMath::Max(ResponsiveMinimapSize, 168.0f),
 		PanelPaddingY * 2.0f + LineHeight * static_cast<float>(LineCount));
 	const FVector2D Origin(MapOrigin.X, MapOrigin.Y - GapAboveMinimap - Size.Y);
-	static const FSlateFontInfo DetailFont = FCoreStyle::GetDefaultFontStyle(TEXT("Regular"), 11);
+	static const FSlateFontInfo DetailFont = PPUIStyle::Font(TEXT("Regular"), 11);
 
 	DrawSafariPanel(AllottedGeometry, OutDrawElements, LayerId, WhiteBrush, Origin, Size, true);
 
@@ -528,7 +530,7 @@ void UPPPatrolHUDWidget::DrawMinimap(const FGeometry& AllottedGeometry, FSlateWi
 		LayerId++,
 		AllottedGeometry.ToPaintGeometry(FVector2D(12.0f, 14.0f), FSlateLayoutTransform(NorthLabelPosition)),
 		TEXT("N"),
-		FCoreStyle::GetDefaultFontStyle(TEXT("Bold"), 10),
+		PPUIStyle::Font(TEXT("Bold"), 10),
 		ESlateDrawEffect::None,
 		SafariTextColor);
 
@@ -632,7 +634,7 @@ void UPPPatrolHUDWidget::DrawMinimap(const FGeometry& AllottedGeometry, FSlateWi
 		FSlateDrawElement::MakeBox(OutDrawElements, LayerId++, AllottedGeometry.ToPaintGeometry(FVector2D(18.0f), FSlateLayoutTransform(Center - FVector2D(9.0f))),
 			WhiteBrush, ESlateDrawEffect::None, FLinearColor(0.02f, 0.03f, 0.025f, 1.0f));
 		FSlateDrawElement::MakeText(OutDrawElements, LayerId++, AllottedGeometry.ToPaintGeometry(FVector2D(16.0f), FSlateLayoutTransform(Center - FVector2D(5.0f, 8.0f))),
-			TEXT("R"), FCoreStyle::GetDefaultFontStyle(TEXT("Bold"), 12), ESlateDrawEffect::None, RefillColor);
+			TEXT("R"), PPUIStyle::Font(TEXT("Bold"), 12), ESlateDrawEffect::None, RefillColor);
 	};
 	for (const TWeakObjectPtr<APPRestPoint>& Point : CachedRestPoints)
 	{
@@ -664,7 +666,7 @@ void UPPPatrolHUDWidget::DrawMinimap(const FGeometry& AllottedGeometry, FSlateWi
 		}
 		FSlateDrawElement::MakeText(OutDrawElements, LayerId++, AllottedGeometry.ToPaintGeometry(FVector2D(MapSize.X - 70.0f, 16.0f), FSlateLayoutTransform(MapOrigin + FVector2D(70.0f, MapSize.Y - 22.0f))),
 			FString::Printf(TEXT("R REFILL  %.0f m"), FMath::Sqrt(bRefillVisible ? NearestVisibleRefillDistance : NearestRefillDistance) / 100.0f),
-			FCoreStyle::GetDefaultFontStyle(TEXT("Bold"), 11), ESlateDrawEffect::None, RefillColor);
+			PPUIStyle::Font(TEXT("Bold"), 11), ESlateDrawEffect::None, RefillColor);
 	}
 
 	TArray<FVector2D> PlayerArrow = {
@@ -679,7 +681,7 @@ void UPPPatrolHUDWidget::DrawMinimap(const FGeometry& AllottedGeometry, FSlateWi
 	FSlateDrawElement::MakeText(
 		OutDrawElements, LayerId++,
 		AllottedGeometry.ToPaintGeometry(FVector2D(48.0f, 14.0f), FSlateLayoutTransform(MapOrigin + FVector2D(10.0f, MapSize.Y - 21.0f))),
-		RangeText, FCoreStyle::GetDefaultFontStyle(TEXT("Bold"), 10), ESlateDrawEffect::None, SafariTextColor);
+		RangeText, PPUIStyle::Font(TEXT("Bold"), 10), ESlateDrawEffect::None, SafariTextColor);
 }
 
 void UPPPatrolHUDWidget::DrawCompass(const FGeometry& AllottedGeometry, FSlateWindowElementList& OutDrawElements, int32& LayerId) const
@@ -698,8 +700,8 @@ void UPPPatrolHUDWidget::DrawCompass(const FGeometry& AllottedGeometry, FSlateWi
 	const FVector2D CompassSize(LocalCompassWidth, 34.0f);
 	const FVector2D Center(Start.X + LocalCompassWidth * 0.5f, Start.Y + 17.0f);
 	const FSlateBrush* WhiteBrush = GetCachedWhiteBrush();
-	static const FSlateFontInfo CardinalFont = FCoreStyle::GetDefaultFontStyle(TEXT("Bold"), 12);
-	static const FSlateFontInfo IntercardinalFont = FCoreStyle::GetDefaultFontStyle(TEXT("Regular"), 10);
+	static const FSlateFontInfo CardinalFont = PPUIStyle::Font(TEXT("Bold"), 12);
+	static const FSlateFontInfo IntercardinalFont = PPUIStyle::Font(TEXT("Regular"), 10);
 	const float VisibleDegrees = 110.0f;
 	const float HalfWidth = LocalCompassWidth * 0.5f;
 
@@ -721,6 +723,7 @@ void UPPPatrolHUDWidget::DrawCompass(const FGeometry& AllottedGeometry, FSlateWi
 
 	DrawHudLine(AllottedGeometry, OutDrawElements, LayerId, Start, Start + FVector2D(LocalCompassWidth, 0.0f), SafariBorderColor, 1.0f);
 	DrawHudLine(AllottedGeometry, OutDrawElements, LayerId, Start + FVector2D(0.0f, CompassSize.Y), Start + CompassSize, SafariBorderColor, 1.0f);
+	PPUIStyle::DrawOutline(AllottedGeometry, OutDrawElements, LayerId, Start, CompassSize);
 	DrawHudLine(AllottedGeometry, OutDrawElements, LayerId, Start + FVector2D(6.0f, Center.Y - Start.Y), Start + FVector2D(LocalCompassWidth - 6.0f, Center.Y - Start.Y), SafariMinorColor, 1.0f);
 
 	for (int32 Degrees = 0; Degrees < 360; Degrees += 15)
@@ -857,11 +860,11 @@ void UPPPatrolHUDWidget::DrawPatrolTimer(const FGeometry& AllottedGeometry, FSla
 	const FLinearColor Color = Seconds <= 30 ? SafariDangerColor : Seconds <= 120 ? SafariMarkerColor : SafariTextColor;
 	const FString Label = FString::Printf(TEXT("PATROL ENDS IN  %02d:%02d"), Seconds / 60, Seconds % 60);
 	FSlateDrawElement::MakeText(OutDrawElements, LayerId++, AllottedGeometry.ToPaintGeometry(Size, FSlateLayoutTransform(Origin + FVector2D(14.0f, 6.0f))),
-		Label, FCoreStyle::GetDefaultFontStyle(TEXT("Bold"), 17), ESlateDrawEffect::None, Color);
+		Label, PPUIStyle::Font(TEXT("Bold"), 17), ESlateDrawEffect::None, Color);
 	const TCHAR* Warning = Seconds <= 30 ? TEXT("FINAL 30 SECONDS - DELIVER CAPTIVES")
 		: Seconds <= 120 ? TEXT("TIME LOW - RETURN TO AN ARREST CAMP") : TEXT("Only delivered poachers count as arrests");
 	FSlateDrawElement::MakeText(OutDrawElements, LayerId++, AllottedGeometry.ToPaintGeometry(Size, FSlateLayoutTransform(Origin + FVector2D(14.0f, 32.0f))),
-		Warning, FCoreStyle::GetDefaultFontStyle(TEXT("Regular"), 11), ESlateDrawEffect::None, Color);
+		Warning, PPUIStyle::Font(TEXT("Regular"), 11), ESlateDrawEffect::None, Color);
 }
 
 void UPPPatrolHUDWidget::DrawPlayerHealth(const FGeometry& AllottedGeometry, FSlateWindowElementList& OutDrawElements, int32& LayerId) const
@@ -889,7 +892,7 @@ void UPPPatrolHUDWidget::DrawPlayerHealth(const FGeometry& AllottedGeometry, FSl
 	const FVector2D ThumbSize(4.0f * Scale, 20.0f * Scale);
 	const float ThumbX = BarOrigin.X + (BarSize.X * HealthPercent) - (ThumbSize.X * 0.5f);
 	const FSlateBrush* WhiteBrush = GetCachedWhiteBrush();
-	const FSlateFontInfo LabelFont = FCoreStyle::GetDefaultFontStyle(TEXT("Bold"), FMath::RoundToInt(15.0f * Scale));
+	const FSlateFontInfo LabelFont = PPUIStyle::Font(TEXT("Bold"), FMath::RoundToInt(15.0f * Scale));
 	const FLinearColor HealthColor = HealthPercent <= 0.3f
 		? SafariDangerColor
 		: SafariGreenColor;
@@ -943,8 +946,8 @@ void UPPPatrolHUDWidget::DrawToolCount(const FGeometry& AllottedGeometry, FSlate
 	const FVector2D Size(FMath::Max(220.0f, AmmoPanelSize.X) * Scale, FMath::Max(64.0f, AmmoPanelSize.Y) * Scale);
 	const FVector2D Origin(ViewSize.X - Size.X - ToolCountOffset.X, ViewSize.Y - Size.Y - ToolCountOffset.Y);
 	const FSlateBrush* WhiteBrush = GetCachedWhiteBrush();
-	const FSlateFontInfo LabelFont = FCoreStyle::GetDefaultFontStyle(TEXT("Bold"), FMath::RoundToInt(15.0f * Scale));
-	const FSlateFontInfo CountFont = FCoreStyle::GetDefaultFontStyle(TEXT("Bold"), FMath::RoundToInt(28.0f * Scale));
+	const FSlateFontInfo LabelFont = PPUIStyle::Font(TEXT("Bold"), FMath::RoundToInt(15.0f * Scale));
+	const FSlateFontInfo CountFont = PPUIStyle::Font(TEXT("Bold"), FMath::RoundToInt(28.0f * Scale));
 
 	DrawSafariPanel(AllottedGeometry, OutDrawElements, LayerId, WhiteBrush, Origin, Size, true);
 

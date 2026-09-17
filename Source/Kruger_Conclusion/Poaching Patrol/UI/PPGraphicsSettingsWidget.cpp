@@ -1,4 +1,6 @@
 #include "UI/PPGraphicsSettingsWidget.h"
+#include "UI/PPUIStyle.h"
+#include "Components/Border.h"
 
 #include "Blueprint/WidgetTree.h"
 #include "Components/Button.h"
@@ -14,6 +16,7 @@ namespace
 	UButton* AddPresetButton(UWidgetTree* Tree, UHorizontalBox* Row, const TCHAR* Name, TObjectPtr<UTextBlock>& OutText)
 	{
 		UButton* Button = Tree->ConstructWidget<UButton>(UButton::StaticClass(), FName(Name));
+		PPUIStyle::OutlineButton(Button);
 		OutText = Tree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass());
 		OutText->SetText(FText::FromString(Name));
 		OutText->SetJustification(ETextJustify::Center);
@@ -33,11 +36,15 @@ void UPPGraphicsSettingsWidget::NativeOnInitialized()
 	if (!WidgetTree->RootWidget)
 	{
 		UVerticalBox* Root = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("GraphicsSettingsRoot"));
-		WidgetTree->RootWidget = Root;
+		UBorder* Frame = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("GraphicsFrame"));
+		Frame->SetBrush(PPUIStyle::PanelBrush(FLinearColor(0.11f, 0.085f, 0.045f, 0.96f)));
+		Frame->SetPadding(FMargin(5.0f));
+		Frame->SetContent(Root);
+		WidgetTree->RootWidget = Frame;
 		HeadingText = WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), TEXT("GraphicsHeading"));
 		HeadingText->SetText(NSLOCTEXT("PoachingPatrol", "GraphicsQuality", "Graphics Quality"));
 		HeadingText->SetJustification(ETextJustify::Center);
-		HeadingText->SetFont(FSlateFontInfo(FCoreStyle::GetDefaultFont(), 22));
+		HeadingText->SetFont(PPUIStyle::Font(TEXT("Bold"), 22));
 		Root->AddChildToVerticalBox(HeadingText)->SetPadding(FMargin(4.0f));
 
 		UHorizontalBox* Row = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("PresetRow"));
