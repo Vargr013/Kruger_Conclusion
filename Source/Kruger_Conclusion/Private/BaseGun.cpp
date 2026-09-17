@@ -21,14 +21,21 @@ ABaseGun::ABaseGun()
 
 void ABaseGun::Shoot()
 {
-    if (bConsumesUses && CurrentAmmo <= 0)
+    if (!GetWorld() || GetWorld()->IsPaused() || GetWorld()->GetTimeSeconds() < NextShotTime || (bConsumesUses && CurrentAmmo <= 0))
     {
         return;
     }
 
+    // I checked the delay here so extra clicks could not use ammunition.
+    const float PreviousNextShotTime = NextShotTime;
+    NextShotTime = GetWorld()->GetTimeSeconds() + FMath::Max(0.05f, ShotCooldownSeconds);
     if (FireMode == EFireMode::Projectile)
     {
-        FireProjectile();
+        if (!FireProjectile())
+        {
+            NextShotTime = PreviousNextShotTime;
+            return;
+        }
     }
     else if (FireMode == EFireMode::Raycast)
     {
@@ -60,9 +67,9 @@ FText ABaseGun::GetToolDisplayName() const
         : FText::FromString(TEXT("Darts"));
 }
 
-void ABaseGun::FireProjectile()
+bool ABaseGun::FireProjectile()
 {
-    if (!ProjectileClass) return;
+    if (!ProjectileClass || !IsValid(MuzzleLocation)) return false;
 
     FVector Loc = MuzzleLocation->GetComponentLocation();
     FRotator Rot = MuzzleLocation->GetComponentRotation();
@@ -71,7 +78,7 @@ void ABaseGun::FireProjectile()
     Params.Owner = GetOwner();
     Params.Instigator = GetInstigator();
 
-    GetWorld()->SpawnActor<ABaseProjectile>(ProjectileClass, Loc, Rot, Params);
+    return GetWorld()->SpawnActor<ABaseProjectile>(ProjectileClass, Loc, Rot, Params) != nullptr;
 }
 
 void ABaseGun::FireRaycast()

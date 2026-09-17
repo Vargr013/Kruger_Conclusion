@@ -39,9 +39,14 @@ bool FPPRestPointHoldResupplyTest::RunTest(const FString& Parameters)
 	}
 
 	Ranger->SetCurrentGun(Gun);
+	Gun->FireMode = EFireMode::Raycast;
 	for (int32 ShotIndex = 0; ShotIndex < Gun->GetMaxUses(); ++ShotIndex)
 	{
 		Gun->Shoot();
+		++GFrameCounter;
+		World->Tick(LEVELTICK_All, 0.25f);
+		++GFrameCounter;
+		World->Tick(LEVELTICK_All, 0.25f);
 	}
 	TestEqual(TEXT("Gun is empty before restock"), Gun->GetRemainingUses(), 0);
 
@@ -83,6 +88,10 @@ bool FPPRestPointHoldResupplyTest::RunTest(const FString& Parameters)
 	for (int32 ShotIndex = 0; ShotIndex < 3; ++ShotIndex)
 	{
 		Gun->Shoot();
+		++GFrameCounter;
+		World->Tick(LEVELTICK_All, 0.25f);
+		++GFrameCounter;
+		World->Tick(LEVELTICK_All, 0.25f);
 	}
 	RestPoint->AdvanceHold(2.0f, true);
 	if (Health)

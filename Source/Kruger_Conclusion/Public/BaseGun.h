@@ -49,6 +49,9 @@ public:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon Setup|HUD", meta = (ClampMin = 0))
     int32 MaxAmmo = 10;
 
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon Setup", meta = (ClampMin = "0.05"))
+    float ShotCooldownSeconds = 0.4f;
+
 
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon Setup|HUD")
@@ -70,8 +73,10 @@ public:
     FText GetToolDisplayName() const;
 
 private:
-    void FireProjectile();
+    bool FireProjectile();
     void FireRaycast();
+
+    float NextShotTime = 0.0f;
 
     UPROPERTY(VisibleInstanceOnly, Category = "Weapon Setup|HUD")
     int32 CurrentAmmo = 0;
