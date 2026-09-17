@@ -270,11 +270,11 @@ void UPPPatrolHUDWidget::DrawRestPointPrompt(const FGeometry& AllottedGeometry, 
 	}
 
 	const APPRestPoint* RestPoint = nullptr;
-	for (TActorIterator<APPRestPoint> It(GetWorld()); It; ++It)
+	for (const TWeakObjectPtr<APPRestPoint>& Point : CachedRestPoints)
 	{
-		if (*It && (*It)->IsRangerInRangeFor(PlayerPawn))
+		if (Point.IsValid() && Point->IsRangerInRangeFor(PlayerPawn))
 		{
-			RestPoint = *It;
+			RestPoint = Point.Get();
 			break;
 		}
 	}
@@ -620,6 +620,51 @@ void UPPPatrolHUDWidget::DrawMinimap(const FGeometry& AllottedGeometry, FSlateWi
 		const FVector2D MarkerCenter = MapCenter + ClampedPoint;
 		DrawHudLine(AllottedGeometry, OutDrawElements, LayerId, MarkerCenter + FVector2D(-6.0f, 0.0f), MarkerCenter + FVector2D(6.0f, 0.0f), ArrestZoneColor, 2.5f);
 		DrawHudLine(AllottedGeometry, OutDrawElements, LayerId, MarkerCenter + FVector2D(0.0f, -6.0f), MarkerCenter + FVector2D(0.0f, 6.0f), ArrestZoneColor, 2.5f);
+	}
+
+	const APPRestPoint* NearestRefill = nullptr;
+	float NearestRefillDistance = TNumericLimits<float>::Max();
+	bool bRefillVisible = false;
+	float NearestVisibleRefillDistance = TNumericLimits<float>::Max();
+	const FLinearColor RefillColor(0.25f, 0.85f, 0.95f, 1.0f);
+	auto DrawRefill = [&](const FVector2D& Center)
+	{
+		FSlateDrawElement::MakeBox(OutDrawElements, LayerId++, AllottedGeometry.ToPaintGeometry(FVector2D(18.0f), FSlateLayoutTransform(Center - FVector2D(9.0f))),
+			WhiteBrush, ESlateDrawEffect::None, FLinearColor(0.02f, 0.03f, 0.025f, 1.0f));
+		FSlateDrawElement::MakeText(OutDrawElements, LayerId++, AllottedGeometry.ToPaintGeometry(FVector2D(16.0f), FSlateLayoutTransform(Center - FVector2D(5.0f, 8.0f))),
+			TEXT("R"), FCoreStyle::GetDefaultFontStyle(TEXT("Bold"), 12), ESlateDrawEffect::None, RefillColor);
+	};
+	for (const TWeakObjectPtr<APPRestPoint>& Point : CachedRestPoints)
+	{
+		if (!Point.IsValid())
+		{
+			continue;
+		}
+		const float Distance = FVector::DistSquared2D(PlayerPawn->GetActorLocation(), Point->GetActorLocation());
+		if (Distance < NearestRefillDistance)
+		{
+			NearestRefillDistance = Distance;
+			NearestRefill = Point.Get();
+		}
+		const FVector2D Local = WorldToMinimap(Point->GetActorLocation(), PlayerPawn, MapHalfExtent);
+		if (FMath::Abs(Local.X) <= MapHalfExtent && FMath::Abs(Local.Y) <= MapHalfExtent)
+		{
+			bRefillVisible = true;
+			NearestVisibleRefillDistance = FMath::Min(NearestVisibleRefillDistance, Distance);
+			DrawRefill(MapCenter + ClampMinimapPointToSquare(Local, MapHalfExtent - 10.0f));
+		}
+	}
+	if (NearestRefill)
+	{
+		const FVector2D Local = WorldToMinimap(NearestRefill->GetActorLocation(), PlayerPawn, MapHalfExtent);
+		if (!bRefillVisible)
+		{
+			// I kept the nearest refill on the edge so players could find it from any zoom.
+			DrawRefill(MapCenter + ClampMinimapPointToSquare(Local, MapHalfExtent - 10.0f));
+		}
+		FSlateDrawElement::MakeText(OutDrawElements, LayerId++, AllottedGeometry.ToPaintGeometry(FVector2D(MapSize.X - 70.0f, 16.0f), FSlateLayoutTransform(MapOrigin + FVector2D(70.0f, MapSize.Y - 22.0f))),
+			FString::Printf(TEXT("R REFILL  %.0f m"), FMath::Sqrt(bRefillVisible ? NearestVisibleRefillDistance : NearestRefillDistance) / 100.0f),
+			FCoreStyle::GetDefaultFontStyle(TEXT("Bold"), 11), ESlateDrawEffect::None, RefillColor);
 	}
 
 	TArray<FVector2D> PlayerArrow = {
@@ -1030,6 +1075,7 @@ void UPPPatrolHUDWidget::RefreshMinimapActors()
 	CachedMinimapPoachers.Reset();
 	CachedMinimapAnimals.Reset();
 	CachedArrestZones.Reset();
+	CachedRestPoints.Reset();
 
 	if (const UEnvironmentLevelSubsystem* LevelSubsystem = GetWorld() ? GetWorld()->GetSubsystem<UEnvironmentLevelSubsystem>() : nullptr)
 	{
@@ -1048,6 +1094,10 @@ void UPPPatrolHUDWidget::RefreshMinimapActors()
 		for (TActorIterator<APPArrestZone> It(GetWorld()); It; ++It)
 		{
 			CachedArrestZones.Add(*It);
+		}
+		for (TActorIterator<APPRestPoint> It(GetWorld()); It; ++It)
+		{
+			CachedRestPoints.Add(*It);
 		}
 	}
 }

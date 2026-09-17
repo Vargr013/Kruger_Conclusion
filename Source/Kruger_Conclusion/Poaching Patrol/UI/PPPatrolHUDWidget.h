@@ -137,6 +137,7 @@ private:
 	TArray<TWeakObjectPtr<APPPoacherCharacter>> CachedMinimapPoachers;
 	TArray<TWeakObjectPtr<APPAnimalCharacter>> CachedMinimapAnimals;
 	TArray<TWeakObjectPtr<APPArrestZone>> CachedArrestZones;
+	TArray<TWeakObjectPtr<APPRestPoint>> CachedRestPoints;
 	TWeakObjectPtr<APPPoacherCharacter> CachedUrgentAttacker;
 	int32 CachedHostilePoacherCount = 0;
 	float DamageFlashRemaining = 0.0f;
