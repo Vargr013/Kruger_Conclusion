@@ -1,4 +1,5 @@
 #include "Actors/PPArrestZone.h"
+#include "Actors/PPTutorialDirector.h"
 
 #include "EnvironmentLevelSubsystem.h"
 #include "Characters/PPPoacherCharacter.h"
@@ -38,7 +39,7 @@ APPArrestZone::APPArrestZone()
 void APPArrestZone::BeginPlay()
 {
 	Super::BeginPlay();
-	ArrestBounds->OnComponentBeginOverlap.AddDynamic(this, &APPArrestZone::OnArrestBoundsBeginOverlap);
+	ArrestBounds->OnComponentBeginOverlap.AddUniqueDynamic(this, &APPArrestZone::OnArrestBoundsBeginOverlap);
 }
 
 void APPArrestZone::OnConstruction(const FTransform& Transform)
@@ -83,6 +84,10 @@ void APPArrestZone::OnArrestBoundsBeginOverlap(
 		return;
 	}
 
+	auto* Rules = GetWorld()->GetSubsystem<UEnvironmentLevelSubsystem>();
+	APPTutorialDirector* Tutorial = Rules && Rules->IsTutorialMode() ? Rules->GetTutorialDirector() : nullptr;
+	if (Tutorial && !Tutorial->AllowsArrest(Poacher, this)) return;
+
 	const EPPPoacherState PoacherState = Poacher->GetPoacherState();
 	const bool bCanArrest = PoacherState == EPPPoacherState::Captured
 		|| PoacherState == EPPPoacherState::FollowingPlayer;
@@ -110,6 +115,8 @@ void APPArrestZone::OnArrestBoundsBeginOverlap(
 			LevelSubsystem->ReportPoacherArrested(Poacher);
 		}
 	}
+
+	if (Tutorial) Tutorial->NotifyArrest(Poacher, this);
 
 	if (bRemovePoacherAfterArrest)
 	{

@@ -1,4 +1,5 @@
 #include "EnvironmentLevelSubsystem.h"
+#include "Actors/PPTutorialDirector.h"
 
 #include "Characters/PPAnimalCharacter.h"
 #include "Characters/PPCreatureBase.h"
@@ -11,6 +12,11 @@ void UEnvironmentLevelSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 {
 	Super::OnWorldBeginPlay(InWorld);
 	ResetRoundState();
+	for (TActorIterator<APPTutorialDirector> It(&InWorld); It; ++It)
+	{
+		TutorialDirector = *It;
+		break;
+	}
 	ScanPlacedActors();
 	BroadcastStateChanged();
 }
@@ -55,7 +61,7 @@ void UEnvironmentLevelSubsystem::ScanPlacedActors()
 
 void UEnvironmentLevelSubsystem::RegisterPoacher(APPPoacherCharacter* Poacher)
 {
-	if (!IsValid(Poacher) || bRoundEnded || RegisteredPoachers.Contains(Poacher))
+	if (!IsValid(Poacher) || IsTutorialMode() != Poacher->bTutorialEncounter || (IsTutorialMode() && Poacher != TutorialDirector->TutorialPoacher) || bRoundEnded || RegisteredPoachers.Contains(Poacher))
 	{
 		return;
 	}
@@ -65,7 +71,7 @@ void UEnvironmentLevelSubsystem::RegisterPoacher(APPPoacherCharacter* Poacher)
 
 void UEnvironmentLevelSubsystem::RegisterAnimal(APPAnimalCharacter* Animal)
 {
-	if (!IsValid(Animal) || bRoundEnded || RegisteredAnimals.Contains(Animal))
+	if (IsTutorialMode() || !IsValid(Animal) || bRoundEnded || RegisteredAnimals.Contains(Animal))
 	{
 		return;
 	}
@@ -80,6 +86,7 @@ void UEnvironmentLevelSubsystem::ReportPoacherArrested(APPPoacherCharacter* Poac
 		return;
 	}
 	RegisterPoacher(Poacher);
+	if (!RegisteredPoachers.Contains(Poacher)) return;
 	ArrestedPoachers.Add(Poacher);
 	BroadcastStateChanged();
 	CheckWinCondition();
@@ -92,6 +99,7 @@ void UEnvironmentLevelSubsystem::ReportPoacherPermanentlyEscaped(APPPoacherChara
 		return;
 	}
 	RegisterPoacher(Poacher);
+	if (!RegisteredPoachers.Contains(Poacher)) return;
 	PermanentlyEscapedPoachers.Add(Poacher);
 	BroadcastStateChanged();
 	CheckWinCondition();
@@ -132,13 +140,28 @@ APPAnimalCharacter* UEnvironmentLevelSubsystem::GetThreatenedAnimal() const
 	return !bRoundEnded && IsValid(Animal) && !LostAnimals.Contains(Animal) && GetWorld()->GetTimeSeconds() - AnimalThreatTime < 4.0f ? Animal : nullptr;
 }
 
+bool UEnvironmentLevelSubsystem::IsTutorialMode() const
+{
+	return TutorialDirector.IsValid() && TutorialDirector->PatrolMode == EPPPatrolMode::Tutorial;
+}
+
 void UEnvironmentLevelSubsystem::ReportPlayerDowned()
 {
+	if (IsTutorialMode())
+	{
+		TutorialDirector->FailTutorial(FText::FromString(TEXT("You were downed. Start your first patrol again.")));
+		return;
+	}
 	FinishRound(EPPRoundEndReason::PlayerDowned);
 }
 
 void UEnvironmentLevelSubsystem::StartPatrol()
 {
+	if (IsTutorialMode())
+	{
+		if (!bPatrolStarted) { bPatrolStarted = true; TutorialDirector->StartTutorial(); }
+		return;
+	}
 	if (bPatrolStarted || bRoundEnded || RegisteredPoachers.IsEmpty() || !GetWorld())
 	{
 		return;
@@ -161,6 +184,7 @@ float UEnvironmentLevelSubsystem::GetPatrolSecondsRemaining() const
 
 void UEnvironmentLevelSubsystem::CheckPatrolTime()
 {
+	if (IsTutorialMode()) return;
 	if (bPatrolStarted && !bRoundEnded && GetPatrolSecondsRemaining() <= 0.0f)
 	{
 		FinishRound(EPPRoundEndReason::TimeExpired);
@@ -408,6 +432,7 @@ TArray<APPPoacherCharacter*> UEnvironmentLevelSubsystem::GetActivePoachers() con
 	{
 		APPPoacherCharacter* Poacher = PoacherPtr.Get();
 		if (!IsValid(Poacher)
+			|| (IsTutorialMode() && !Poacher->IsEncounterActive())
 			|| ArrestedPoachers.Contains(Poacher)
 			|| PermanentlyEscapedPoachers.Contains(Poacher)
 			|| Poacher->GetPoacherState() == EPPPoacherState::Arrested
@@ -465,6 +490,7 @@ void UEnvironmentLevelSubsystem::BroadcastStateChanged()
 
 void UEnvironmentLevelSubsystem::CheckWinCondition()
 {
+	if (IsTutorialMode()) return;
 	if (bRoundEnded)
 	{
 		return;

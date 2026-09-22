@@ -34,8 +34,8 @@ void APPRestPoint::BeginPlay()
 {
 	Super::BeginPlay();
 	ApplyInteractRadius();
-	InteractVolume->OnComponentBeginOverlap.AddDynamic(this, &APPRestPoint::OnInteractVolumeBeginOverlap);
-	InteractVolume->OnComponentEndOverlap.AddDynamic(this, &APPRestPoint::OnInteractVolumeEndOverlap);
+	InteractVolume->OnComponentBeginOverlap.AddUniqueDynamic(this, &APPRestPoint::OnInteractVolumeBeginOverlap);
+	InteractVolume->OnComponentEndOverlap.AddUniqueDynamic(this, &APPRestPoint::OnInteractVolumeEndOverlap);
 }
 
 void APPRestPoint::OnConstruction(const FTransform& Transform)
@@ -120,6 +120,7 @@ void APPRestPoint::AdvanceHold(float DeltaTime, bool bHoldingInteract)
 		HoldTime = HoldDuration;
 		Ranger->Resupply();
 		bCompletedThisHold = true;
+		OnResupplyCompleted.Broadcast(this, Ranger);
 	}
 }
 

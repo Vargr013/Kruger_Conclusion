@@ -8,6 +8,8 @@
 
 class AActor;
 class APPAnimalCharacter;
+class APPPoacherCharacter;
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FPPPoacherStateChanged, APPPoacherCharacter*, Poacher, EPPPoacherState, State);
 
 UCLASS()
 class KRUGER_CONCLUSION_API APPPoacherCharacter : public APPCreatureBase, public IPPInteractableInterface
@@ -16,6 +18,14 @@ class KRUGER_CONCLUSION_API APPPoacherCharacter : public APPCreatureBase, public
 
 public:
 	APPPoacherCharacter();
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Poacher|Encounter") bool bTutorialEncounter = false;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Poacher|Encounter") bool bStartEncounterInactive = false;
+	UPROPERTY(BlueprintAssignable, Category="Poacher|Encounter") FPPPoacherStateChanged OnPoacherStateChanged;
+	UFUNCTION(BlueprintCallable, Category="Poacher|Encounter") void SetEncounterActive(bool bActive);
+	bool IsEncounterActive() const { return bEncounterActive; }
+private:
+	bool bEncounterActive = true;
+public:
 
 protected:
 	virtual void BeginPlay() override;

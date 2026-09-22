@@ -67,6 +67,7 @@ void APPPoacherCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 float APPPoacherCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
+	if (!bEncounterActive) return 0.0f;
 	const bool bPlayerProjectile = IsPlayerProjectileDamage(EventInstigator, DamageCauser);
 	if (bPlayerProjectile && bIsSubdued)
 	{
@@ -88,7 +89,9 @@ float APPPoacherCharacter::TakeDamage(float DamageAmount, FDamageEvent const& Da
 void APPPoacherCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-	StartDisguisedIdle();
+	const auto* Rules = GetWorld()->GetSubsystem<UEnvironmentLevelSubsystem>();
+	SetEncounterActive(!bStartEncounterInactive && (!Rules || Rules->IsTutorialMode() == bTutorialEncounter));
+	if (bEncounterActive) StartDisguisedIdle();
 
 	if (UWorld* World = GetWorld())
 	{
@@ -99,8 +102,24 @@ void APPPoacherCharacter::BeginPlay()
 	}
 }
 
+void APPPoacherCharacter::SetEncounterActive(bool bActive)
+{
+	bEncounterActive = bActive;
+	SetActorHiddenInGame(!bActive);
+	SetActorEnableCollision(bActive);
+	// I suspended gravity as well as AI while the training encounter waited.
+	if (auto* Movement = GetCharacterMovement())
+	{
+		Movement->StopMovementImmediately();
+		Movement->SetMovementMode(bActive ? MOVE_Walking : MOVE_None);
+	}
+	if (bActive) { StartAIUpdates(); StartDisguisedIdle(); }
+	else { CancelPlayerAttack(); CancelAnimalHunt(); StopMovement(); StopAIUpdates(); }
+}
+
 void APPPoacherCharacter::UpdateCreatureAI()
 {
+	if (!bEncounterActive) return;
 	const UEnvironmentLevelSubsystem* Rules = GetWorld() ? GetWorld()->GetSubsystem<UEnvironmentLevelSubsystem>() : nullptr;
 	if (IsActorHealthDepleted(this) || (Rules && Rules->HasRoundEnded()))
 	{
@@ -371,6 +390,7 @@ void APPPoacherCharacter::SetPoacherState(EPPPoacherState NewState)
 
 	CurrentPoacherState = NewState;
 	RefreshPoacherMoveSpeed();
+	OnPoacherStateChanged.Broadcast(this, NewState);
 
 	DebugMessage(FString::Printf(TEXT("Poacher state -> %s"), GetPoacherStateName(CurrentPoacherState)), FColor::Green);
 }
@@ -959,6 +979,7 @@ void APPPoacherCharacter::UpdateEscapePressure()
 
 void APPPoacherCharacter::ApplyPepperSpraySlow(float Duration)
 {
+	if (!bEncounterActive) return;
 	if (CurrentPoacherState == EPPPoacherState::Arrested || bPendingRemovalAfterArrest || bIsCaptured || !GetWorld())
 	{
 		return;

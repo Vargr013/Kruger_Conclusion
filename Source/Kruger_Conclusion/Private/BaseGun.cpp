@@ -5,6 +5,20 @@
 #include "Engine/Engine.h"
 #include "Kismet/GameplayStatics.h"
 #include "DrawDebugHelpers.h"
+#include "GameFramework/Pawn.h"
+
+namespace
+{
+AController* GetWeaponController(const ABaseGun* Gun)
+{
+    if (AController* Controller = Gun->GetInstigatorController())
+    {
+        return Controller;
+    }
+    const APawn* OwnerPawn = Cast<APawn>(Gun->GetOwner());
+    return OwnerPawn ? OwnerPawn->GetController() : nullptr;
+}
+}
 
 ABaseGun::ABaseGun()
 {
@@ -114,7 +128,7 @@ void ABaseGun::FireRaycast()
                 UGameplayStatics::ApplyDamage(
                     HitResult.GetActor(),
                     DamagePerShot,
-                    GetInstigatorController(),
+                    GetWeaponController(this),
                     this,
                     UDamageType::StaticClass()
                 );
@@ -125,7 +139,7 @@ void ABaseGun::FireRaycast()
             UGameplayStatics::ApplyDamage(
                 HitResult.GetActor(),
                 DamagePerShot,
-                GetInstigatorController(),
+                GetWeaponController(this),
                 this,
                 UDamageType::StaticClass()
             );

@@ -10,6 +10,7 @@
 #include "Data/PPMinimapDefinition.h"
 #include "Actors/PPArrestZone.h"
 #include "Actors/PPRestPoint.h"
+#include "Actors/PPTutorialDirector.h"
 #include "Engine/Canvas.h"
 #include "Engine/Texture2D.h"
 #include "EngineUtils.h"
@@ -322,6 +323,7 @@ void UPPPatrolHUDWidget::DrawRestPointPrompt(const FGeometry& AllottedGeometry, 
 
 void UPPPatrolHUDWidget::DrawObjectives(const FGeometry& AllottedGeometry, FSlateWindowElementList& OutDrawElements, int32& LayerId) const
 {
+	if (const auto* Rules = GetWorld()->GetSubsystem<UEnvironmentLevelSubsystem>(); Rules && Rules->IsTutorialMode()) return;
 	if (CachedObjectives.IsEmpty())
 	{
 		return;
@@ -849,7 +851,7 @@ void UPPPatrolHUDWidget::DrawCompass(const FGeometry& AllottedGeometry, FSlateWi
 void UPPPatrolHUDWidget::DrawPatrolTimer(const FGeometry& AllottedGeometry, FSlateWindowElementList& OutDrawElements, int32& LayerId) const
 {
 	const UEnvironmentLevelSubsystem* Rules = GetWorld() ? GetWorld()->GetSubsystem<UEnvironmentLevelSubsystem>() : nullptr;
-	if (!Rules || !Rules->HasPatrolStarted() || Rules->HasRoundEnded())
+	if (!Rules || Rules->IsTutorialMode() || !Rules->HasPatrolStarted() || Rules->HasRoundEnded())
 	{
 		return;
 	}
@@ -1100,11 +1102,15 @@ void UPPPatrolHUDWidget::RefreshMinimapActors()
 	{
 		for (TActorIterator<APPArrestZone> It(GetWorld()); It; ++It)
 		{
-			CachedArrestZones.Add(*It);
+			const auto* Rules = GetWorld()->GetSubsystem<UEnvironmentLevelSubsystem>();
+			const bool bTraining = Rules && Rules->IsTutorialMode();
+			if (bTraining ? *It == Rules->GetTutorialDirector()->ArrestZone : !It->ActorHasTag(TEXT("PPTutorial"))) CachedArrestZones.Add(*It);
 		}
 		for (TActorIterator<APPRestPoint> It(GetWorld()); It; ++It)
 		{
-			CachedRestPoints.Add(*It);
+			const auto* Rules = GetWorld()->GetSubsystem<UEnvironmentLevelSubsystem>();
+			const bool bTraining = Rules && Rules->IsTutorialMode();
+			if (bTraining ? *It == Rules->GetTutorialDirector()->ResupplyPoint : !It->ActorHasTag(TEXT("PPTutorial"))) CachedRestPoints.Add(*It);
 		}
 	}
 }

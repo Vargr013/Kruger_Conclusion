@@ -32,7 +32,7 @@ void ARangerCharacter::BeginPlay()
     {
         FActorSpawnParameters SpawnParams;
         SpawnParams.Owner = this;
-        SpawnParams.Instigator = GetInstigator();
+        SpawnParams.Instigator = this;
 
         CurrentGun = GetWorld()->SpawnActor<ABaseGun>(GunClass, FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
 

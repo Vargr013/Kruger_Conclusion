@@ -6,6 +6,7 @@
 #include "EnvironmentLevelSubsystem.generated.h"
 
 class AActor;
+class APPTutorialDirector;
 class APPAnimalCharacter;
 class APPPoacherCharacter;
 class APPCreatureBase;
@@ -33,6 +34,8 @@ public:
 	APPAnimalCharacter* GetThreatenedAnimal() const;
 	void ReportPlayerDowned();
 	void StartPatrol();
+	bool IsTutorialMode() const;
+	APPTutorialDirector* GetTutorialDirector() const { return TutorialDirector.Get(); }
 	bool HasPatrolStarted() const { return bPatrolStarted; }
 	float GetPatrolSecondsRemaining() const;
 	virtual void Deinitialize() override;
@@ -98,6 +101,7 @@ public:
 	FOnLevelStateChangedSignature OnLevelLost;
 
 private:
+	TWeakObjectPtr<APPTutorialDirector> TutorialDirector;
 	void ResetRoundState();
 	void ScanPlacedActors();
 	void BroadcastStateChanged();

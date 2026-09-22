@@ -5,6 +5,8 @@
 #include "PPRestPoint.generated.h"
 
 class ARangerCharacter;
+class APPRestPoint;
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FPPRestCompleted, APPRestPoint*, Point, ARangerCharacter*, Ranger);
 class USceneComponent;
 class USphereComponent;
 class UStaticMeshComponent;
@@ -16,6 +18,7 @@ class KRUGER_CONCLUSION_API APPRestPoint : public AActor
 
 public:
 	APPRestPoint();
+	UPROPERTY(BlueprintAssignable, Category="Rest Point") FPPRestCompleted OnResupplyCompleted;
 
 	UFUNCTION(BlueprintPure, Category = "Rest Point")
 	bool IsRangerInRange() const;

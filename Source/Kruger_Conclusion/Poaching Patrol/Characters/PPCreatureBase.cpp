@@ -31,7 +31,12 @@ void APPCreatureBase::BeginPlay()
 	HomeLocation = GetActorLocation();
 	SetCreatureMoveSpeed(WalkSpeed);
 	EnsureCreatureAIController();
-	StartAIUpdates();
+	if (const auto* Rules = GetWorld()->GetSubsystem<UEnvironmentLevelSubsystem>(); Rules && Rules->IsTutorialMode())
+	{
+		SetActorHiddenInGame(true);
+		SetActorEnableCollision(false);
+	}
+	else StartAIUpdates();
 	DebugMessage(FString::Printf(TEXT("AI started at home %s"), *HomeLocation.ToCompactString()));
 }
 

@@ -11,6 +11,7 @@ class UInputMappingContext;
 class UInputAction;
 class UUserWidget;
 class UPPPatrolHUDWidget;
+class UPPTutorialWidget;
 class UPPRoundReportWidget;
 class UPPRestraintMinigameWidget;
 class UPPPauseMenuWidget;
@@ -36,6 +37,7 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category="Poaching Patrol|Flow")
 	void ReplayPoachingPatrolDay();
+	void ShowTutorialResult(bool bSuccess, const FText& Message);
 
 	UFUNCTION(BlueprintCallable, Category="Poaching Patrol|Flow")
 	void ReturnToPoachingPatrolMenu();
@@ -94,6 +96,8 @@ protected:
 
 	UPROPERTY()
 	TObjectPtr<UPPRoundReportWidget> RoundReportWidget;
+	UPROPERTY() TObjectPtr<UPPTutorialWidget> TutorialHUDWidget;
+	UPROPERTY() TObjectPtr<UPPTutorialWidget> TutorialResultWidget;
 
 	UPROPERTY(EditAnywhere, Category="HUD|Poaching Patrol")
 	TSubclassOf<UPPRestraintMinigameWidget> RestraintMinigameWidgetClass;
