@@ -6,6 +6,8 @@ The first playable tutorial lives in the blocked-off `First Day on Patrol` regio
 
 The placed `PPTutorialDirector` is the pre-play level setting. Set `Patrol Mode` to `Tutorial` for the induction or `Normal Patrol` for the existing timed round. Tutorial mode starts after the opening menu closes, suppresses the patrol countdown and automatic round report, filters normal hostiles and wildlife, and owns the retry/completion flow.
 
+During play, `Escape` or `Tab` opens the pause menu. It shows the current patrol mode and offers `Restart in Tutorial` or `Restart in Normal Patrol`. Confirming the change stores a one-use mode request, reloads the current level, bypasses the opening overlay, and starts the selected mode from a clean state. Cancelling keeps the current patrol unchanged. Returning to the main menu clears any pending mode request.
+
 The director exposes the tutorial start, briefing point, patrol destination, resupply point, practice target, poacher, arrest zone, objectives, hints, ranger lines, and optional voice clips. Map Check reports missing assignments, an incorrectly configured tutorial poacher, missing objectives, or multiple directors.
 
 `Reviewed Community Opening` and `Reviewed Community Debrief` are intentionally empty. Add only team-approved engagement findings before dialogue recording.

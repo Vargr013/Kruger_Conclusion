@@ -331,9 +331,35 @@ void AKruger_ConclusionPlayerController::ReturnToPoachingPatrolMenu()
 {
 	if (UGameInstance* GameInstance = GetGameInstance())
 	{
-		GameInstance->GetSubsystem<UPPGameFlowSubsystem>()->ClearReplayBypass();
+		if (UPPGameFlowSubsystem* Flow = GameInstance->GetSubsystem<UPPGameFlowSubsystem>())
+		{
+			Flow->ClearReplayBypass();
+			Flow->ClearRequestedPatrolMode();
+		}
 	}
 	ReloadCurrentPatrolLevel();
+}
+
+bool AKruger_ConclusionPlayerController::RestartPoachingPatrolInMode(bool bTutorialMode)
+{
+	UEnvironmentLevelSubsystem* Rules = GetWorld() ? GetWorld()->GetSubsystem<UEnvironmentLevelSubsystem>() : nullptr;
+	UGameInstance* GameInstance = GetGameInstance();
+	if (!Rules || !Rules->GetTutorialDirector() || !GameInstance)
+	{
+		UE_LOG(LogKruger_Conclusion, Error, TEXT("Could not restart in %s because patrol mode switching is unavailable in this level."),
+			bTutorialMode ? TEXT("Tutorial") : TEXT("Normal Patrol"));
+		return false;
+	}
+
+	if (UPPGameFlowSubsystem* Flow = GameInstance->GetSubsystem<UPPGameFlowSubsystem>())
+	{
+		Flow->RequestPatrolMode(bTutorialMode);
+		Flow->RequestReplayBypass();
+		ReloadCurrentPatrolLevel();
+		return true;
+	}
+
+	return false;
 }
 
 void AKruger_ConclusionPlayerController::OpenGraphicsSettings()
@@ -388,6 +414,8 @@ void AKruger_ConclusionPlayerController::SetupInputComponent()
 	Super::SetupInputComponent();
 	FInputKeyBinding& PauseBinding = InputComponent->BindKey(EKeys::Escape, IE_Pressed, this, &AKruger_ConclusionPlayerController::ToggleGameplayPause);
 	PauseBinding.bExecuteWhenPaused = true;
+	FInputKeyBinding& TabPauseBinding = InputComponent->BindKey(EKeys::Tab, IE_Pressed, this, &AKruger_ConclusionPlayerController::ToggleGameplayPause);
+	TabPauseBinding.bExecuteWhenPaused = true;
 
 	if (UEnhancedInputComponent* EnhancedInput = Cast<UEnhancedInputComponent>(InputComponent); EnhancedInput && MinimapZoomAction)
 	{

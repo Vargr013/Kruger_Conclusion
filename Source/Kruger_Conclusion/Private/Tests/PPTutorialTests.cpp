@@ -6,10 +6,12 @@
 #include "Actors/PPArrestZone.h"
 #include "Characters/ARangerCharacter.h"
 #include "Characters/PPPoacherCharacter.h"
+#include "Data/PPGameFlowSubsystem.h"
 #include "BaseProjectile.h"
 #include "BaseGun.h"
 #include "EnvironmentLevelSubsystem.h"
 #include "Engine/Engine.h"
+#include "Engine/GameInstance.h"
 #include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/PlayerState.h"
@@ -144,6 +146,31 @@ bool FPPTutorialNormalRulesTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("Normal final arrest ends round"), Rules->HasRoundEnded());
 	TestEqual(TEXT("Tutorial remains unstarted"), Director->GetStage(), EPPTutorialStage::WaitingForMenu);
 	World->DestroyWorld(false); GEngine->DestroyWorldContext(World);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FPPTutorialModeRequestTest,
+	"KrugerConclusion.PoachingPatrol.Tutorial.ModeRequestIsOneShot",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FPPTutorialModeRequestTest::RunTest(const FString& Parameters)
+{
+	UGameInstance* GameInstance = NewObject<UGameInstance>();
+	UPPGameFlowSubsystem* Flow = NewObject<UPPGameFlowSubsystem>(GameInstance);
+	bool bTutorialMode = false;
+	TestFalse(TEXT("No mode override exists initially"), Flow->ConsumeRequestedPatrolMode(bTutorialMode));
+
+	Flow->RequestPatrolMode(true);
+	TestTrue(TEXT("Tutorial request is available after reload request"), Flow->ConsumeRequestedPatrolMode(bTutorialMode));
+	TestTrue(TEXT("Tutorial request keeps the requested mode"), bTutorialMode);
+	TestFalse(TEXT("Tutorial request is consumed only once"), Flow->ConsumeRequestedPatrolMode(bTutorialMode));
+
+	Flow->RequestPatrolMode(false);
+	TestTrue(TEXT("Normal patrol request is available"), Flow->ConsumeRequestedPatrolMode(bTutorialMode));
+	TestFalse(TEXT("Normal patrol request keeps the requested mode"), bTutorialMode);
+
+	Flow->RequestPatrolMode(true);
+	Flow->ClearRequestedPatrolMode();
+	TestFalse(TEXT("Returning to the menu clears a pending mode request"), Flow->ConsumeRequestedPatrolMode(bTutorialMode));
 	return true;
 }
 #endif

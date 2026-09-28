@@ -4,7 +4,9 @@
 #include "Characters/PPAnimalCharacter.h"
 #include "Characters/PPCreatureBase.h"
 #include "Characters/PPPoacherCharacter.h"
+#include "Data/PPGameFlowSubsystem.h"
 #include "Data/PPHealthComponent.h"
+#include "Engine/GameInstance.h"
 #include "EngineUtils.h"
 #include "TimerManager.h"
 
@@ -16,6 +18,21 @@ void UEnvironmentLevelSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 	{
 		TutorialDirector = *It;
 		break;
+	}
+	if (UGameInstance* GameInstance = InWorld.GetGameInstance())
+	{
+		bool bRequestedTutorialMode = false;
+		if (UPPGameFlowSubsystem* Flow = GameInstance->GetSubsystem<UPPGameFlowSubsystem>(); Flow && Flow->ConsumeRequestedPatrolMode(bRequestedTutorialMode))
+		{
+			if (TutorialDirector.IsValid())
+			{
+				TutorialDirector->PatrolMode = bRequestedTutorialMode ? EPPPatrolMode::Tutorial : EPPPatrolMode::NormalPatrol;
+			}
+			else
+			{
+				UE_LOG(LogTemp, Error, TEXT("Could not apply the requested patrol mode because this level has no tutorial director."));
+			}
+		}
 	}
 	ScanPlacedActors();
 	BroadcastStateChanged();

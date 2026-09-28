@@ -54,6 +54,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Poaching Patrol|Pause")
 	void ClosePauseOverlay();
 
+	UFUNCTION(BlueprintCallable, Category="Poaching Patrol|Flow")
+	bool RestartPoachingPatrolInMode(bool bTutorialMode);
+
 	UFUNCTION(BlueprintCallable, Category="Poaching Patrol|Restraint")
 	bool StartPoacherRestraint(APPPoacherCharacter* Poacher);
 
