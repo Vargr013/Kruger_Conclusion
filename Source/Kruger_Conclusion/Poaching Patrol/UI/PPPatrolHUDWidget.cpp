@@ -1002,7 +1002,7 @@ void UPPPatrolHUDWidget::DrawToolCount(const FGeometry& AllottedGeometry, FSlate
 
 	const FVector2D ViewSize = AllottedGeometry.GetLocalSize();
 	const float Scale = FMath::Clamp(ViewSize.Y / 1080.0f, 0.85f, 1.25f);
-	const FVector2D Size(FMath::Max(220.0f, AmmoPanelSize.X) * Scale, FMath::Max(64.0f, AmmoPanelSize.Y) * Scale);
+	const FVector2D Size(FMath::Max(340.0f, AmmoPanelSize.X) * Scale, FMath::Max(64.0f, AmmoPanelSize.Y) * Scale);
 	const FVector2D Origin(ViewSize.X - Size.X - ToolCountOffset.X, ViewSize.Y - Size.Y - ToolCountOffset.Y);
 	const FSlateBrush* WhiteBrush = GetCachedWhiteBrush();
 	const FSlateFontInfo LabelFont = PPUIStyle::Font(TEXT("Bold"), FMath::RoundToInt(15.0f * Scale));

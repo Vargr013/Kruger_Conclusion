@@ -75,7 +75,7 @@ protected:
 	FVector2D HealthPanelSize = FVector2D(260.0f, 48.0f);
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Poaching Patrol HUD|Layout")
-	FVector2D AmmoPanelSize = FVector2D(260.0f, 64.0f);
+	FVector2D AmmoPanelSize = FVector2D(340.0f, 64.0f);
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Poaching Patrol HUD|Layout", meta=(ClampMin="0.0"))
 	float StatusPanelGap = 10.0f;
