@@ -81,11 +81,14 @@ protected:
     void BP_OnPlayerDowned();
 
 public:
-    UFUNCTION(BlueprintCallable, Category = "Stats")
-    virtual void ResetPlayerHealth();
+	UFUNCTION(BlueprintCallable, Category = "Stats")
+	virtual void ResetPlayerHealth();
 
-    UFUNCTION(BlueprintPure, Category = "Stats")
-    class UPPHealthComponent* GetHealthComponent() const { return HealthComponent; }
+	UFUNCTION(BlueprintCallable, Category = "Stats")
+	void IncreasePlayerMaxHealth(float Amount);
+
+	UFUNCTION(BlueprintPure, Category = "Stats")
+	class UPPHealthComponent* GetHealthComponent() const { return HealthComponent; }
 
 private:
     void UpdateNoiseRadius();

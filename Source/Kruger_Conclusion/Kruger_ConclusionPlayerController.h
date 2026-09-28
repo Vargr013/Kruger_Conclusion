@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/SlateWrapperTypes.h"
+#include "Data/PPGameTypes.h"
 #include "GameFramework/PlayerController.h"
 #include "Kruger_ConclusionPlayerController.generated.h"
 
@@ -16,6 +17,7 @@ class UPPRoundReportWidget;
 class UPPRestraintMinigameWidget;
 class UPPPauseMenuWidget;
 class UPPGraphicsSettingsWidget;
+class UPPUpgradeMenuWidget;
 class APPPoacherCharacter;
 struct FPPRoundResult;
 enum class EPPRestraintResult : uint8;
@@ -38,6 +40,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Poaching Patrol|Flow")
 	void ReplayPoachingPatrolDay();
 	void ShowTutorialResult(bool bSuccess, const FText& Message);
+
+	UFUNCTION(BlueprintCallable, Category="Poaching Patrol|Flow")
+	void ShowUpgradeMenu(EPPUpgradeContinueDestination Destination);
+
+	UFUNCTION(BlueprintCallable, Category="Poaching Patrol|Flow")
+	void ContinueFromUpgradeMenu();
 
 	UFUNCTION(BlueprintCallable, Category="Poaching Patrol|Flow")
 	void ReturnToPoachingPatrolMenu();
@@ -101,6 +109,7 @@ protected:
 	TObjectPtr<UPPRoundReportWidget> RoundReportWidget;
 	UPROPERTY() TObjectPtr<UPPTutorialWidget> TutorialHUDWidget;
 	UPROPERTY() TObjectPtr<UPPTutorialWidget> TutorialResultWidget;
+	UPROPERTY() TObjectPtr<UPPUpgradeMenuWidget> UpgradeMenuWidget;
 
 	UPROPERTY(EditAnywhere, Category="HUD|Poaching Patrol")
 	TSubclassOf<UPPRestraintMinigameWidget> RestraintMinigameWidgetClass;
@@ -137,6 +146,7 @@ protected:
 	void ReloadCurrentPatrolLevel();
 	FTimerHandle ReplayMenuBypassTimer;
 	FTimerHandle MainMenuGraphicsTimer;
+	EPPUpgradeContinueDestination PendingUpgradeContinueDestination = EPPUpgradeContinueDestination::NextPatrolDay;
 
 	/** Gameplay initialization */
 	virtual void BeginPlay() override;

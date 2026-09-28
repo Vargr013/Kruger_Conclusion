@@ -5,7 +5,10 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Camera/CameraComponent.h"
 #include "BaseGun.h"
-#include "Data/PPHealthComponent.h" 
+#include "Data/PPGameFlowSubsystem.h"
+#include "Data/PPHealthComponent.h"
+#include "Engine/GameInstance.h"
+#include "InputCoreTypes.h" 
 
 ARangerCharacter::ARangerCharacter()
 {
@@ -43,6 +46,14 @@ void ARangerCharacter::BeginPlay()
 
             // Adjust this offset so the gun sits nicely in view
             CurrentGun->SetActorRelativeLocation(FVector(100.0f, 40.0f, -30.0f));
+        }
+    }
+
+    if (UGameInstance* GameInstance = GetGameInstance())
+    {
+        if (UPPGameFlowSubsystem* Flow = GameInstance->GetSubsystem<UPPGameFlowSubsystem>())
+        {
+            Flow->ApplyOwnedUpgrades(this);
         }
     }
 
@@ -102,6 +113,9 @@ void ARangerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 {
     Super::SetupPlayerInputComponent(PlayerInputComponent);
 
+    // Spare magazine reload (only consumes a mag when the magazine upgrade is owned).
+    PlayerInputComponent->BindKey(EKeys::R, IE_Pressed, this, &ARangerCharacter::ReloadSpareMagazine);
+
     UEnhancedInputComponent* EnhancedInput = Cast<UEnhancedInputComponent>(PlayerInputComponent);
     if (!EnhancedInput) return;
 
@@ -132,6 +146,14 @@ void ARangerCharacter::Fire()
     }
 }
 
+void ARangerCharacter::ReloadSpareMagazine()
+{
+    if (CurrentGun)
+    {
+        CurrentGun->TryUseSpareMagazine();
+    }
+}
+
 void ARangerCharacter::Move(const FInputActionValue& Value)
 {
     const FVector2D MoveVector = Value.Get<FVector2D>();
@@ -159,14 +181,20 @@ void ARangerCharacter::StartCrouch(const FInputActionValue& Value) { ToggleCrouc
 
 void ARangerCharacter::Resupply()
 {
-    Health = MaxHealth;
     if (HealthComponent)
     {
         HealthComponent->ResetHealth();
+        MaxHealth = HealthComponent->GetMaxHealth();
+        Health = HealthComponent->GetCurrentHealth();
+    }
+    else
+    {
+        Health = MaxHealth;
     }
 
     if (CurrentGun)
     {
         CurrentGun->Reload();
+        CurrentGun->RestoreSpareMagazines();
     }
 }

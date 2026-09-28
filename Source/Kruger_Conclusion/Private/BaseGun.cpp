@@ -31,6 +31,57 @@ ABaseGun::ABaseGun()
     MuzzleLocation->SetupAttachment(SceneRoot);
 
     CurrentAmmo = MaxAmmo;
+    BaseSprayRange = SprayRange;
+}
+
+void ABaseGun::BeginPlay()
+{
+    Super::BeginPlay();
+
+    CurrentAmmo = MaxAmmo;
+    if (BaseSprayRange <= KINDA_SMALL_NUMBER)
+    {
+        BaseSprayRange = SprayRange;
+    }
+}
+
+void ABaseGun::SetSpareMagazineCapacity(int32 Capacity)
+{
+    SpareMagazineCapacity = FMath::Max(0, Capacity);
+    SpareMagazinesRemaining = FMath::Clamp(SpareMagazinesRemaining, 0, SpareMagazineCapacity);
+}
+
+void ABaseGun::RestoreSpareMagazines()
+{
+    SpareMagazinesRemaining = SpareMagazineCapacity;
+}
+
+bool ABaseGun::TryUseSpareMagazine()
+{
+    if (SpareMagazinesRemaining <= 0 || CurrentAmmo >= MaxAmmo)
+    {
+        return false;
+    }
+
+    Reload();
+    --SpareMagazinesRemaining;
+    return true;
+}
+
+void ABaseGun::ApplyRangeUpgrade()
+{
+    if (bRangeUpgradeApplied)
+    {
+        return;
+    }
+
+    if (BaseSprayRange <= KINDA_SMALL_NUMBER)
+    {
+        BaseSprayRange = SprayRange;
+    }
+
+    SprayRange = BaseSprayRange * 2.0f;
+    bRangeUpgradeApplied = true;
 }
 
 void ABaseGun::Shoot()
@@ -60,13 +111,6 @@ void ABaseGun::Shoot()
     {
         CurrentAmmo = FMath::Max(0, CurrentAmmo - 1);
     }
-}
-
-void ABaseGun::BeginPlay()
-{
-    Super::BeginPlay();
-
-    CurrentAmmo = MaxAmmo;
 }
 
 FText ABaseGun::GetToolDisplayName() const

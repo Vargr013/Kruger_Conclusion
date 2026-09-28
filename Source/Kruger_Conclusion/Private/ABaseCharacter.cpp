@@ -210,6 +210,18 @@ void ABaseCharacter::ResetPlayerHealth()
     }
 }
 
+void ABaseCharacter::IncreasePlayerMaxHealth(float Amount)
+{
+    if (Amount <= 0.0f || !HealthComponent)
+    {
+        return;
+    }
+
+    HealthComponent->IncreaseMaxHealth(Amount);
+    MaxHealth = HealthComponent->GetMaxHealth();
+    Health = HealthComponent->GetCurrentHealth();
+}
+
 void ABaseCharacter::Interact()
 {
     if (UWorld* World = GetWorld())

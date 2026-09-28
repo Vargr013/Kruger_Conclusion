@@ -17,6 +17,7 @@
 #include "PPPatrolHUDWidget.h"
 #include "UI/PPRoundReportWidget.h"
 #include "UI/PPTutorialWidget.h"
+#include "UI/PPUpgradeMenuWidget.h"
 #include "UI/PPRestraintMinigameWidget.h"
 #include "UI/PPPauseMenuWidget.h"
 #include "UI/PPGraphicsSettingsWidget.h"
@@ -157,7 +158,7 @@ bool AKruger_ConclusionPlayerController::StartPoacherRestraint(APPPoacherCharact
 	if (!IsLocalPlayerController()
 		|| !IsValid(Poacher)
 		|| RestraintMinigameWidget
-		|| TutorialResultWidget || RoundReportWidget
+		|| TutorialResultWidget || RoundReportWidget || UpgradeMenuWidget
 		|| IsPaused()
 		|| !Poacher->BeginCaptureAttempt())
 	{
@@ -242,7 +243,7 @@ void AKruger_ConclusionPlayerController::RestoreGameplayAfterRestraint()
 	UGameplayStatics::SetGamePaused(this, false);
 	bShowMouseCursor = false;
 	SetInputMode(FInputModeGameOnly());
-	if (PoachingPatrolHUDWidget && !RoundReportWidget)
+	if (PoachingPatrolHUDWidget && !RoundReportWidget && !UpgradeMenuWidget)
 	{
 		PoachingPatrolHUDWidget->SetVisibility(PreviousPatrolHUDVisibility);
 	}
@@ -266,7 +267,7 @@ void AKruger_ConclusionPlayerController::AbortActiveRestraint()
 
 void AKruger_ConclusionPlayerController::HandlePoachingPatrolRoundEnded(FPPRoundResult Result)
 {
-	if (!IsLocalPlayerController() || TutorialResultWidget || RoundReportWidget)
+	if (!IsLocalPlayerController() || TutorialResultWidget || RoundReportWidget || UpgradeMenuWidget)
 	{
 		return;
 	}
@@ -304,7 +305,7 @@ void AKruger_ConclusionPlayerController::HandlePoachingPatrolRoundEnded(FPPRound
 
 void AKruger_ConclusionPlayerController::ShowTutorialResult(bool bSuccess, const FText& Message)
 {
-	if (!IsLocalPlayerController() || TutorialResultWidget) return;
+	if (!IsLocalPlayerController() || TutorialResultWidget || UpgradeMenuWidget) return;
 	AbortActiveRestraint();
 	TutorialResultWidget = CreateWidget<UPPTutorialWidget>(this, UPPTutorialWidget::StaticClass());
 	if (!TutorialResultWidget) return;
@@ -318,6 +319,63 @@ void AKruger_ConclusionPlayerController::ShowTutorialResult(bool bSuccess, const
 	SetInputMode(Mode);
 }
 
+void AKruger_ConclusionPlayerController::ShowUpgradeMenu(EPPUpgradeContinueDestination Destination)
+{
+	if (!IsLocalPlayerController() || UpgradeMenuWidget)
+	{
+		return;
+	}
+
+	PendingUpgradeContinueDestination = Destination;
+
+	if (RoundReportWidget)
+	{
+		RoundReportWidget->RemoveFromParent();
+		RoundReportWidget = nullptr;
+	}
+	if (TutorialResultWidget)
+	{
+		TutorialResultWidget->RemoveFromParent();
+		TutorialResultWidget = nullptr;
+	}
+
+	UpgradeMenuWidget = CreateWidget<UPPUpgradeMenuWidget>(this, UPPUpgradeMenuWidget::StaticClass());
+	if (!UpgradeMenuWidget)
+	{
+		return;
+	}
+
+	UpgradeMenuWidget->Configure(Destination);
+	UpgradeMenuWidget->AddToPlayerScreen(110);
+	if (PoachingPatrolHUDWidget)
+	{
+		PoachingPatrolHUDWidget->SetVisibility(ESlateVisibility::Collapsed);
+	}
+
+	UGameplayStatics::SetGamePaused(this, true);
+	bShowMouseCursor = true;
+	FInputModeUIOnly InputMode;
+	InputMode.SetWidgetToFocus(UpgradeMenuWidget->TakeWidget());
+	SetInputMode(InputMode);
+}
+
+void AKruger_ConclusionPlayerController::ContinueFromUpgradeMenu()
+{
+	if (UpgradeMenuWidget)
+	{
+		UpgradeMenuWidget->RemoveFromParent();
+		UpgradeMenuWidget = nullptr;
+	}
+
+	if (PendingUpgradeContinueDestination == EPPUpgradeContinueDestination::StartNormalPatrol)
+	{
+		RestartPoachingPatrolInMode(false);
+		return;
+	}
+
+	ReplayPoachingPatrolDay();
+}
+
 void AKruger_ConclusionPlayerController::ReplayPoachingPatrolDay()
 {
 	if (UGameInstance* GameInstance = GetGameInstance())
@@ -329,6 +387,11 @@ void AKruger_ConclusionPlayerController::ReplayPoachingPatrolDay()
 
 void AKruger_ConclusionPlayerController::ReturnToPoachingPatrolMenu()
 {
+	if (UpgradeMenuWidget)
+	{
+		UpgradeMenuWidget->RemoveFromParent();
+		UpgradeMenuWidget = nullptr;
+	}
 	if (UGameInstance* GameInstance = GetGameInstance())
 	{
 		if (UPPGameFlowSubsystem* Flow = GameInstance->GetSubsystem<UPPGameFlowSubsystem>())
@@ -448,7 +511,7 @@ void AKruger_ConclusionPlayerController::SetupInputComponent()
 
 void AKruger_ConclusionPlayerController::ToggleGameplayPause()
 {
-	if (!IsLocalPlayerController() || RestraintMinigameWidget || TutorialResultWidget || RoundReportWidget || IsLegacyMainMenuVisible())
+	if (!IsLocalPlayerController() || RestraintMinigameWidget || TutorialResultWidget || RoundReportWidget || UpgradeMenuWidget || IsLegacyMainMenuVisible())
 	{
 		return;
 	}
@@ -465,7 +528,7 @@ void AKruger_ConclusionPlayerController::ToggleGameplayPause()
 
 void AKruger_ConclusionPlayerController::OpenPauseOverlay()
 {
-	if (!IsLocalPlayerController() || PauseMenuWidget || RestraintMinigameWidget || TutorialResultWidget || RoundReportWidget || IsLegacyMainMenuVisible())
+	if (!IsLocalPlayerController() || PauseMenuWidget || RestraintMinigameWidget || TutorialResultWidget || RoundReportWidget || UpgradeMenuWidget || IsLegacyMainMenuVisible())
 	{
 		return;
 	}

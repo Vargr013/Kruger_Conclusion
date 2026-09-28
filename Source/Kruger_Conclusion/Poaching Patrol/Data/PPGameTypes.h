@@ -81,6 +81,21 @@ enum class EPPRoundEndReason : uint8
 	TimeExpired
 };
 
+UENUM(BlueprintType)
+enum class EPPUpgradeType : uint8
+{
+	Health UMETA(DisplayName = "Health"),
+	Magazine UMETA(DisplayName = "Magazine"),
+	Range UMETA(DisplayName = "Range")
+};
+
+UENUM(BlueprintType)
+enum class EPPUpgradeContinueDestination : uint8
+{
+	NextPatrolDay UMETA(DisplayName = "Next Patrol Day"),
+	StartNormalPatrol UMETA(DisplayName = "Start Normal Patrol")
+};
+
 USTRUCT(BlueprintType)
 struct KRUGER_CONCLUSION_API FPPObjectiveState
 {
@@ -200,4 +215,10 @@ struct KRUGER_CONCLUSION_API FPPRoundResult
 
 	UPROPERTY(BlueprintReadOnly, Category="Poaching Patrol|Round")
 	FPPRoundSnapshot Snapshot;
+
+	UPROPERTY(BlueprintReadOnly, Category="Poaching Patrol|Round")
+	int32 IncomeEarned = 0;
+
+	UPROPERTY(BlueprintReadOnly, Category="Poaching Patrol|Round")
+	int32 MoneyTotal = 0;
 };

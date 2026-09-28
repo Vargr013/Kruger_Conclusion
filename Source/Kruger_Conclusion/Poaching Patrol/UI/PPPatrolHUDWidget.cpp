@@ -1023,7 +1023,9 @@ void UPPPatrolHUDWidget::DrawToolCount(const FGeometry& AllottedGeometry, FSlate
 		OutDrawElements,
 		LayerId++,
 		AllottedGeometry.ToPaintGeometry(FVector2D(Size.X - 24.0f * Scale, 36.0f * Scale), FSlateLayoutTransform(Origin + FVector2D(12.0f, 23.0f) * Scale)),
-		FString::Printf(TEXT("%d / %d"), Tool->GetRemainingUses(), Tool->GetMaxUses()),
+		Tool->GetSpareMagazinesRemaining() > 0
+			? FString::Printf(TEXT("%d / %d  +%d mag"), Tool->GetRemainingUses(), Tool->GetMaxUses(), Tool->GetSpareMagazinesRemaining())
+			: FString::Printf(TEXT("%d / %d"), Tool->GetRemainingUses(), Tool->GetMaxUses()),
 		CountFont,
 		ESlateDrawEffect::None,
 		SafariMarkerColor);

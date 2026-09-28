@@ -20,7 +20,7 @@ protected:
 	virtual void NativeOnInitialized() override;
 
 	UFUNCTION()
-	void HandleReplayClicked();
+	void HandleContinueClicked();
 
 	UFUNCTION()
 	void HandleMainMenuClicked();
@@ -43,6 +43,9 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UTextBlock> AnimalText;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UTextBlock> MoneyText;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UTextBlock> FooterText;

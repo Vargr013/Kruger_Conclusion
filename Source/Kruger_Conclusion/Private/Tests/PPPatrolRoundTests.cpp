@@ -4,8 +4,10 @@
 
 #include "Characters/PPAnimalCharacter.h"
 #include "Characters/PPPoacherCharacter.h"
+#include "Data/PPGameFlowSubsystem.h"
 #include "Data/PPHealthComponent.h"
 #include "Engine/Engine.h"
+#include "Engine/GameInstance.h"
 #include "Engine/World.h"
 #include "EnvironmentLevelSubsystem.h"
 #include "GameFramework/WorldSettings.h"
@@ -118,10 +120,25 @@ bool FPPPatrolRoundStateTest::RunTest(const FString& Parameters)
 
 		const FPPRoundResult FirstResult = Rules->GetFinalRoundResult();
 		TestEqual(TEXT("Resolved poachers explains the ending"), FirstResult.EndReason, EPPRoundEndReason::AllPoachersResolved);
+		TestEqual(TEXT("Day income is ten per living animal"), FirstResult.IncomeEarned, FirstResult.Snapshot.AnimalsAlive * 10);
+		TestEqual(TEXT("One surviving animal pays ten"), FirstResult.IncomeEarned, 10);
+		if (UGameInstance* GameInstance = World->GetGameInstance())
+		{
+			if (UPPGameFlowSubsystem* Flow = GameInstance->GetSubsystem<UPPGameFlowSubsystem>())
+			{
+				TestEqual(TEXT("Report total matches session money"), FirstResult.MoneyTotal, Flow->GetMoney());
+				TestTrue(TEXT("Session money includes day income"), Flow->GetMoney() >= FirstResult.IncomeEarned);
+			}
+		}
+		else
+		{
+			TestEqual(TEXT("Without a game instance the report total equals income"), FirstResult.MoneyTotal, FirstResult.IncomeEarned);
+		}
 		Rules->ReportPlayerDowned();
 		TestEqual(TEXT("Late damage cannot replace the ending reason"), Rules->GetFinalRoundResult().EndReason, FirstResult.EndReason);
 		Rules->ReportPoacherPermanentlyEscaped(PoacherC);
 		TestEqual(TEXT("Final result remains immutable"), Rules->GetFinalRoundResult().Snapshot.PoachersPermanentlyEscaped, FirstResult.Snapshot.PoachersPermanentlyEscaped);
+		TestEqual(TEXT("Late events do not re-award income"), Rules->GetFinalRoundResult().IncomeEarned, FirstResult.IncomeEarned);
 	}
 
 	World->DestroyWorld(false);

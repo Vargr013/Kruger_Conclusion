@@ -93,6 +93,7 @@ private:
     void StartCrouch(const FInputActionValue& Value);
 
     void Fire();
+    void ReloadSpareMagazine();
 
     // Applies a sin-wave camera offset while sprinting on the ground. 
     void UpdateHeadBob(float DeltaTime);

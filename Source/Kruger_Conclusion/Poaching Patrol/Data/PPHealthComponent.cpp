@@ -38,3 +38,15 @@ void UPPHealthComponent::ResetHealth()
 	CurrentHealth = MaxHealth;
 	OnHealthChanged.Broadcast(CurrentHealth, MaxHealth);
 }
+
+void UPPHealthComponent::IncreaseMaxHealth(float Amount)
+{
+	if (Amount <= 0.0f)
+	{
+		return;
+	}
+
+	MaxHealth += Amount;
+	CurrentHealth = FMath::Clamp(CurrentHealth + Amount, 0.0f, MaxHealth);
+	OnHealthChanged.Broadcast(CurrentHealth, MaxHealth);
+}

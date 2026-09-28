@@ -30,7 +30,6 @@ public:
     UPROPERTY(VisibleAnywhere)
     USceneComponent* MuzzleLocation;
 
-    // Weapon Settings
     UPROPERTY(EditDefaultsOnly, Category = "Weapon Setup")
     EFireMode FireMode = EFireMode::Projectile;
 
@@ -52,14 +51,11 @@ public:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon Setup", meta = (ClampMin = "0.05"))
     float ShotCooldownSeconds = 0.4f;
 
-
-
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon Setup|HUD")
     bool bConsumesUses = true;
 
-	UFUNCTION(BlueprintCallable, Category = "Weapon")
-	void Reload() { CurrentAmmo = MaxAmmo; }
-
+    UFUNCTION(BlueprintCallable, Category = "Weapon")
+    void Reload() { CurrentAmmo = MaxAmmo; }
 
     void Shoot();
 
@@ -72,14 +68,40 @@ public:
     UFUNCTION(BlueprintPure, Category = "Weapon Setup|HUD")
     FText GetToolDisplayName() const;
 
+    UFUNCTION(BlueprintCallable, Category = "Weapon|Upgrades")
+    void SetSpareMagazineCapacity(int32 Capacity);
+
+    UFUNCTION(BlueprintCallable, Category = "Weapon|Upgrades")
+    void RestoreSpareMagazines();
+
+    UFUNCTION(BlueprintCallable, Category = "Weapon|Upgrades")
+    bool TryUseSpareMagazine();
+
+    UFUNCTION(BlueprintPure, Category = "Weapon|Upgrades")
+    int32 GetSpareMagazineCapacity() const { return SpareMagazineCapacity; }
+
+    UFUNCTION(BlueprintPure, Category = "Weapon|Upgrades")
+    int32 GetSpareMagazinesRemaining() const { return SpareMagazinesRemaining; }
+
+    UFUNCTION(BlueprintCallable, Category = "Weapon|Upgrades")
+    void ApplyRangeUpgrade();
+
 private:
     bool FireProjectile();
     void FireRaycast();
 
     float NextShotTime = 0.0f;
+    float BaseSprayRange = 500.0f;
+    bool bRangeUpgradeApplied = false;
 
     UPROPERTY(VisibleInstanceOnly, Category = "Weapon Setup|HUD")
     int32 CurrentAmmo = 0;
+
+    UPROPERTY(VisibleInstanceOnly, Category = "Weapon|Upgrades")
+    int32 SpareMagazineCapacity = 0;
+
+    UPROPERTY(VisibleInstanceOnly, Category = "Weapon|Upgrades")
+    int32 SpareMagazinesRemaining = 0;
 
 protected:
     virtual void BeginPlay() override;

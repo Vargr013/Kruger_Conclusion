@@ -13,6 +13,7 @@ protected:
 	virtual void NativeOnInitialized() override;
 	virtual void NativeTick(const FGeometry& Geometry, float DeltaSeconds) override;
 private:
+	UFUNCTION() void ContinueToUpgrades();
 	UFUNCTION() void Replay();
 	UFUNCTION() void MainMenu();
 	UPROPERTY() TObjectPtr<class UBorder> ObjectivePanel;
@@ -26,6 +27,7 @@ private:
 	UPROPERTY() TObjectPtr<class UTextBlock> Speaker;
 	UPROPERTY() TObjectPtr<class UTextBlock> ResultTitle;
 	UPROPERTY() TObjectPtr<class UTextBlock> ResultText;
+	UPROPERTY() TObjectPtr<class UButton> ContinueButton;
 	UPROPERTY() TObjectPtr<class UTextBlock> ReplayText;
 	bool bShowingResult = false;
 };

@@ -79,6 +79,7 @@ void UPPRoundReportWidget::BuildDefaultWidgetTree()
 	OutcomeText = AddReportText(WidgetTree, Column, TEXT("Outcome"), 18, Ink);
 	PoacherText = AddReportText(WidgetTree, Column, TEXT("Poachers"), 22, Ink, ETextJustify::Left);
 	AnimalText = AddReportText(WidgetTree, Column, TEXT("Animals"), 22, Ink, ETextJustify::Left);
+	MoneyText = AddReportText(WidgetTree, Column, TEXT("Money"), 20, Ink, ETextJustify::Left);
 	FooterText = AddReportText(WidgetTree, Column, TEXT("Footer"), 14, Ink);
 
 	USpacer* Spacer = WidgetTree->ConstructWidget<USpacer>(USpacer::StaticClass(), TEXT("ButtonSpacer"));
@@ -111,9 +112,9 @@ void UPPRoundReportWidget::BuildDefaultWidgetTree()
 		{
 			Slot->SetPadding(FMargin(10.0f, 0.0f));
 		}
-		if (Handler == &UPPRoundReportWidget::HandleReplayClicked)
+		if (Handler == &UPPRoundReportWidget::HandleContinueClicked)
 		{
-			Button->OnClicked.AddDynamic(this, &UPPRoundReportWidget::HandleReplayClicked);
+			Button->OnClicked.AddDynamic(this, &UPPRoundReportWidget::HandleContinueClicked);
 		}
 		else
 		{
@@ -121,7 +122,7 @@ void UPPRoundReportWidget::BuildDefaultWidgetTree()
 		}
 	};
 
-	AddButton(TEXT("ReplayButton"), TEXT("REPLAY DAY"), &UPPRoundReportWidget::HandleReplayClicked);
+	AddButton(TEXT("ContinueButton"), TEXT("CONTINUE"), &UPPRoundReportWidget::HandleContinueClicked);
 	AddButton(TEXT("MainMenuButton"), TEXT("MAIN MENU"), &UPPRoundReportWidget::HandleMainMenuClicked);
 }
 
@@ -157,6 +158,13 @@ void UPPRoundReportWidget::RefreshText()
 		Snapshot.TotalAnimals,
 		Snapshot.AnimalsPoached,
 		FMath::Max(0, Snapshot.AnimalsLost - Snapshot.AnimalsPoached))));
+	if (MoneyText)
+	{
+		MoneyText->SetText(FText::FromString(FString::Printf(
+			TEXT("INCOME +%d  |  TOTAL %d"),
+			RoundResult.IncomeEarned,
+			RoundResult.MoneyTotal)));
+	}
 	const TCHAR* Reason = TEXT("End-of-day field report");
 	switch (RoundResult.EndReason)
 	{
@@ -168,11 +176,11 @@ void UPPRoundReportWidget::RefreshText()
 	FooterText->SetText(FText::FromString(Reason));
 }
 
-void UPPRoundReportWidget::HandleReplayClicked()
+void UPPRoundReportWidget::HandleContinueClicked()
 {
 	if (AKruger_ConclusionPlayerController* Controller = Cast<AKruger_ConclusionPlayerController>(GetOwningPlayer()))
 	{
-		Controller->ReplayPoachingPatrolDay();
+		Controller->ShowUpgradeMenu(EPPUpgradeContinueDestination::NextPatrolDay);
 	}
 }
 

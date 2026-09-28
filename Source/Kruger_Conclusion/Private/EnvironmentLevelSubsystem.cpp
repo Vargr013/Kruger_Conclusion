@@ -538,6 +538,28 @@ void UEnvironmentLevelSubsystem::FinishRound(EPPRoundEndReason Reason)
 	FinalRoundResult.EndReason = Reason;
 	FinalRoundResult.Outcome = Reason != EPPRoundEndReason::PlayerDowned && FinalRoundResult.Snapshot.bQuotaMet
 		? EPPRoundOutcome::Success : EPPRoundOutcome::Failure;
+
+	int32 IncomePerAnimal = 10;
+	UPPGameFlowSubsystem* Flow = nullptr;
+	if (UGameInstance* GameInstance = GetWorld() ? GetWorld()->GetGameInstance() : nullptr)
+	{
+		Flow = GameInstance->GetSubsystem<UPPGameFlowSubsystem>();
+		if (Flow)
+		{
+			IncomePerAnimal = Flow->GetIncomePerAnimalAlive();
+		}
+	}
+	FinalRoundResult.IncomeEarned = FinalRoundResult.Snapshot.AnimalsAlive * IncomePerAnimal;
+	if (Flow)
+	{
+		Flow->AddMoney(FinalRoundResult.IncomeEarned);
+		FinalRoundResult.MoneyTotal = Flow->GetMoney();
+	}
+	else
+	{
+		FinalRoundResult.MoneyTotal = FinalRoundResult.IncomeEarned;
+	}
+
 	OnRoundEnded.Broadcast(FinalRoundResult);
 
 	if (FinalRoundResult.Outcome == EPPRoundOutcome::Success)

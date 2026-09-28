@@ -40,6 +40,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Health")
 	void ResetHealth();
 
+	UFUNCTION(BlueprintCallable, Category="Health")
+	void IncreaseMaxHealth(float Amount);
+
 	UFUNCTION(BlueprintPure, Category="Health")
 	float GetCurrentHealth() const { return CurrentHealth; }
 
