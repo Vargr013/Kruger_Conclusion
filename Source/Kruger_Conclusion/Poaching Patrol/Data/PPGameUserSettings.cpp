@@ -5,6 +5,7 @@
 UPPGameUserSettings::UPPGameUserSettings()
 {
 	SelectedGraphicsPreset = EPPGraphicsPreset::Medium;
+	MouseSensitivity = DefaultMouseSensitivity;
 }
 
 UPPGameUserSettings* UPPGameUserSettings::GetPPGameUserSettings()
@@ -17,6 +18,7 @@ void UPPGameUserSettings::SetToDefaults()
 	Super::SetToDefaults();
 	SelectedGraphicsPreset = EPPGraphicsPreset::Medium;
 	bHasExplicitGraphicsPreset = false;
+	MouseSensitivity = DefaultMouseSensitivity;
 	ScalabilityQuality = BuildQualityLevels(SelectedGraphicsPreset);
 }
 
@@ -35,6 +37,8 @@ void UPPGameUserSettings::LoadSettings(bool bForceReload)
 		// left untouched until the player explicitly chooses a project preset.
 		SelectedGraphicsPreset = EPPGraphicsPreset::Medium;
 	}
+
+	MouseSensitivity = SanitizeMouseSensitivity(MouseSensitivity);
 }
 
 void UPPGameUserSettings::ApplyGraphicsPreset(EPPGraphicsPreset Preset)
@@ -46,6 +50,20 @@ void UPPGameUserSettings::ApplyGraphicsPreset(EPPGraphicsPreset Preset)
 	ApplyResolutionSettings(false);
 	SaveSettings();
 	OnGraphicsPresetChanged.Broadcast(SelectedGraphicsPreset);
+}
+
+void UPPGameUserSettings::SetMouseSensitivity(float NewSensitivity)
+{
+	const float Sanitized = SanitizeMouseSensitivity(NewSensitivity);
+	if (FMath::IsNearlyEqual(MouseSensitivity, Sanitized, 0.001f))
+	{
+		MouseSensitivity = Sanitized;
+		return;
+	}
+
+	MouseSensitivity = Sanitized;
+	SaveSettings();
+	OnMouseSensitivityChanged.Broadcast(MouseSensitivity);
 }
 
 EPPGraphicsPreset UPPGameUserSettings::SanitizePreset(int32 RawValue)
@@ -60,6 +78,11 @@ EPPGraphicsPreset UPPGameUserSettings::SanitizePreset(int32 RawValue)
 	default:
 		return EPPGraphicsPreset::Medium;
 	}
+}
+
+float UPPGameUserSettings::SanitizeMouseSensitivity(float RawValue)
+{
+	return FMath::Clamp(RawValue, MinMouseSensitivity, MaxMouseSensitivity);
 }
 
 Scalability::FQualityLevels UPPGameUserSettings::BuildQualityLevels(EPPGraphicsPreset Preset)

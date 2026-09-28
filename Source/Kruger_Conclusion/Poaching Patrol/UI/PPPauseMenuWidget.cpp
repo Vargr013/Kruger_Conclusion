@@ -1,5 +1,6 @@
 #include "UI/PPPauseMenuWidget.h"
 #include "UI/PPUIStyle.h"
+#include "UI/PPOptionsMenuWidget.h"
 
 #include "Kruger_ConclusionPlayerController.h"
 #include "Blueprint/WidgetTree.h"
@@ -11,8 +12,6 @@
 #include "Components/VerticalBox.h"
 #include "Components/VerticalBoxSlot.h"
 #include "EnvironmentLevelSubsystem.h"
-#include "UI/PPGraphicsSettingsWidget.h"
-#include "Styling/CoreStyle.h"
 
 namespace
 {
@@ -40,31 +39,34 @@ void UPPPauseMenuWidget::NativeOnInitialized()
 		WidgetTree->RootWidget = Canvas;
 		UBorder* Backdrop = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("PauseBackdrop"));
 		Backdrop->SetBrush(PPUIStyle::PanelBrush(FLinearColor(0.11f, 0.085f, 0.045f, 0.96f)));
-		Canvas->AddChildToCanvas(Backdrop)->SetAnchors(FAnchors(0.32f, 0.18f, 0.68f, 0.82f));
+		Canvas->AddChildToCanvas(Backdrop)->SetAnchors(FAnchors(0.30f, 0.14f, 0.70f, 0.86f));
 
-		UVerticalBox* Menu = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("PauseMenu"));
-		Backdrop->AddChild(Menu);
+		UVerticalBox* RootColumn = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("PauseRoot"));
+		Backdrop->AddChild(RootColumn);
+
+		MainMenu = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("PauseMenu"));
+		RootColumn->AddChildToVerticalBox(MainMenu);
+
 		UTextBlock* Title = WidgetTree->ConstructWidget<UTextBlock>();
 		Title->SetText(NSLOCTEXT("PoachingPatrol", "Paused", "Paused"));
 		Title->SetJustification(ETextJustify::Center);
 		Title->SetFont(PPUIStyle::Font(TEXT("Bold"), 32));
-		Menu->AddChildToVerticalBox(Title)->SetPadding(FMargin(12.0f));
+		MainMenu->AddChildToVerticalBox(Title)->SetPadding(FMargin(12.0f));
 
-		ResumeButton = AddMenuButton(WidgetTree, Menu, TEXT("Resume"), NSLOCTEXT("PoachingPatrol", "Resume", "Resume"));
-		GraphicsSettings = WidgetTree->ConstructWidget<UPPGraphicsSettingsWidget>(UPPGraphicsSettingsWidget::StaticClass(), TEXT("PauseGraphicsSettings"));
-		Menu->AddChildToVerticalBox(GraphicsSettings)->SetPadding(FMargin(12.0f));
+		ResumeButton = AddMenuButton(WidgetTree, MainMenu, TEXT("Resume"), NSLOCTEXT("PoachingPatrol", "Resume", "Resume"));
+		OptionsButton = AddMenuButton(WidgetTree, MainMenu, TEXT("Options"), NSLOCTEXT("PoachingPatrol", "Options", "Options"));
 
 		CurrentModeText = WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), TEXT("CurrentPatrolMode"));
 		CurrentModeText->SetJustification(ETextJustify::Center);
 		CurrentModeText->SetFont(PPUIStyle::Font(TEXT("Regular"), 19));
 		CurrentModeText->SetAutoWrapText(true);
-		Menu->AddChildToVerticalBox(CurrentModeText)->SetPadding(FMargin(12.0f, 14.0f, 12.0f, 4.0f));
+		MainMenu->AddChildToVerticalBox(CurrentModeText)->SetPadding(FMargin(12.0f, 14.0f, 12.0f, 4.0f));
 
-		ModeSwitchButton = AddMenuButton(WidgetTree, Menu, TEXT("SwitchPatrolMode"), FText::GetEmpty());
+		ModeSwitchButton = AddMenuButton(WidgetTree, MainMenu, TEXT("SwitchPatrolMode"), FText::GetEmpty());
 		ModeSwitchButtonText = Cast<UTextBlock>(ModeSwitchButton->GetContent());
 
 		ModeConfirmation = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("ModeConfirmation"));
-		Menu->AddChildToVerticalBox(ModeConfirmation)->SetPadding(FMargin(8.0f));
+		MainMenu->AddChildToVerticalBox(ModeConfirmation)->SetPadding(FMargin(8.0f));
 		UTextBlock* Warning = WidgetTree->ConstructWidget<UTextBlock>();
 		Warning->SetText(NSLOCTEXT("PoachingPatrol", "ModeRestartWarning", "Changing patrol mode restarts the level and resets your current progress."));
 		Warning->SetJustification(ETextJustify::Center);
@@ -76,19 +78,60 @@ void UPPPauseMenuWidget::NativeOnInitialized()
 		CancelModeButton = AddMenuButton(WidgetTree, ModeConfirmation, TEXT("CancelPatrolMode"), NSLOCTEXT("PoachingPatrol", "CancelModeRestart", "Cancel"));
 		ModeConfirmation->SetVisibility(ESlateVisibility::Collapsed);
 
-		ReturnButton = AddMenuButton(WidgetTree, Menu, TEXT("ReturnToMainMenu"), NSLOCTEXT("PoachingPatrol", "ReturnToMenu", "Return to Main Menu"));
+		ReturnButton = AddMenuButton(WidgetTree, MainMenu, TEXT("ReturnToMainMenu"), NSLOCTEXT("PoachingPatrol", "ReturnToMenu", "Return to Main Menu"));
+
+		OptionsMenu = WidgetTree->ConstructWidget<UPPOptionsMenuWidget>(UPPOptionsMenuWidget::StaticClass(), TEXT("PauseOptionsMenu"));
+		RootColumn->AddChildToVerticalBox(OptionsMenu)->SetPadding(FMargin(8.0f));
+		OptionsMenu->SetVisibility(ESlateVisibility::Collapsed);
 	}
+
 	ResumeButton->OnClicked.AddUniqueDynamic(this, &UPPPauseMenuWidget::Resume);
+	OptionsButton->OnClicked.AddUniqueDynamic(this, &UPPPauseMenuWidget::OpenOptions);
 	ReturnButton->OnClicked.AddUniqueDynamic(this, &UPPPauseMenuWidget::ReturnToMainMenu);
 	ModeSwitchButton->OnClicked.AddUniqueDynamic(this, &UPPPauseMenuWidget::RequestModeSwitch);
 	ConfirmModeButton->OnClicked.AddUniqueDynamic(this, &UPPPauseMenuWidget::ConfirmModeSwitch);
 	CancelModeButton->OnClicked.AddUniqueDynamic(this, &UPPPauseMenuWidget::CancelModeSwitch);
+	if (OptionsMenu)
+	{
+		OptionsMenu->OnBackRequested.AddUniqueDynamic(this, &UPPPauseMenuWidget::CloseOptions);
+	}
 	RefreshPatrolMode();
+	ShowMainMenu();
 }
 
 void UPPPauseMenuWidget::Resume()
 {
 	if (AKruger_ConclusionPlayerController* Controller = GetOwningPlayer<AKruger_ConclusionPlayerController>()) Controller->ClosePauseOverlay();
+}
+
+void UPPPauseMenuWidget::OpenOptions()
+{
+	ShowOptionsMenu();
+}
+
+void UPPPauseMenuWidget::CloseOptions()
+{
+	ShowMainMenu();
+	if (OptionsButton)
+	{
+		OptionsButton->SetKeyboardFocus();
+	}
+}
+
+void UPPPauseMenuWidget::ShowMainMenu()
+{
+	if (MainMenu) MainMenu->SetVisibility(ESlateVisibility::Visible);
+	if (OptionsMenu) OptionsMenu->SetVisibility(ESlateVisibility::Collapsed);
+}
+
+void UPPPauseMenuWidget::ShowOptionsMenu()
+{
+	if (MainMenu) MainMenu->SetVisibility(ESlateVisibility::Collapsed);
+	if (OptionsMenu)
+	{
+		OptionsMenu->SetVisibility(ESlateVisibility::Visible);
+		OptionsMenu->SetKeyboardFocus();
+	}
 }
 
 void UPPPauseMenuWidget::ReturnToMainMenu()

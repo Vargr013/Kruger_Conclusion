@@ -20,9 +20,10 @@
 #include "UI/PPUpgradeMenuWidget.h"
 #include "UI/PPRestraintMinigameWidget.h"
 #include "UI/PPPauseMenuWidget.h"
-#include "UI/PPGraphicsSettingsWidget.h"
+#include "UI/PPMainMenuWidget.h"
 #include "Characters/PPPoacherCharacter.h"
 #include "Kismet/GameplayStatics.h"
+#include "Kismet/KismetSystemLibrary.h"
 #include "Widgets/Input/SVirtualJoystick.h"
 #include "InputCoreTypes.h"
 
@@ -97,18 +98,6 @@ void AKruger_ConclusionPlayerController::BeginPlay()
 
 	if (IsLocalPlayerController())
 	{
-		MainMenuGraphicsWidget = CreateWidget<UPPGraphicsSettingsWidget>(this, UPPGraphicsSettingsWidget::StaticClass());
-		if (MainMenuGraphicsWidget)
-		{
-			MainMenuGraphicsWidget->SetHeading(NSLOCTEXT("PoachingPatrol", "MainMenuGraphics", "Settings - Graphics"));
-			MainMenuGraphicsWidget->SetAnchorsInViewport(FAnchors(0.5f, 0.82f));
-			MainMenuGraphicsWidget->SetAlignmentInViewport(FVector2D(0.5f, 0.5f));
-			MainMenuGraphicsWidget->SetDesiredSizeInViewport(FVector2D(520.0f, 110.0f));
-			MainMenuGraphicsWidget->AddToPlayerScreen(90);
-			RefreshMainMenuGraphicsEntry();
-			GetWorldTimerManager().SetTimer(MainMenuGraphicsTimer, this, &AKruger_ConclusionPlayerController::RefreshMainMenuGraphicsEntry, 0.2f, true);
-		}
-
 		if (UEnvironmentLevelSubsystem* LevelSubsystem = GetWorld() ? GetWorld()->GetSubsystem<UEnvironmentLevelSubsystem>() : nullptr)
 		{
 			TutorialHUDWidget = CreateWidget<UPPTutorialWidget>(this, UPPTutorialWidget::StaticClass());
@@ -120,13 +109,25 @@ void AKruger_ConclusionPlayerController::BeginPlay()
 			}
 		}
 
+		SuppressLegacyMainMenuOverlay();
+
+		bool bBypassMainMenu = false;
 		if (UGameInstance* GameInstance = GetGameInstance())
 		{
-			if (UPPGameFlowSubsystem* Flow = GameInstance->GetSubsystem<UPPGameFlowSubsystem>(); Flow && Flow->ConsumeReplayBypass())
+			if (UPPGameFlowSubsystem* Flow = GameInstance->GetSubsystem<UPPGameFlowSubsystem>())
 			{
-				ApplyReplayMenuBypass();
-				GetWorldTimerManager().SetTimer(ReplayMenuBypassTimer, this, &AKruger_ConclusionPlayerController::ApplyReplayMenuBypass, 0.1f, false);
+				bBypassMainMenu = Flow->ConsumeReplayBypass();
 			}
+		}
+
+		if (bBypassMainMenu)
+		{
+			ApplyReplayMenuBypass();
+			GetWorldTimerManager().SetTimer(ReplayMenuBypassTimer, this, &AKruger_ConclusionPlayerController::ApplyReplayMenuBypass, 0.1f, false);
+		}
+		else if (!RoundReportWidget && !TutorialResultWidget && !UpgradeMenuWidget)
+		{
+			OpenPoachingPatrolMainMenu();
 		}
 	}
 }
@@ -140,7 +141,7 @@ void AKruger_ConclusionPlayerController::PlayerTick(float DeltaTime)
 	}
 	UEnvironmentLevelSubsystem* Rules = GetWorld()->GetSubsystem<UEnvironmentLevelSubsystem>();
 	// I waited until the menu closed so its opening frame did not start the clock.
-	if (Rules && !Rules->HasPatrolStarted() && !Rules->HasRoundEnded() && !IsLegacyMainMenuVisible())
+	if (Rules && !Rules->HasPatrolStarted() && !Rules->HasRoundEnded() && !IsMainMenuVisible())
 	{
 		Rules->StartPatrol();
 	}
@@ -148,7 +149,6 @@ void AKruger_ConclusionPlayerController::PlayerTick(float DeltaTime)
 
 void AKruger_ConclusionPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	GetWorldTimerManager().ClearTimer(MainMenuGraphicsTimer);
 	AbortActiveRestraint();
 	Super::EndPlay(EndPlayReason);
 }
@@ -392,6 +392,21 @@ void AKruger_ConclusionPlayerController::ReturnToPoachingPatrolMenu()
 		UpgradeMenuWidget->RemoveFromParent();
 		UpgradeMenuWidget = nullptr;
 	}
+	if (PauseMenuWidget)
+	{
+		PauseMenuWidget->RemoveFromParent();
+		PauseMenuWidget = nullptr;
+	}
+	if (RoundReportWidget)
+	{
+		RoundReportWidget->RemoveFromParent();
+		RoundReportWidget = nullptr;
+	}
+	if (TutorialResultWidget)
+	{
+		TutorialResultWidget->RemoveFromParent();
+		TutorialResultWidget = nullptr;
+	}
 	if (UGameInstance* GameInstance = GetGameInstance())
 	{
 		if (UPPGameFlowSubsystem* Flow = GameInstance->GetSubsystem<UPPGameFlowSubsystem>())
@@ -401,6 +416,59 @@ void AKruger_ConclusionPlayerController::ReturnToPoachingPatrolMenu()
 		}
 	}
 	ReloadCurrentPatrolLevel();
+}
+
+void AKruger_ConclusionPlayerController::OpenPoachingPatrolMainMenu()
+{
+	if (!IsLocalPlayerController())
+	{
+		return;
+	}
+
+	SuppressLegacyMainMenuOverlay();
+
+	if (!MainMenuWidget)
+	{
+		MainMenuWidget = CreateWidget<UPPMainMenuWidget>(this, UPPMainMenuWidget::StaticClass());
+		if (!MainMenuWidget)
+		{
+			return;
+		}
+		MainMenuWidget->AddToPlayerScreen(120);
+	}
+
+	MainMenuWidget->SetVisibility(ESlateVisibility::Visible);
+	MainMenuWidget->ShowRootMenu();
+	UGameplayStatics::SetGamePaused(this, true);
+	bShowMouseCursor = true;
+	FInputModeUIOnly InputMode;
+	InputMode.SetWidgetToFocus(MainMenuWidget->TakeWidget());
+	InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+	SetInputMode(InputMode);
+	MainMenuWidget->SetKeyboardFocus();
+}
+
+void AKruger_ConclusionPlayerController::ClosePoachingPatrolMainMenu()
+{
+	if (MainMenuWidget)
+	{
+		MainMenuWidget->RemoveFromParent();
+		MainMenuWidget = nullptr;
+	}
+	SuppressLegacyMainMenuOverlay();
+}
+
+void AKruger_ConclusionPlayerController::StartPoachingPatrolFromMenu()
+{
+	ClosePoachingPatrolMainMenu();
+	UGameplayStatics::SetGamePaused(this, false);
+	bShowMouseCursor = false;
+	SetInputMode(FInputModeGameOnly());
+}
+
+void AKruger_ConclusionPlayerController::QuitPoachingPatrolGame()
+{
+	UKismetSystemLibrary::QuitGame(this, this, EQuitPreference::Quit, false);
 }
 
 bool AKruger_ConclusionPlayerController::RestartPoachingPatrolInMode(bool bTutorialMode)
@@ -427,22 +495,18 @@ bool AKruger_ConclusionPlayerController::RestartPoachingPatrolInMode(bool bTutor
 
 void AKruger_ConclusionPlayerController::OpenGraphicsSettings()
 {
-	if (MainMenuGraphicsWidget)
+	OpenPoachingPatrolMainMenu();
+	if (MainMenuWidget)
 	{
-		MainMenuGraphicsWidget->SetVisibility(ESlateVisibility::Visible);
-		bShowMouseCursor = true;
-		FInputModeGameAndUI InputMode;
-		InputMode.SetWidgetToFocus(MainMenuGraphicsWidget->TakeWidget());
-		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
-		SetInputMode(InputMode);
+		MainMenuWidget->ShowOptionsMenu();
 	}
 }
 
 void AKruger_ConclusionPlayerController::CloseGraphicsSettings()
 {
-	if (MainMenuGraphicsWidget)
+	if (MainMenuWidget)
 	{
-		MainMenuGraphicsWidget->SetVisibility(ESlateVisibility::Collapsed);
+		MainMenuWidget->ShowRootMenu();
 	}
 }
 
@@ -458,15 +522,8 @@ void AKruger_ConclusionPlayerController::ReloadCurrentPatrolLevel()
 
 void AKruger_ConclusionPlayerController::ApplyReplayMenuBypass()
 {
-	for (TObjectIterator<UUserWidget> It; It; ++It)
-	{
-		UUserWidget* Widget = *It;
-		if (IsValid(Widget) && Widget->GetWorld() == GetWorld() && Widget->GetClass()->GetName().Contains(TEXT("WPB_MainMenuOverlay")))
-		{
-			Widget->RemoveFromParent();
-		}
-	}
-
+	ClosePoachingPatrolMainMenu();
+	SuppressLegacyMainMenuOverlay();
 	UGameplayStatics::SetGamePaused(this, false);
 	bShowMouseCursor = false;
 	SetInputMode(FInputModeGameOnly());
@@ -511,7 +568,7 @@ void AKruger_ConclusionPlayerController::SetupInputComponent()
 
 void AKruger_ConclusionPlayerController::ToggleGameplayPause()
 {
-	if (!IsLocalPlayerController() || RestraintMinigameWidget || TutorialResultWidget || RoundReportWidget || UpgradeMenuWidget || IsLegacyMainMenuVisible())
+	if (!IsLocalPlayerController() || RestraintMinigameWidget || TutorialResultWidget || RoundReportWidget || UpgradeMenuWidget || IsMainMenuVisible())
 	{
 		return;
 	}
@@ -528,7 +585,7 @@ void AKruger_ConclusionPlayerController::ToggleGameplayPause()
 
 void AKruger_ConclusionPlayerController::OpenPauseOverlay()
 {
-	if (!IsLocalPlayerController() || PauseMenuWidget || RestraintMinigameWidget || TutorialResultWidget || RoundReportWidget || UpgradeMenuWidget || IsLegacyMainMenuVisible())
+	if (!IsLocalPlayerController() || PauseMenuWidget || RestraintMinigameWidget || TutorialResultWidget || RoundReportWidget || UpgradeMenuWidget || IsMainMenuVisible())
 	{
 		return;
 	}
@@ -566,28 +623,24 @@ void AKruger_ConclusionPlayerController::ClosePauseOverlay()
 	SetInputMode(FInputModeGameOnly());
 }
 
-bool AKruger_ConclusionPlayerController::IsLegacyMainMenuVisible() const
+bool AKruger_ConclusionPlayerController::IsMainMenuVisible() const
+{
+	return MainMenuWidget && MainMenuWidget->IsInViewport()
+		&& MainMenuWidget->GetVisibility() != ESlateVisibility::Collapsed
+		&& MainMenuWidget->GetVisibility() != ESlateVisibility::Hidden;
+}
+
+void AKruger_ConclusionPlayerController::SuppressLegacyMainMenuOverlay()
 {
 	for (TObjectIterator<UUserWidget> It; It; ++It)
 	{
-		const UUserWidget* Widget = *It;
+		UUserWidget* Widget = *It;
 		if (IsValid(Widget)
 			&& Widget->GetWorld() == GetWorld()
-			&& Widget->IsInViewport()
 			&& Widget->GetClass()->GetName().Contains(TEXT("WPB_MainMenuOverlay")))
 		{
-			return true;
+			Widget->RemoveFromParent();
 		}
-	}
-
-	return false;
-}
-
-void AKruger_ConclusionPlayerController::RefreshMainMenuGraphicsEntry()
-{
-	if (MainMenuGraphicsWidget)
-	{
-		MainMenuGraphicsWidget->SetVisibility(IsLegacyMainMenuVisible() ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
 	}
 }
 

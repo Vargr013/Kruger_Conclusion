@@ -34,6 +34,9 @@ bool FPPGraphicsPresetDefaultsTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("New installs default to Medium"), Settings->GetGraphicsPreset(), EPPGraphicsPreset::Medium);
 	TestEqual(TEXT("Invalid low saved value falls back to Medium"), UPPGameUserSettings::SanitizePreset(-1), EPPGraphicsPreset::Medium);
 	TestEqual(TEXT("Invalid high saved value falls back to Medium"), UPPGameUserSettings::SanitizePreset(99), EPPGraphicsPreset::Medium);
+	TestEqual(TEXT("Mouse sensitivity defaults to 1.0"), Settings->GetMouseSensitivity(), UPPGameUserSettings::DefaultMouseSensitivity);
+	TestEqual(TEXT("Mouse sensitivity clamps low values"), UPPGameUserSettings::SanitizeMouseSensitivity(0.01f), UPPGameUserSettings::MinMouseSensitivity);
+	TestEqual(TEXT("Mouse sensitivity clamps high values"), UPPGameUserSettings::SanitizeMouseSensitivity(5.0f), UPPGameUserSettings::MaxMouseSensitivity);
 	return true;
 }
 

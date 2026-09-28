@@ -6,6 +6,7 @@
 #include "Camera/CameraComponent.h"
 #include "BaseGun.h"
 #include "Data/PPGameFlowSubsystem.h"
+#include "Data/PPGameUserSettings.h"
 #include "Data/PPHealthComponent.h"
 #include "Engine/GameInstance.h"
 #include "InputCoreTypes.h" 
@@ -171,8 +172,13 @@ void ARangerCharacter::Move(const FInputActionValue& Value)
 void ARangerCharacter::Look(const FInputActionValue& Value)
 {
     const FVector2D LookVector = Value.Get<FVector2D>();
-    AddControllerYawInput(LookVector.X);
-    AddControllerPitchInput(LookVector.Y);
+    float Sensitivity = UPPGameUserSettings::DefaultMouseSensitivity;
+    if (const UPPGameUserSettings* Settings = UPPGameUserSettings::GetPPGameUserSettings())
+    {
+        Sensitivity = Settings->GetMouseSensitivity();
+    }
+    AddControllerYawInput(LookVector.X * Sensitivity);
+    AddControllerPitchInput(LookVector.Y * Sensitivity);
 }
 
 void ARangerCharacter::StartSprint(const FInputActionValue& Value) { ToggleSprint(); }
