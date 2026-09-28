@@ -44,6 +44,10 @@ bool FPPMinimapProjectionTest::RunTest(const FString& Parameters)
 	TestTrue(
 		TEXT("Inside point is unchanged"),
 		UPPPatrolHUDWidget::ClampMinimapPointToSquare(FVector2D(40.0f, -20.0f), 100.0f).Equals(FVector2D(40.0f, -20.0f), 0.01f));
+	TestTrue(
+		TEXT("Search center snaps both world axes to coarse cells"),
+		UPPPatrolHUDWidget::QuantizePoacherSearchCenter(FVector(2450.0f, -1490.0f, 500.0f), 2000.0f)
+			.Equals(FVector2D(2000.0f, -2000.0f), 0.01f));
 	return true;
 }
 

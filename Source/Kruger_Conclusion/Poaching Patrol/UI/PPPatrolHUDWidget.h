@@ -39,6 +39,7 @@ public:
 		float WorldRadius);
 
 	static FVector2D ClampMinimapPointToSquare(const FVector2D& Point, float HalfExtent);
+	static FVector2D QuantizePoacherSearchCenter(const FVector& WorldLocation, float GridSize);
 
 	static bool ProjectWorldToCompass(
 		const FVector& WorldLocation,
@@ -84,6 +85,15 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Poaching Patrol HUD|Minimap")
 	TObjectPtr<UPPMinimapDefinition> MinimapDefinition = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Poaching Patrol HUD|Minimap", meta=(ClampMin="1000.0"))
+	float PoacherSearchRadius = 3500.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Poaching Patrol HUD|Minimap", meta=(ClampMin="100.0"))
+	float PoacherSearchGridSize = 2000.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Poaching Patrol HUD|Minimap", meta=(ClampMin="0.1"))
+	float PoacherSearchUpdateSeconds = 3.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Poaching Patrol HUD|Style")
 	FLinearColor PanelColor = FLinearColor(0.02f, 0.025f, 0.02f, 0.72f);
@@ -132,6 +142,7 @@ private:
 	float GetResponsiveMinimapSize(const FVector2D& ViewSize) const;
 	FVector2D WorldToMinimap(const FVector& WorldLocation, const APawn* PlayerPawn, float MapRadius) const;
 	void RefreshMinimapActors();
+	void RefreshPoacherSearchZones();
 	const FSlateBrush* GetCachedWhiteBrush() const;
 
 	TArray<FPPObjectiveState> CachedObjectives;
@@ -141,6 +152,13 @@ private:
 	bool bHasEscortStatus = false;
 	int32 CurrentMinimapZoomIndex = 1;
 	TArray<TWeakObjectPtr<APPPoacherCharacter>> CachedMinimapPoachers;
+	struct FPoacherSearchZone
+	{
+		TWeakObjectPtr<APPPoacherCharacter> Poacher;
+		FVector2D WorldCenter = FVector2D::ZeroVector;
+		float LastSampleTime = -1.0f;
+	};
+	TArray<FPoacherSearchZone> PoacherSearchZones;
 	TArray<TWeakObjectPtr<APPAnimalCharacter>> CachedMinimapAnimals;
 	TArray<TWeakObjectPtr<APPArrestZone>> CachedArrestZones;
 	TArray<TWeakObjectPtr<APPRestPoint>> CachedRestPoints;

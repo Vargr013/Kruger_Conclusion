@@ -123,6 +123,7 @@ void UPPPatrolHUDWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTi
 	}
 	StatusRefreshAccumulator = 0.0f;
 	RefreshMinimapActors();
+	RefreshPoacherSearchZones();
 
 	const APlayerController* PlayerController = GetOwningPlayer();
 	APawn* PlayerPawn = PlayerController ? PlayerController->GetPawn() : nullptr;
@@ -558,10 +559,65 @@ void UPPPatrolHUDWidget::DrawMinimap(const FGeometry& AllottedGeometry, FSlateWi
 			AnimalColor);
 	}
 
+	FSlateBrush SearchBrush = *WhiteBrush;
+	SearchBrush.DrawAs = ESlateBrushDrawType::RoundedBox;
+	SearchBrush.OutlineSettings = FSlateBrushOutlineSettings();
+	bool bSearchZoneVisible = false;
+	OutDrawElements.PushClip(FSlateClippingZone(AllottedGeometry.ToPaintGeometry(InnerSize, FSlateLayoutTransform(InnerOrigin))));
+	for (const FPoacherSearchZone& Zone : PoacherSearchZones)
+	{
+		const APPPoacherCharacter* Poacher = Zone.Poacher.Get();
+		if (!IsValid(Poacher) || Poacher->GetPoacherState() == EPPPoacherState::Captured
+			|| Poacher->GetPoacherState() == EPPPoacherState::FollowingPlayer
+			|| Poacher->GetPoacherState() == EPPPoacherState::Arrested
+			|| Poacher->GetPoacherState() == EPPPoacherState::Escaped)
+		{
+			continue;
+		}
+		const FVector2D LocalPoint = WorldToMinimap(FVector(Zone.WorldCenter, 0.0f), PlayerPawn, MapHalfExtent);
+		const float Radius = PoacherSearchRadius * MapHalfExtent / WorldRadius;
+		if (FMath::Abs(LocalPoint.X) > MapHalfExtent + Radius || FMath::Abs(LocalPoint.Y) > MapHalfExtent + Radius)
+		{
+			continue;
+		}
+		bSearchZoneVisible = true;
+		const FVector2D Center = MapCenter + LocalPoint;
+		for (int32 Band = 0; Band < 3; ++Band)
+		{
+			const float BandRadius = Radius * (1.0f - Band * 0.28f);
+			const FVector2D Diameter(BandRadius * 2.0f);
+			FSlateDrawElement::MakeBox(
+				OutDrawElements, LayerId++,
+				AllottedGeometry.ToPaintGeometry(Diameter, FSlateLayoutTransform(Center - FVector2D(BandRadius))),
+				&SearchBrush, ESlateDrawEffect::None,
+				FLinearColor(0.95f, 0.24f, 0.09f, Band == 0 ? 0.10f : 0.08f));
+		}
+		TArray<FVector2D> Outline;
+		for (int32 Segment = 0; Segment <= 40; ++Segment)
+		{
+			const float Angle = 2.0f * UE_PI * Segment / 40.0f;
+			Outline.Add(Center + FVector2D(FMath::Cos(Angle), FMath::Sin(Angle)) * Radius);
+		}
+		FSlateDrawElement::MakeLines(OutDrawElements, LayerId++, AllottedGeometry.ToPaintGeometry(), Outline,
+			ESlateDrawEffect::None, FLinearColor(0.95f, 0.35f, 0.13f, 0.58f), true, 1.5f);
+	}
+	OutDrawElements.PopClip();
+	if (bSearchZoneVisible)
+	{
+		const FVector2D LabelOrigin = MapOrigin + FVector2D(10.0f, 10.0f);
+		FSlateDrawElement::MakeBox(OutDrawElements, LayerId++,
+			AllottedGeometry.ToPaintGeometry(FVector2D(126.0f, 18.0f), FSlateLayoutTransform(LabelOrigin)),
+			WhiteBrush, ESlateDrawEffect::None, FLinearColor(0.02f, 0.025f, 0.02f, 0.76f));
+		FSlateDrawElement::MakeText(OutDrawElements, LayerId++,
+			AllottedGeometry.ToPaintGeometry(FVector2D(122.0f, 16.0f), FSlateLayoutTransform(LabelOrigin + FVector2D(4.0f, 1.0f))),
+			TEXT("POACHER ACTIVITY"), PPUIStyle::Font(TEXT("Bold"), 10), ESlateDrawEffect::None, SafariDangerColor);
+	}
+
 	for (const TWeakObjectPtr<APPPoacherCharacter>& PoacherPtr : CachedMinimapPoachers)
 	{
 		const APPPoacherCharacter* Poacher = PoacherPtr.Get();
-		if (!IsValid(Poacher) || Poacher->GetPoacherState() == EPPPoacherState::Arrested || Poacher->GetPoacherState() == EPPPoacherState::Escaped)
+		if (!IsValid(Poacher) || (Poacher->GetPoacherState() != EPPPoacherState::Captured
+			&& Poacher->GetPoacherState() != EPPPoacherState::FollowingPlayer))
 		{
 			continue;
 		}
@@ -571,12 +627,11 @@ void UPPPatrolHUDWidget::DrawMinimap(const FGeometry& AllottedGeometry, FSlateWi
 			continue;
 		}
 
-		const bool bEscorted = Poacher->GetPoacherState() == EPPPoacherState::Captured || Poacher->GetPoacherState() == EPPPoacherState::FollowingPlayer;
-		const float OuterSize = bEscorted ? 11.0f : 8.0f;
-		if (bEscorted)
+		const float OuterSize = 11.0f;
+		if (GetWorld())
 		{
 			FLinearColor EscortColor = SafariMarkerColor;
-			EscortColor.A = GetWorld() ? 0.55f + 0.35f * FMath::Abs(FMath::Sin(GetWorld()->GetTimeSeconds() * 4.0f)) : 0.8f;
+			EscortColor.A = 0.55f + 0.35f * FMath::Abs(FMath::Sin(GetWorld()->GetTimeSeconds() * 4.0f));
 			FSlateDrawElement::MakeRotatedBox(
 				OutDrawElements, LayerId++,
 				AllottedGeometry.ToPaintGeometry(FVector2D(OuterSize), FSlateLayoutTransform(MapCenter + LocalPoint - FVector2D(OuterSize * 0.5f))),
@@ -801,7 +856,9 @@ void UPPPatrolHUDWidget::DrawCompass(const FGeometry& AllottedGeometry, FSlateWi
 		const APPPoacherCharacter* Poacher = PoacherPtr.Get();
 		if (!IsValid(Poacher)
 			|| Poacher->GetPoacherState() == EPPPoacherState::Arrested
-			|| Poacher->GetPoacherState() == EPPPoacherState::Escaped)
+			|| Poacher->GetPoacherState() == EPPPoacherState::Escaped
+			|| (Poacher->GetPoacherState() != EPPPoacherState::Captured
+				&& Poacher->GetPoacherState() != EPPPoacherState::FollowingPlayer))
 		{
 			continue;
 		}
@@ -1039,6 +1096,14 @@ FVector2D UPPPatrolHUDWidget::ClampMinimapPointToSquare(const FVector2D& Point, 
 		: Point;
 }
 
+FVector2D UPPPatrolHUDWidget::QuantizePoacherSearchCenter(const FVector& WorldLocation, float GridSize)
+{
+	const float SafeGridSize = FMath::Max(1.0f, GridSize);
+	return FVector2D(
+		FMath::GridSnap(WorldLocation.X, SafeGridSize),
+		FMath::GridSnap(WorldLocation.Y, SafeGridSize));
+}
+
 bool UPPPatrolHUDWidget::ProjectWorldToCompass(
 	const FVector& WorldLocation,
 	const FVector& PlayerLocation,
@@ -1111,6 +1176,48 @@ void UPPPatrolHUDWidget::RefreshMinimapActors()
 			const auto* Rules = GetWorld()->GetSubsystem<UEnvironmentLevelSubsystem>();
 			const bool bTraining = Rules && Rules->IsTutorialMode();
 			if (bTraining ? *It == Rules->GetTutorialDirector()->ResupplyPoint : !It->ActorHasTag(TEXT("PPTutorial"))) CachedRestPoints.Add(*It);
+		}
+	}
+}
+
+void UPPPatrolHUDWidget::RefreshPoacherSearchZones()
+{
+	const UWorld* World = GetWorld();
+	if (!World)
+	{
+		PoacherSearchZones.Reset();
+		return;
+	}
+	const float Now = World->GetTimeSeconds();
+	PoacherSearchZones.RemoveAll([this](const FPoacherSearchZone& Zone)
+	{
+		return !Zone.Poacher.IsValid() || !CachedMinimapPoachers.Contains(Zone.Poacher)
+			|| Zone.Poacher->GetPoacherState() == EPPPoacherState::Captured
+			|| Zone.Poacher->GetPoacherState() == EPPPoacherState::FollowingPlayer
+			|| Zone.Poacher->GetPoacherState() == EPPPoacherState::Arrested
+			|| Zone.Poacher->GetPoacherState() == EPPPoacherState::Escaped;
+	});
+	for (const TWeakObjectPtr<APPPoacherCharacter>& PoacherPtr : CachedMinimapPoachers)
+	{
+		const APPPoacherCharacter* Poacher = PoacherPtr.Get();
+		if (!IsValid(Poacher) || Poacher->GetPoacherState() == EPPPoacherState::Captured
+			|| Poacher->GetPoacherState() == EPPPoacherState::FollowingPlayer)
+		{
+			continue;
+		}
+		FPoacherSearchZone* Zone = PoacherSearchZones.FindByPredicate([PoacherPtr](const FPoacherSearchZone& Candidate)
+		{
+			return Candidate.Poacher == PoacherPtr;
+		});
+		if (!Zone)
+		{
+			Zone = &PoacherSearchZones.AddDefaulted_GetRef();
+			Zone->Poacher = PoacherPtr;
+		}
+		if (Zone->LastSampleTime < 0.0f || Now - Zone->LastSampleTime >= PoacherSearchUpdateSeconds)
+		{
+			Zone->WorldCenter = QuantizePoacherSearchCenter(Poacher->GetActorLocation(), PoacherSearchGridSize);
+			Zone->LastSampleTime = Now;
 		}
 	}
 }
