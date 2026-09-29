@@ -8,6 +8,7 @@
 #include "Data/PPGameTypes.h"
 #include "Data/PPHealthComponent.h"
 #include "Engine/Engine.h"
+#include "Engine/GameInstance.h"
 #include "Engine/World.h"
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -17,13 +18,14 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FPPUpgradePurchaseRulesTest::RunTest(const FString& Parameters)
 {
-	UPPGameFlowSubsystem* Flow = NewObject<UPPGameFlowSubsystem>(GetTransientPackage());
+	UGameInstance* GameInstance = NewObject<UGameInstance>();
+	UPPGameFlowSubsystem* Flow = NewObject<UPPGameFlowSubsystem>(GameInstance);
 	if (!TestNotNull(TEXT("Game flow object exists"), Flow))
 	{
 		return false;
 	}
 
-	Flow->SetMoney(1000);
+	Flow->SetMoney(2300);
 	TestEqual(TEXT("First health upgrade costs 100"), Flow->GetUpgradeCost(EPPUpgradeType::Health), 100);
 	TestTrue(TEXT("First health upgrade purchases"), Flow->PurchaseUpgrade(EPPUpgradeType::Health));
 	TestEqual(TEXT("Health stack is one"), Flow->GetHealthUpgradeCount(), 1);
@@ -66,7 +68,8 @@ bool FPPUpgradeApplyEffectsTest::RunTest(const FString& Parameters)
 	FWorldContext& WorldContext = GEngine->CreateNewWorldContext(EWorldType::Game);
 	WorldContext.SetCurrentWorld(World);
 
-	UPPGameFlowSubsystem* Flow = NewObject<UPPGameFlowSubsystem>(GetTransientPackage());
+	UGameInstance* GameInstance = NewObject<UGameInstance>();
+	UPPGameFlowSubsystem* Flow = NewObject<UPPGameFlowSubsystem>(GameInstance);
 	ARangerCharacter* Ranger = World->SpawnActor<ARangerCharacter>();
 	ABaseGun* Gun = World->SpawnActor<ABaseGun>();
 	if (!TestNotNull(TEXT("Game flow exists"), Flow)
@@ -79,6 +82,7 @@ bool FPPUpgradeApplyEffectsTest::RunTest(const FString& Parameters)
 	}
 
 	Ranger->SetCurrentGun(Gun);
+	Gun->SetOwner(Ranger);
 	Flow->SetMoney(2000);
 	Flow->PurchaseUpgrade(EPPUpgradeType::Health);
 	Flow->PurchaseUpgrade(EPPUpgradeType::Health);
@@ -97,6 +101,9 @@ bool FPPUpgradeApplyEffectsTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("Spare mags start full after apply"), Gun->GetSpareMagazinesRemaining(), 2);
 	TestEqual(TEXT("Range upgrade doubles spray range"), Gun->SprayRange, 1000.0f);
 
+	Gun->FireMode = EFireMode::Raycast;
+	Gun->MaxAmmo = 1;
+	Gun->Reload();
 	Gun->Shoot();
 	TestTrue(TEXT("Spare magazine reloads when ammo is spent"), Gun->TryUseSpareMagazine());
 	TestEqual(TEXT("One spare mag remains after reload"), Gun->GetSpareMagazinesRemaining(), 1);

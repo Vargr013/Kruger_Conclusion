@@ -108,8 +108,30 @@ int32 UPPPatrolHUDWidget::NativePaint(
 	DrawEscortStatus(AllottedGeometry, OutDrawElements, LayerId);
 	DrawCombatStatus(AllottedGeometry, OutDrawElements, LayerId);
 	DrawRestPointPrompt(AllottedGeometry, OutDrawElements, LayerId);
+	DrawCrosshair(AllottedGeometry, OutDrawElements, LayerId);
 
 	return LayerId;
+}
+
+void UPPPatrolHUDWidget::DrawCrosshair(const FGeometry& AllottedGeometry, FSlateWindowElementList& OutDrawElements, int32& LayerId) const
+{
+	const APlayerController* PlayerController = GetOwningPlayer();
+	if (!PlayerController || !PlayerController->GetPawn() || PlayerController->IsPaused())
+	{
+		return;
+	}
+
+	const FVector2D ViewSize = AllottedGeometry.GetLocalSize();
+	const FVector2D Center = ViewSize * 0.5f;
+	const float HalfLength = 7.0f * FMath::Clamp(ViewSize.Y / 1080.0f, 0.8f, 1.2f);
+	const FVector2D Horizontal(HalfLength, 0.0f);
+	const FVector2D Vertical(0.0f, HalfLength);
+	const FLinearColor Outline(0.02f, 0.018f, 0.012f, 0.9f);
+	const FLinearColor Reticle(0.95f, 0.92f, 0.81f, 0.95f);
+	DrawHudLine(AllottedGeometry, OutDrawElements, LayerId, Center - Horizontal, Center + Horizontal, Outline, 3.5f);
+	DrawHudLine(AllottedGeometry, OutDrawElements, LayerId, Center - Vertical, Center + Vertical, Outline, 3.5f);
+	DrawHudLine(AllottedGeometry, OutDrawElements, LayerId, Center - Horizontal, Center + Horizontal, Reticle, 1.5f);
+	DrawHudLine(AllottedGeometry, OutDrawElements, LayerId, Center - Vertical, Center + Vertical, Reticle, 1.5f);
 }
 
 void UPPPatrolHUDWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
@@ -117,12 +139,18 @@ void UPPPatrolHUDWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTi
 	Super::NativeTick(MyGeometry, InDeltaTime);
 	DamageFlashRemaining = FMath::Max(0.0f, DamageFlashRemaining - InDeltaTime);
 	StatusRefreshAccumulator += InDeltaTime;
+	WorldMarkerRefreshAccumulator += InDeltaTime;
 	if (StatusRefreshAccumulator < 0.1f)
 	{
 		return;
 	}
 	StatusRefreshAccumulator = 0.0f;
-	RefreshMinimapActors();
+	const bool bRefreshWorldMarkers = WorldMarkerRefreshAccumulator >= 1.0f;
+	if (bRefreshWorldMarkers)
+	{
+		WorldMarkerRefreshAccumulator = 0.0f;
+	}
+	RefreshMinimapActors(bRefreshWorldMarkers);
 	RefreshPoacherSearchZones();
 
 	const APlayerController* PlayerController = GetOwningPlayer();
@@ -1146,12 +1174,10 @@ FVector2D UPPPatrolHUDWidget::WorldToMinimap(const FVector& WorldLocation, const
 		: FVector2D::ZeroVector;
 }
 
-void UPPPatrolHUDWidget::RefreshMinimapActors()
+void UPPPatrolHUDWidget::RefreshMinimapActors(bool bRefreshWorldMarkers)
 {
 	CachedMinimapPoachers.Reset();
 	CachedMinimapAnimals.Reset();
-	CachedArrestZones.Reset();
-	CachedRestPoints.Reset();
 
 	if (const UEnvironmentLevelSubsystem* LevelSubsystem = GetWorld() ? GetWorld()->GetSubsystem<UEnvironmentLevelSubsystem>() : nullptr)
 	{
@@ -1165,18 +1191,18 @@ void UPPPatrolHUDWidget::RefreshMinimapActors()
 		}
 	}
 
-	if (GetWorld())
+	if (bRefreshWorldMarkers && GetWorld())
 	{
+		CachedArrestZones.Reset();
+		CachedRestPoints.Reset();
+		const auto* Rules = GetWorld()->GetSubsystem<UEnvironmentLevelSubsystem>();
+		const bool bTraining = Rules && Rules->IsTutorialMode();
 		for (TActorIterator<APPArrestZone> It(GetWorld()); It; ++It)
 		{
-			const auto* Rules = GetWorld()->GetSubsystem<UEnvironmentLevelSubsystem>();
-			const bool bTraining = Rules && Rules->IsTutorialMode();
 			if (bTraining ? *It == Rules->GetTutorialDirector()->ArrestZone : !It->ActorHasTag(TEXT("PPTutorial"))) CachedArrestZones.Add(*It);
 		}
 		for (TActorIterator<APPRestPoint> It(GetWorld()); It; ++It)
 		{
-			const auto* Rules = GetWorld()->GetSubsystem<UEnvironmentLevelSubsystem>();
-			const bool bTraining = Rules && Rules->IsTutorialMode();
 			if (bTraining ? *It == Rules->GetTutorialDirector()->ResupplyPoint : !It->ActorHasTag(TEXT("PPTutorial"))) CachedRestPoints.Add(*It);
 		}
 	}

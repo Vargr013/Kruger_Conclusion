@@ -106,7 +106,7 @@ void UPPMainMenuWidget::NativeOnInitialized()
 
 		StartButton = AddMainMenuButton(WidgetTree, RootMenu, TEXT("Start"), NSLOCTEXT("PoachingPatrol", "Start", "Start"));
 		OptionsButton = AddMainMenuButton(WidgetTree, RootMenu, TEXT("Options"), NSLOCTEXT("PoachingPatrol", "Options", "Options"));
-		QuitButton = AddMainMenuButton(WidgetTree, RootMenu, TEXT("Quit"), NSLOCTEXT("PoachingPatrol", "Quit", "Quit"));
+		QuitButton = AddMainMenuButton(WidgetTree, RootMenu, TEXT("Quit"), NSLOCTEXT("PoachingPatrol", "Quit", "Quit Game"));
 
 		OptionsScale = WidgetTree->ConstructWidget<UScaleBox>(UScaleBox::StaticClass(), TEXT("OptionsScale"));
 		OptionsScale->SetStretch(EStretch::UserSpecified);

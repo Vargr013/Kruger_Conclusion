@@ -127,6 +127,7 @@ protected:
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 
 private:
+	void DrawCrosshair(const FGeometry& AllottedGeometry, FSlateWindowElementList& OutDrawElements, int32& LayerId) const;
 	void DrawMinimap(const FGeometry& AllottedGeometry, FSlateWindowElementList& OutDrawElements, int32& LayerId) const;
 	void DrawControlsHint(const FGeometry& AllottedGeometry, FSlateWindowElementList& OutDrawElements, int32& LayerId) const;
 	void DrawCompass(const FGeometry& AllottedGeometry, FSlateWindowElementList& OutDrawElements, int32& LayerId) const;
@@ -141,13 +142,14 @@ private:
 	ABaseGun* FindCurrentTool() const;
 	float GetResponsiveMinimapSize(const FVector2D& ViewSize) const;
 	FVector2D WorldToMinimap(const FVector& WorldLocation, const APawn* PlayerPawn, float MapRadius) const;
-	void RefreshMinimapActors();
+	void RefreshMinimapActors(bool bRefreshWorldMarkers);
 	void RefreshPoacherSearchZones();
 	const FSlateBrush* GetCachedWhiteBrush() const;
 
 	TArray<FPPObjectiveState> CachedObjectives;
 	FPPEscortStatus CachedEscortStatus;
 	float StatusRefreshAccumulator = 0.0f;
+	float WorldMarkerRefreshAccumulator = 1.0f;
 	mutable const FSlateBrush* CachedWhiteBrush = nullptr;
 	bool bHasEscortStatus = false;
 	int32 CurrentMinimapZoomIndex = 1;
