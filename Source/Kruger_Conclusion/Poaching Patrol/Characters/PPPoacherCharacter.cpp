@@ -54,6 +54,12 @@ APPPoacherCharacter::APPPoacherCharacter()
 	AttackAcceptanceRadius = 130.0f;
 }
 
+void APPPoacherCharacter::OnConstruction(const FTransform& Transform)
+{
+	Super::OnConstruction(Transform);
+	PrepareCreatureAnimationVisual();
+}
+
 void APPPoacherCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	CancelPlayerAttack();
@@ -89,6 +95,7 @@ float APPPoacherCharacter::TakeDamage(float DamageAmount, FDamageEvent const& Da
 void APPPoacherCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+	StartCreatureAnimation();
 	const auto* Rules = GetWorld()->GetSubsystem<UEnvironmentLevelSubsystem>();
 	SetEncounterActive(!bStartEncounterInactive && (!Rules || Rules->IsTutorialMode() == bTutorialEncounter));
 	if (bEncounterActive) StartDisguisedIdle();

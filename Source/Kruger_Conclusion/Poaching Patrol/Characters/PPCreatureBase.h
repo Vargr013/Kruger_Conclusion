@@ -8,6 +8,9 @@
 class AAIController;
 class AController;
 class UPPHealthComponent;
+class UAnimSequence;
+class USkeletalMesh;
+class UMaterialInterface;
 
 UENUM(BlueprintType)
 enum class EPPThreatDetectionType : uint8
@@ -38,6 +41,33 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Creature|Movement")
 	float FleeSpeed = 420.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Creature|Animation")
+	TSoftObjectPtr<USkeletalMesh> WalkVisualMesh;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Creature|Animation")
+	TSoftObjectPtr<UAnimSequence> WalkAnimation;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Creature|Animation")
+	TSoftObjectPtr<USkeletalMesh> RunVisualMesh;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Creature|Animation")
+	TSoftObjectPtr<UAnimSequence> RunAnimation;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Creature|Animation")
+	TSoftObjectPtr<UMaterialInterface> VisualMaterial;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Creature|Animation")
+	FVector WalkVisualOffset = FVector::ZeroVector;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Creature|Animation")
+	FVector RunVisualOffset = FVector::ZeroVector;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Creature|Animation")
+	FVector CreatureVisualScale = FVector::OneVector;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Creature|Animation", meta=(ClampMin="1.0"))
+	float RunAnimationSpeedThreshold = 350.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Creature|Roaming")
 	float RoamRadius = 650.0f;
@@ -243,6 +273,13 @@ public:
 	UPPHealthComponent* GetHealthComponent() const { return HealthComponent; }
 
 protected:
+	void PrepareCreatureAnimationVisual();
+	void StartCreatureAnimation();
+	void UpdateCreatureAnimation();
+	FTimerHandle CreatureAnimationTimerHandle;
+	bool bUsingRunAnimation = false;
+	bool bCreatureAnimationInitialized = false;
+
 	UFUNCTION()
 	void OnHealthDepleted();
 

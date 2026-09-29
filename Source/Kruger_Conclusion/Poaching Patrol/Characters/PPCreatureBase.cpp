@@ -1,6 +1,8 @@
 #include "Characters/PPCreatureBase.h"
 
 #include "AIController.h"
+#include "Animation/AnimSequence.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "Data/PPHealthComponent.h"
 #include "DrawDebugHelpers.h"
 #include "Engine/Engine.h"
@@ -10,6 +12,8 @@
 #include "Kismet/GameplayStatics.h"
 #include "NavigationSystem.h"
 #include "Navigation/PathFollowingComponent.h"
+#include "Engine/SkeletalMesh.h"
+#include "Materials/MaterialInterface.h"
 
 APPCreatureBase::APPCreatureBase()
 {
@@ -42,8 +46,90 @@ void APPCreatureBase::BeginPlay()
 
 void APPCreatureBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	GetWorldTimerManager().ClearTimer(CreatureAnimationTimerHandle);
 	StopAIUpdates();
 	Super::EndPlay(EndPlayReason);
+}
+
+void APPCreatureBase::PrepareCreatureAnimationVisual()
+{
+	if (WalkVisualMesh.IsNull() || WalkAnimation.IsNull() || !GetMesh())
+	{
+		return;
+	}
+
+	USkeletalMesh* WalkMesh = WalkVisualMesh.LoadSynchronous();
+	UAnimSequence* WalkClip = WalkAnimation.LoadSynchronous();
+	if (!WalkMesh || !WalkClip || WalkMesh->GetSkeleton() != WalkClip->GetSkeleton())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Invalid walk animation pairing on %s"), *GetName());
+		return;
+	}
+
+	bCreatureAnimationInitialized = true;
+	bUsingRunAnimation = false;
+	GetMesh()->SetSkeletalMesh(WalkMesh);
+	GetMesh()->SetRelativeLocation(WalkVisualOffset);
+	GetMesh()->SetRelativeScale3D(CreatureVisualScale);
+	GetMesh()->SetAnimationMode(EAnimationMode::AnimationSingleNode);
+	GetMesh()->SetAnimation(WalkClip);
+	if (UMaterialInterface* Material = VisualMaterial.LoadSynchronous())
+	{
+		GetMesh()->SetMaterial(0, Material);
+	}
+	GetMesh()->SetPosition(0.0f);
+	GetMesh()->Stop();
+}
+
+void APPCreatureBase::StartCreatureAnimation()
+{
+	PrepareCreatureAnimationVisual();
+	if (!bCreatureAnimationInitialized || !GetWorld())
+	{
+		return;
+	}
+	UpdateCreatureAnimation();
+	GetWorldTimerManager().SetTimer(CreatureAnimationTimerHandle, this, &APPCreatureBase::UpdateCreatureAnimation, 0.12f, true);
+}
+
+void APPCreatureBase::UpdateCreatureAnimation()
+{
+	if (!bCreatureAnimationInitialized || !GetMesh())
+	{
+		return;
+	}
+
+	const float Speed = GetVelocity().Size2D();
+	const bool bMoving = Speed > 5.0f;
+	const bool bRun = bMoving && Speed >= RunAnimationSpeedThreshold && !RunVisualMesh.IsNull() && !RunAnimation.IsNull();
+	if (bRun != bUsingRunAnimation)
+	{
+		USkeletalMesh* NextMesh = (bRun ? RunVisualMesh : WalkVisualMesh).LoadSynchronous();
+		UAnimSequence* NextClip = (bRun ? RunAnimation : WalkAnimation).LoadSynchronous();
+		if (!NextMesh || !NextClip || NextMesh->GetSkeleton() != NextClip->GetSkeleton())
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Invalid run animation pairing on %s"), *GetName());
+			return;
+		}
+		GetMesh()->SetSkeletalMesh(NextMesh);
+		GetMesh()->SetRelativeLocation(bRun ? RunVisualOffset : WalkVisualOffset);
+		GetMesh()->SetAnimationMode(EAnimationMode::AnimationSingleNode);
+		GetMesh()->SetAnimation(NextClip);
+		bUsingRunAnimation = bRun;
+	}
+
+	if (bMoving)
+	{
+		if (!GetMesh()->IsPlaying())
+		{
+			GetMesh()->Play(true);
+		}
+	}
+	else if (GetMesh()->IsPlaying())
+	{
+		GetMesh()->Stop();
+		GetMesh()->SetPosition(0.0f);
+	}
 }
 
 float APPCreatureBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)

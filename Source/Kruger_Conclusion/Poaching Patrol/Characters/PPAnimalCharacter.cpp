@@ -45,6 +45,10 @@ void APPAnimalCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 	ApplyAnimalVisualMesh();
+	if (!bUseStaticAnimalMeshVisual)
+	{
+		StartCreatureAnimation();
+	}
 	StartIdle();
 
 	if (UWorld* World = GetWorld())
@@ -265,10 +269,19 @@ void APPAnimalCharacter::ApplyAnimalVisualMesh()
 {
 	if (!bUseStaticAnimalMeshVisual || !StaticAnimalMeshComponent)
 	{
+		if (StaticAnimalMeshComponent)
+		{
+			StaticAnimalMeshComponent->SetVisibility(false, true);
+			StaticAnimalMeshComponent->SetHiddenInGame(true, true);
+		}
 		if (USkeletalMeshComponent* CharacterMesh = GetMesh())
 		{
 			CharacterMesh->SetVisibility(true, true);
 			CharacterMesh->SetHiddenInGame(false, true);
+		}
+		if (!bUseStaticAnimalMeshVisual)
+		{
+			PrepareCreatureAnimationVisual();
 		}
 		return;
 	}

@@ -73,3 +73,11 @@ Plugins/**/Intermediate/*
 
 # Cache files for the editor to use
 DerivedDataCache/*
+
+# Local Python helpers and bytecode
+__pycache__/
+*.pyc
+/ArtSource/KrugerWayfinding/build_sign.py
+/Scripts/replace_tutorial_signs.py
+/Scripts/setup_kruger_sign_materials.py
+/Scripts/verify_kruger_signs.py
