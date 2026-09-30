@@ -1,4 +1,5 @@
 #include "UI/PPRestraintMinigameWidget.h"
+#include "Data/PPAudioSubsystem.h"
 #include "UI/PPUIStyle.h"
 
 #include "Characters/PPPoacherCharacter.h"
@@ -293,6 +294,7 @@ void UPPRestraintMinigameWidget::BuildPattern()
 
 void UPPRestraintMinigameWidget::RecordHit(double CurrentRealTime)
 {
+	UPPAudioSubsystem::Play(this, TEXT("Confirm"), true);
 	++Hits;
 	FeedbackText = TEXT("HIT");
 	FeedbackExpiresAt = CurrentRealTime + HitFeedbackDuration;
@@ -301,6 +303,7 @@ void UPPRestraintMinigameWidget::RecordHit(double CurrentRealTime)
 
 void UPPRestraintMinigameWidget::RecordMiss(double CurrentRealTime)
 {
+	UPPAudioSubsystem::Play(this, TEXT("Miss"), true);
 	++Misses;
 	FeedbackText = TEXT("MISS");
 	FeedbackExpiresAt = CurrentRealTime + HitFeedbackDuration;

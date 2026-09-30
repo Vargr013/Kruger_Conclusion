@@ -1,4 +1,5 @@
 #include "BaseGun.h"
+#include "Data/PPAudioSubsystem.h"
 #include "BaseProjectile.h"
 #include "Characters/PPAnimalCharacter.h"
 #include "Characters/PPPoacherCharacter.h"
@@ -65,6 +66,7 @@ bool ABaseGun::TryUseSpareMagazine()
 
     Reload();
     --SpareMagazinesRemaining;
+    UPPAudioSubsystem::Play(this, TEXT("Equipment"));
     return true;
 }
 
@@ -107,6 +109,7 @@ void ABaseGun::Shoot()
         FireRaycast();
     }
 
+    if (FireMode == EFireMode::Raycast) UPPAudioSubsystem::Play(this, TEXT("Spray"));
     if (bConsumesUses)
     {
         CurrentAmmo = FMath::Max(0, CurrentAmmo - 1);

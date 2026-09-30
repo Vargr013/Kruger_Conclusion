@@ -81,3 +81,6 @@ __pycache__/
 /Scripts/replace_tutorial_signs.py
 /Scripts/setup_kruger_sign_materials.py
 /Scripts/verify_kruger_signs.py
+
+# Local project documentation
+/Docs/

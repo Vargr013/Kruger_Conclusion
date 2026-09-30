@@ -12,6 +12,7 @@ public class Kruger_Conclusion : ModuleRules
 			"Core",
 			"CoreUObject",
 			"Engine",
+            "PhysicsCore",
 			"InputCore",
 			"EnhancedInput",
 			"AIModule",

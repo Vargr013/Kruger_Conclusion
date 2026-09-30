@@ -1,4 +1,5 @@
 #include "Actors/PPTutorialDirector.h"
+#include "Data/PPAudioSubsystem.h"
 #include "Actors/PPTutorialTarget.h"
 #include "Actors/PPRestPoint.h"
 #include "Actors/PPArrestZone.h"
@@ -119,13 +120,18 @@ void APPTutorialDirector::EnterStage(EPPTutorialStage Next)
 	ClearDialogue();
 	FeedbackRemaining = Next > Stage && Stage > EPPTutorialStage::Briefing ? 2.5f : 0;
 	Stage = Next;
+	if (Stage == EPPTutorialStage::Radio) UPPAudioSubsystem::Play(this, TEXT("Radio"));
 	StageElapsed = 0;
 	if (const auto* Lesson = Lessons.Find(Stage)) Dialogue = Lesson->Lines;
 	const FText Community = Stage == EPPTutorialStage::Briefing ? ReviewedCommunityOpening : Stage == EPPTutorialStage::Debrief ? ReviewedCommunityDebrief : FText::GetEmpty();
 	if (!Community.IsEmpty())
 	{
 		FPPTutorialLine Line;
-		Line.Speaker = FText::FromString(TEXT("Senior Ranger")); Line.Text = Community; Line.Seconds = 8;
+		Line.Speaker = FText::FromString(TEXT("Senior Ranger"));
+		Line.Text = Community;
+		TArray<FString> CommunityWords;
+		Community.ToString().ParseIntoArrayWS(CommunityWords);
+		Line.Seconds = FMath::Max(8.0f, CommunityWords.Num() / 2.8f + 2.0f);
 		Dialogue.Add(Line);
 	}
 	AdvanceDialogue();

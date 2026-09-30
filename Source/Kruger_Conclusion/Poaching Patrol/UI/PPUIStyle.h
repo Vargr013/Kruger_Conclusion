@@ -5,6 +5,8 @@
 #include "Components/Button.h"
 #include "Rendering/DrawElements.h"
 #include "Styling/CoreStyle.h"
+#include "Sound/SoundBase.h"
+#include "Sound/SlateSound.h"
 
 namespace PPUIStyle
 {
@@ -40,6 +42,9 @@ namespace PPUIStyle
         Style.Hovered = PanelBrush(FLinearColor(0.32f, 0.26f, 0.14f, 1.0f));
         Style.Pressed = PanelBrush(FLinearColor(0.09f, 0.07f, 0.035f, 1.0f));
         Style.Disabled = PanelBrush(FLinearColor(0.10f, 0.10f, 0.09f, 1.0f));
+        FSlateSound Click;
+        Click.SetResourceObject(LoadObject<USoundBase>(nullptr, TEXT("/Game/Poaching_Patrol/Audio/UI_Click.UI_Click")));
+        Style.SetPressedSound(Click);
         Button->SetStyle(Style);
     }
 }

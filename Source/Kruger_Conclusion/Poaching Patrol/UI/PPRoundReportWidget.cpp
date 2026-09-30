@@ -173,7 +173,10 @@ void UPPRoundReportWidget::RefreshText()
 	case EPPRoundEndReason::TimeExpired: Reason = TEXT("Patrol time ran out. Only delivered arrests counted."); break;
 	default: break;
 	}
-	FooterText->SetText(FText::FromString(Reason));
+	// Community context: poverty and exclusion do not make whole communities complicit
+	// (Hübschle-Finch, 2016). See Docs/CommunityEngagement.md for sources and scope.
+	FooterText->SetText(FText::FromString(FString::Printf(
+		TEXT("%s\n\nA patrol can stop an immediate threat. Lasting conservation also needs local voices, education and fair opportunities. What would help people and wildlife beyond this patrol?"), Reason)));
 }
 
 void UPPRoundReportWidget::HandleContinueClicked()

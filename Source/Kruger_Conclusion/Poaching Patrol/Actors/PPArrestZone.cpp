@@ -1,4 +1,5 @@
 #include "Actors/PPArrestZone.h"
+#include "Data/PPAudioSubsystem.h"
 #include "Actors/PPTutorialDirector.h"
 
 #include "EnvironmentLevelSubsystem.h"
@@ -116,6 +117,7 @@ void APPArrestZone::OnArrestBoundsBeginOverlap(
 		}
 	}
 
+	UPPAudioSubsystem::Play(this, TEXT("Confirm"));
 	if (Tutorial) Tutorial->NotifyArrest(Poacher, this);
 
 	if (bRemovePoacherAfterArrest)

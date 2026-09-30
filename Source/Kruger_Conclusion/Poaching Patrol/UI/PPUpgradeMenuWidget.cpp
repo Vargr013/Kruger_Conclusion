@@ -1,4 +1,5 @@
 #include "UI/PPUpgradeMenuWidget.h"
+#include "Data/PPAudioSubsystem.h"
 
 #include "UI/PPUIStyle.h"
 #include "Data/PPGameFlowSubsystem.h"
@@ -328,6 +329,7 @@ void UPPUpgradeMenuWidget::HandleBuy(FUpgradeCellWidgets& Cell)
 		return;
 	}
 
+	UPPAudioSubsystem::Play(this, TEXT("Confirm"), true);
 	RefreshOffers();
 }
 

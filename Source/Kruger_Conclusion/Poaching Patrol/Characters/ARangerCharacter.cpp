@@ -1,4 +1,5 @@
 #include "ARangerCharacter.h"
+#include "Data/PPAudioSubsystem.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "GameFramework/PlayerController.h"
@@ -187,6 +188,7 @@ void ARangerCharacter::StartCrouch(const FInputActionValue& Value) { ToggleCrouc
 
 void ARangerCharacter::Resupply()
 {
+    UPPAudioSubsystem::Play(this, TEXT("Equipment"));
     if (HealthComponent)
     {
         HealthComponent->ResetHealth();
