@@ -279,5 +279,39 @@
     "source_page": "https://kenney.nl/assets/impact-sounds",
     "licence": "CC0 1.0",
     "asset_path": "/Game/Poaching_Patrol/Audio/Wood2.Wood2"
+  },
+  {
+    "asset": "PredatorAlert",
+    "source": "LionGrowls-source.mp3",
+    "start_seconds": 0.15,
+    "length_seconds": 1.65,
+    "loop": false,
+    "duration_seconds": 1.6499791666666668,
+    "sha256": "e58a0a5ace662822857e0c933c667d2a23653bd41aabebdaaec4c31eaa011e84",
+    "creator": "stratcat322",
+    "publication_year": 2015,
+    "source_page": "https://freesound.org/people/stratcat322/sounds/270383/",
+    "licence": "CC0 1.0",
+    "download_url": "https://cdn.freesound.org/previews/270/270383_1808829-hq.mp3",
+    "source_sha256": "651b17a4886fdfd3f1f774b5ba002c394193bad8fe2339b130ac9607722f7086",
+    "processing": "Public high-quality preview; mono 48 kHz PCM16; peak 0.8; 30 ms edge fades",
+    "asset_path": "/Game/Poaching_Patrol/Audio/PredatorAlert.PredatorAlert"
+  },
+  {
+    "asset": "PredatorAttack",
+    "source": "LionGrowls-source.mp3",
+    "start_seconds": 2.25,
+    "length_seconds": 1.2,
+    "loop": false,
+    "duration_seconds": 1.2,
+    "sha256": "3586c01876067d1504e2ebdc0cb8152afd1bfe65f36787939683298edae9e247",
+    "creator": "stratcat322",
+    "publication_year": 2015,
+    "source_page": "https://freesound.org/people/stratcat322/sounds/270383/",
+    "licence": "CC0 1.0",
+    "download_url": "https://cdn.freesound.org/previews/270/270383_1808829-hq.mp3",
+    "source_sha256": "651b17a4886fdfd3f1f774b5ba002c394193bad8fe2339b130ac9607722f7086",
+    "processing": "Public high-quality preview; mono 48 kHz PCM16; peak 0.8; 30 ms edge fades",
+    "asset_path": "/Game/Poaching_Patrol/Audio/PredatorAttack.PredatorAttack"
   }
 ]

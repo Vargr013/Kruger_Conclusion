@@ -35,6 +35,10 @@ const TCHAR* GetPoacherStateName(EPPPoacherState State)
 		return TEXT("EngagingPlayer");
 	case EPPPoacherState::Subdued:
 		return TEXT("Subdued");
+	case EPPPoacherState::Investigating:
+		return TEXT("Investigating");
+	case EPPPoacherState::Searching:
+		return TEXT("Searching");
 	default:
 		return TEXT("Unknown");
 	}
@@ -69,6 +73,12 @@ void APPPoacherCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 		GetWorldTimerManager().ClearTimer(PepperSprayTimerHandle);
 	}
 	Super::EndPlay(EndPlayReason);
+}
+
+void APPPoacherCharacter::StopAIUpdates()
+{
+	CancelPlayerAttack();
+	Super::StopAIUpdates();
 }
 
 float APPPoacherCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
@@ -130,6 +140,7 @@ void APPPoacherCharacter::UpdateCreatureAI()
 	const UEnvironmentLevelSubsystem* Rules = GetWorld() ? GetWorld()->GetSubsystem<UEnvironmentLevelSubsystem>() : nullptr;
 	if (IsActorHealthDepleted(this) || (Rules && Rules->HasRoundEnded()))
 	{
+		ClearTargetMemory();
 		CancelAnimalHunt();
 		CancelPlayerAttack();
 		StopMovement();
@@ -208,21 +219,33 @@ void APPPoacherCharacter::UpdateCreatureAI()
 	}
 
 	AActor* PlayerActor = FindPlayerActor();
-	const bool bPlayerDetected = CanDetectPlayerForCombat(PlayerActor);
-	if (bPlayerDetected)
+	FPPThreatObservation PlayerObservation;
+	const bool bPlayerDetected = ObserveTarget(PlayerActor, PlayerObservation);
+	if (bPlayerDetected && FVector::DistSquared(HomeLocation, PlayerObservation.Location) <= FMath::Square(CombatLeashDistance))
 	{
-		LastPlayerDetectedTime = CurrentTime;
+		RememberObservation(PlayerActor, PlayerObservation);
+		if (PlayerObservation.bSeen)
+		{
+			LastPlayerDetectedTime = CurrentTime;
+			StartEngagingPlayer(PlayerActor);
+			UpdatePlayerCombat(PlayerActor, CurrentTime);
+			return;
+		}
 	}
-	const bool bRememberedPlayer = CurrentPoacherState == EPPPoacherState::EngagingPlayer
-		&& PlayerActor
-		&& CurrentTime - LastPlayerDetectedTime <= PlayerTargetMemoryTime;
-	if ((bPlayerDetected || bRememberedPlayer) && IsWithinCombatLeash(PlayerActor) && !IsActorHealthDepleted(PlayerActor))
+	if (RememberedTarget.Get() == PlayerActor && PlayerActor)
 	{
-		StartEngagingPlayer(PlayerActor);
-		UpdatePlayerCombat(PlayerActor, CurrentTime);
+		CancelPlayerAttack();
+		SetCreatureMoveSpeed(GetAdjustedPoacherMoveSpeed(CombatMoveSpeed));
+		if (FollowRememberedTarget(CombatLeashDistance, PlayerTargetMemoryTime))
+		{
+			SetPoacherState(IsSearchingLastLocation(PlayerTargetMemoryTime) ? EPPPoacherState::Searching : EPPPoacherState::Investigating);
+			return;
+		}
+		DisengageFromPlayer(true);
 		return;
 	}
-	if (CurrentPoacherState == EPPPoacherState::EngagingPlayer)
+	if (!HuntingTarget.IsValid() && (CurrentPoacherState == EPPPoacherState::EngagingPlayer
+		|| CurrentPoacherState == EPPPoacherState::Investigating || CurrentPoacherState == EPPPoacherState::Searching))
 	{
 		DisengageFromPlayer(true);
 		return;
@@ -256,6 +279,7 @@ void APPPoacherCharacter::UpdateCreatureAI()
 
 void APPPoacherCharacter::CancelAnimalHunt()
 {
+	if (HuntingTarget.IsValid() && RememberedTarget.Get() == HuntingTarget.Get()) ClearTargetMemory();
 	bAnimalAttackPending = false;
 	HuntingTarget.Reset();
 	RefreshPoacherMoveSpeed();
@@ -290,7 +314,23 @@ bool APPPoacherCharacter::UpdateAnimalHunt(float CurrentTime)
 		HuntingTarget = Animal;
 		HuntingStartedTime = CurrentTime;
 	}
-	if (CurrentTime - HuntingStartedTime > 20.0f || FVector::DistSquared(GetActorLocation(), Animal->GetActorLocation()) > FMath::Square(SightThreatRadius * 1.5f))
+	FPPThreatObservation Observation;
+	const bool bObserved = ObserveTarget(Animal, Observation);
+	if (bObserved) RememberObservation(Animal, Observation);
+	if (!bObserved || !Observation.bSeen)
+	{
+		bAnimalAttackPending = false;
+		if (FollowRememberedTarget(CombatLeashDistance))
+		{
+			SetPoacherState(IsSearchingLastLocation() ? EPPPoacherState::Searching : EPPPoacherState::Investigating);
+			return true;
+		}
+		ClearTargetMemory();
+		CancelAnimalHunt();
+		StartDisguisedIdle();
+		return false;
+	}
+	if (CurrentTime - HuntingStartedTime > 20.0f || FVector::DistSquared(HomeLocation, Observation.Location) > FMath::Square(CombatLeashDistance))
 	{
 		RejectedHuntingTarget = Animal;
 		HuntingRetryTime = CurrentTime + 3.0f;
@@ -310,7 +350,7 @@ bool APPPoacherCharacter::UpdateAnimalHunt(float CurrentTime)
 		}
 		else
 		{
-			MoveToLocation(Animal->GetActorLocation(), FMath::Max(1.0f, AnimalAttackReach * 0.5f));
+			MoveToLocation(Observation.Location, FMath::Max(1.0f, AnimalAttackReach * 0.5f));
 		}
 		if (CurrentTime >= AnimalAttackResolveTime)
 		{
@@ -326,7 +366,7 @@ bool APPPoacherCharacter::UpdateAnimalHunt(float CurrentTime)
 	if (!bCanHit)
 	{
 		const float Acceptance = FMath::Max(1.0f, AnimalAttackReach * 0.5f);
-		if (!MoveToLocation(Animal->GetActorLocation(), Acceptance))
+		if (!MoveToLocation(Observation.Location, Acceptance))
 		{
 			RejectedHuntingTarget = Animal;
 			HuntingRetryTime = CurrentTime + 3.0f;
@@ -431,6 +471,7 @@ void APPPoacherCharacter::StartDisguisedRoaming()
 
 void APPPoacherCharacter::StartDisguisedIdle()
 {
+	ClearTargetMemory();
 	if (bIsCaptured)
 	{
 		return;
@@ -560,24 +601,12 @@ bool APPPoacherCharacter::CanDetectPlayerForCombat(AActor* PlayerActor) const
 	{
 		return false;
 	}
-	return DetectionType == EPPThreatDetectionType::Sound || HasClearLineOfSightTo(PlayerActor);
+	return DetectionType == EPPThreatDetectionType::Sight;
 }
 
 bool APPPoacherCharacter::HasClearLineOfSightTo(AActor* TargetActor) const
 {
-	if (!TargetActor || !GetWorld())
-	{
-		return false;
-	}
-
-	FVector Start = GetActorLocation();
-	Start.Z += BaseEyeHeight;
-	FVector End = TargetActor->GetActorLocation();
-	End.Z += 50.0f;
-	FCollisionQueryParams Params(SCENE_QUERY_STAT(PoacherCombatVisibility), false, this);
-	FHitResult Hit;
-	const bool bBlocked = GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_Visibility, Params);
-	return !bBlocked || Hit.GetActor() == TargetActor;
+	return CanSeeTarget(TargetActor);
 }
 
 bool APPPoacherCharacter::IsWithinCombatLeash(AActor* PlayerActor) const
@@ -672,6 +701,7 @@ void APPPoacherCharacter::CancelPlayerAttack()
 
 void APPPoacherCharacter::DisengageFromPlayer(bool bReturnToIdle)
 {
+	ClearTargetMemory();
 	const bool bWasEngaging = CurrentPoacherState == EPPPoacherState::EngagingPlayer;
 	CancelPlayerAttack();
 	CurrentTargetActor = nullptr;
@@ -693,6 +723,7 @@ void APPPoacherCharacter::CapturePoacher(AActor* NewCaptor)
 	}
 
 	CancelPlayerAttack();
+	ClearTargetMemory();
 	ClearSubduedState(false);
 	bIsCaptured = true;
 	CaptorActor = NewCaptor;
@@ -786,6 +817,7 @@ void APPPoacherCharacter::EnterSubduedState(float Duration, bool bFromProjectile
 	}
 
 	CancelPlayerAttack();
+	ClearTargetMemory();
 	bIsSubdued = true;
 	bSubduedByProjectile = bSubduedByProjectile || bFromProjectile;
 	CurrentThreatActor = nullptr;
@@ -1038,7 +1070,8 @@ void APPPoacherCharacter::RefreshPoacherMoveSpeed()
 		SetCreatureMoveSpeed(GetAdjustedPoacherMoveSpeed(FleeSpeed));
 		return;
 	}
-	if (CurrentPoacherState == EPPPoacherState::EngagingPlayer)
+	if (CurrentPoacherState == EPPPoacherState::EngagingPlayer
+		|| CurrentPoacherState == EPPPoacherState::Investigating || CurrentPoacherState == EPPPoacherState::Searching)
 	{
 		SetCreatureMoveSpeed(GetAdjustedPoacherMoveSpeed(CombatMoveSpeed));
 		return;

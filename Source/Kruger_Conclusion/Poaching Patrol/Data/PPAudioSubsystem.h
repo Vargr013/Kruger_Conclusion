@@ -18,6 +18,8 @@ public:
     virtual bool IsTickableWhenPaused() const override { return true; }
     virtual TStatId GetStatId() const override;
     static void Play(const UObject* Context, FName Cue, bool bUI = false);
+    static void PlayPredator(AActor* Predator, bool bAttack);
+    static void StopPredator(AActor* Predator);
 private:
     UPROPERTY() TMap<FName, TObjectPtr<USoundBase>> Sounds;
     UPROPERTY() TObjectPtr<UAudioComponent> Wind;
@@ -25,6 +27,8 @@ private:
     UPROPERTY() TObjectPtr<UAudioComponent> Feedback;
     UPROPERTY() TObjectPtr<UAudioComponent> Equipment;
     UPROPERTY() TObjectPtr<UAudioComponent> Footstep;
+    UPROPERTY() TArray<TObjectPtr<UAudioComponent>> PredatorVoices;
+    UPROPERTY() TObjectPtr<class USoundAttenuation> PredatorAttenuation;
     float CachedWaterDistance = TNumericLimits<float>::Max();
     FString CachedSurface = TEXT("Grass");
     TMap<FName, double> LastCueTimes;

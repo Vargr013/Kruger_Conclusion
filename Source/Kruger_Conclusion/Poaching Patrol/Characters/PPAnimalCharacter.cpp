@@ -1,4 +1,7 @@
 #include "Characters/PPAnimalCharacter.h"
+#include "Data/PPAudioSubsystem.h"
+#include "Kismet/GameplayStatics.h"
+#include "GameFramework/DamageType.h"
 
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
@@ -20,6 +23,14 @@ const TCHAR* GetAnimalStateName(EPPAnimalState State)
 		return TEXT("Alert");
 	case EPPAnimalState::Fleeing:
 		return TEXT("Fleeing");
+	case EPPAnimalState::Investigating:
+		return TEXT("Investigating");
+	case EPPAnimalState::Chasing:
+		return TEXT("Chasing");
+	case EPPAnimalState::Searching:
+		return TEXT("Searching");
+	case EPPAnimalState::Attacking:
+		return TEXT("Attacking");
 	default:
 		return TEXT("Unknown");
 	}
@@ -75,11 +86,8 @@ void APPAnimalCharacter::UpdateCreatureAI()
 
 	if (bIsPredator)
 	{
-		if (AActor* AttackTarget = FindBestAttackTarget())
-		{
-			TryAttackTarget(AttackTarget);
-			return;
-		}
+		UpdatePredatorBehaviour();
+		return;
 	}
 
 	AActor* ThreatActor = FindBestThreatActor();
@@ -234,6 +242,8 @@ void APPAnimalCharacter::StartFleeing(AActor* ThreatActor)
 
 void APPAnimalCharacter::StartIdle()
 {
+	ClearTargetMemory();
+	CancelPredatorAttack();
 	StopMovement();
 	EnterRoamState();
 	SetAnimalState(EPPAnimalState::Idle);

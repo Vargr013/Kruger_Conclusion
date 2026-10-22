@@ -18,6 +18,8 @@ class KRUGER_CONCLUSION_API ABaseCharacter : public ACharacter
 
 public:
     ABaseCharacter();
+	UFUNCTION(BlueprintPure, Category="Movement") bool IsSprinting() const { return bIsSprinting; }
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Noise") TObjectPtr<class UPPNoiseEmitterComponent> NoiseEmitter;
 
 protected:
     virtual void BeginPlay() override;

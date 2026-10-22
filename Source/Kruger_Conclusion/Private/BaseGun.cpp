@@ -1,4 +1,5 @@
 #include "BaseGun.h"
+#include "Data/PPNoiseEmitterComponent.h"
 #include "Data/PPAudioSubsystem.h"
 #include "BaseProjectile.h"
 #include "Characters/PPAnimalCharacter.h"
@@ -110,6 +111,11 @@ void ABaseGun::Shoot()
     }
 
     if (FireMode == EFireMode::Raycast) UPPAudioSubsystem::Play(this, TEXT("Spray"));
+    if (AActor* User = GetOwner())
+    {
+        if (UPPNoiseEmitterComponent* Noise = User->FindComponentByClass<UPPNoiseEmitterComponent>())
+            Noise->EmitNoise(FireMode == EFireMode::Raycast ? 600.0f : 1200.0f);
+    }
     if (bConsumesUses)
     {
         CurrentAmmo = FMath::Max(0, CurrentAmmo - 1);

@@ -11,7 +11,11 @@ enum class EPPAnimalState : uint8
 	Idle UMETA(DisplayName="Idle"),
 	Roaming UMETA(DisplayName="Roaming"),
 	Alert UMETA(DisplayName="Alert"),
-	Fleeing UMETA(DisplayName="Fleeing")
+	Fleeing UMETA(DisplayName="Fleeing"),
+	Investigating UMETA(DisplayName="Investigating"),
+	Chasing UMETA(DisplayName="Chasing"),
+	Searching UMETA(DisplayName="Searching"),
+	Attacking UMETA(DisplayName="Attacking")
 };
 
 UENUM(BlueprintType)
@@ -25,7 +29,9 @@ enum class EPPPoacherState : uint8
 	Arrested UMETA(DisplayName="Arrested"),
 	Escaped UMETA(DisplayName="Escaped"),
 	EngagingPlayer UMETA(DisplayName="Engaging Player"),
-	Subdued UMETA(DisplayName="Subdued")
+	Subdued UMETA(DisplayName="Subdued"),
+	Investigating UMETA(DisplayName="Investigating"),
+	Searching UMETA(DisplayName="Searching")
 };
 
 UENUM(BlueprintType)

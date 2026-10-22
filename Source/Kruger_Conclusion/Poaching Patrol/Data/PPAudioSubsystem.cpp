@@ -9,6 +9,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Materials/MaterialInterface.h"
 #include "Sound/SoundBase.h"
+#include "Sound/SoundAttenuation.h"
 
 bool UPPAudioSubsystem::DoesSupportWorldType(EWorldType::Type Type) const
 {
@@ -19,7 +20,7 @@ void UPPAudioSubsystem::OnWorldBeginPlay(UWorld& World)
 {
     Super::OnWorldBeginPlay(World);
     const TArray<FString> Names = {TEXT("Wind"), TEXT("River"), TEXT("Spray"), TEXT("Radio"), TEXT("Equipment"), TEXT("Confirm"), TEXT("Miss"),
-        TEXT("Grass0"), TEXT("Grass1"), TEXT("Grass2"), TEXT("Sand0"), TEXT("Sand1"), TEXT("Sand2"), TEXT("Stone0"), TEXT("Stone1"), TEXT("Stone2"), TEXT("Wood0"), TEXT("Wood1"), TEXT("Wood2")};
+        TEXT("Grass0"), TEXT("Grass1"), TEXT("Grass2"), TEXT("Sand0"), TEXT("Sand1"), TEXT("Sand2"), TEXT("Stone0"), TEXT("Stone1"), TEXT("Stone2"), TEXT("Wood0"), TEXT("Wood1"), TEXT("Wood2"), TEXT("PredatorAlert"), TEXT("PredatorAttack")};
     for (const FString& Name : Names)
     {
         const FString Path = FString::Printf(TEXT("/Game/Poaching_Patrol/Audio/%s.%s"), *Name, *Name);
@@ -28,9 +29,17 @@ void UPPAudioSubsystem::OnWorldBeginPlay(UWorld& World)
     }
     Wind = UGameplayStatics::SpawnSound2D(this, Sounds.FindRef(TEXT("Wind")), 0.001f, 1, 0, nullptr, false, false);
     River = UGameplayStatics::SpawnSound2D(this, Sounds.FindRef(TEXT("River")), 0.001f, 1, 0, nullptr, false, false);
+    PredatorAttenuation = NewObject<USoundAttenuation>(this);
+    PredatorAttenuation->Attenuation.bSpatialize = true;
+    PredatorAttenuation->Attenuation.bAttenuate = true;
+    PredatorAttenuation->Attenuation.AttenuationShapeExtents = FVector(150.0f, 0, 0);
+    PredatorAttenuation->Attenuation.FalloffDistance = 1850.0f;
 }
 void UPPAudioSubsystem::Deinitialize()
 {
+    for (UAudioComponent* Voice : PredatorVoices)
+        if (IsValid(Voice)) { Voice->Stop(); Voice->DestroyComponent(); }
+    PredatorVoices.Reset();
     for (UAudioComponent* Component : {Wind.Get(), River.Get(), Feedback.Get(), Equipment.Get(), Footstep.Get()})
         if (IsValid(Component)) { Component->Stop(); Component->DestroyComponent(); }
     Sounds.Reset(); LastCueTimes.Reset();
@@ -64,6 +73,8 @@ void UPPAudioSubsystem::Tick(float DeltaTime)
     APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0);
     ARangerCharacter* Ranger = PC ? Cast<ARangerCharacter>(PC->GetPawn()) : nullptr;
     const bool bGameplay = Ranger && !World->IsPaused() && !PC->IsMoveInputIgnored() && !PC->bShowMouseCursor;
+    for (UAudioComponent* Voice : PredatorVoices)
+        if (IsValid(Voice)) Voice->SetPaused(!bGameplay);
     float WaterDistance = TNumericLimits<float>::Max();
     if (bGameplay)
     {

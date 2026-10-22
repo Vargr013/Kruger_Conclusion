@@ -11,6 +11,17 @@ class UPPHealthComponent;
 class UAnimSequence;
 class USkeletalMesh;
 class UMaterialInterface;
+class UPPNoiseEmitterComponent;
+
+USTRUCT(BlueprintType)
+struct FPPThreatObservation
+{
+	GENERATED_BODY()
+	UPROPERTY(BlueprintReadOnly) bool bSeen = false;
+	UPROPERTY(BlueprintReadOnly) bool bHeard = false;
+	UPROPERTY(BlueprintReadOnly) FVector Location = FVector::ZeroVector;
+	UPROPERTY(BlueprintReadOnly) float Time = -1000.0f;
+};
 
 UENUM(BlueprintType)
 enum class EPPThreatDetectionType : uint8
@@ -27,6 +38,15 @@ class KRUGER_CONCLUSION_API APPCreatureBase : public ACharacter
 
 public:
 	APPCreatureBase();
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Creature|Noise") TObjectPtr<UPPNoiseEmitterComponent> NoiseEmitter;
+	UFUNCTION(BlueprintCallable, Category="Creature|Threat") bool ObserveTarget(AActor* Target, FPPThreatObservation& Observation) const;
+	UFUNCTION(BlueprintPure, Category="Creature|Threat") bool CanSeeTarget(AActor* Target) const;
+	void RememberObservation(AActor* Target, const FPPThreatObservation& Observation);
+	bool FollowRememberedTarget(float Leash = 3000.0f, float MemorySeconds = 3.0f);
+	void ClearTargetMemory();
+	UFUNCTION(BlueprintPure, Category="Creature|Threat") FVector GetLastObservedLocation() const { return LastObservation.Location; }
+	UFUNCTION(BlueprintPure, Category="Creature|Threat") float GetLastObservedTime() const { return LastObservation.Time; }
+	bool IsSearchingLastLocation(float MemorySeconds = 3.0f) const;
 
 protected:
 	virtual void BeginPlay() override;
@@ -100,7 +120,7 @@ protected:
 	float SightThreatAngleDegrees = 90.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Creature|Threat")
-	float SoundThreatRadius = 700.0f;
+	float SoundThreatRadius = 1200.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Creature|Threat")
 	bool bUseSightThreats = true;
@@ -274,6 +294,12 @@ public:
 
 protected:
 	void PrepareCreatureAnimationVisual();
+	UPROPERTY(Transient) TWeakObjectPtr<AActor> RememberedTarget;
+	UPROPERTY(Transient) FPPThreatObservation LastObservation;
+	int32 SearchPointIndex = 0;
+	float NextSearchPointTime = 0.0f;
+	mutable TWeakObjectPtr<AActor> FleeSource;
+	mutable FVector LastThreatPosition = FVector::ZeroVector;
 	void StartCreatureAnimation();
 	void UpdateCreatureAnimation();
 	FTimerHandle CreatureAnimationTimerHandle;

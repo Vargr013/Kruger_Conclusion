@@ -21,6 +21,7 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	virtual void OnConstruction(const FTransform& Transform) override;
+	virtual void EndPlay(const EEndPlayReason::Type Reason) override;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Animal|Visuals")
 	UStaticMeshComponent* StaticAnimalMeshComponent;
@@ -39,6 +40,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Animal|Identity")
 	bool bIsPredator = false;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Animal|Predator") float PursuitSpeed = 750.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Animal|Predator") float PredatorLeashDistance = 3000.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Animal|Predator") float PredatorAttackWindup = 0.6f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Animal|Timing")
 	float IdleTimeMin = 4.0f;
@@ -62,6 +66,8 @@ protected:
 
 public:
 	virtual void UpdateCreatureAI() override;
+	virtual void StopAIUpdates() override;
+	UFUNCTION(BlueprintPure, Category="Animal|Predator") bool IsPredatorAttackPending() const { return bPredatorAttackPending; }
 	virtual bool IsValidThreatActor_Implementation(AActor* PotentialThreat) const override;
 
 	UFUNCTION(BlueprintCallable, Category="Animal|State")
@@ -92,6 +98,12 @@ public:
 	bool IsPredator() const { return bIsPredator; }
 
 protected:
+	void UpdatePredatorBehaviour();
+	void CancelPredatorAttack();
+	void ResolvePredatorAttack();
+	FTimerHandle PredatorAttackTimer;
+	bool bPredatorAttackPending = false;
+	float LastGrowlTime = -1000.0f;
 	void UpdateIdleLocalWander(float CurrentTime);
 	void ApplyAnimalVisualMesh();
 	virtual void HandleHealthDepleted() override;

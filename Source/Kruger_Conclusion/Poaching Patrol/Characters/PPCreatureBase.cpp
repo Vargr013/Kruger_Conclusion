@@ -1,4 +1,5 @@
 #include "Characters/PPCreatureBase.h"
+#include "Data/PPNoiseEmitterComponent.h"
 
 #include "AIController.h"
 #include "Animation/AnimSequence.h"
@@ -21,6 +22,7 @@ APPCreatureBase::APPCreatureBase()
 	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
 	AIControllerClass = AAIController::StaticClass();
 	HealthComponent = CreateDefaultSubobject<UPPHealthComponent>(TEXT("HealthComponent"));
+	NoiseEmitter = CreateDefaultSubobject<UPPNoiseEmitterComponent>(TEXT("NoiseEmitter"));
 }
 
 void APPCreatureBase::BeginPlay()
@@ -176,13 +178,13 @@ AActor* APPCreatureBase::FindBestAttackTarget() const
 			return;
 		}
 
-		EPPThreatDetectionType DetectionType = EPPThreatDetectionType::None;
-		if (!CanDetectThreat(Candidate, DetectionType))
+		FPPThreatObservation Observation;
+		if (!ObserveTarget(Candidate, Observation))
 		{
 			return;
 		}
 
-		const float DistanceSquared = FVector::DistSquared(GetActorLocation(), Candidate->GetActorLocation());
+		const float DistanceSquared = FVector::DistSquared(GetActorLocation(), Observation.Location);
 		if (DistanceSquared < BestDistanceSquared)
 		{
 			BestDistanceSquared = DistanceSquared;
@@ -218,7 +220,7 @@ bool APPCreatureBase::IsTargetInAttackRange(AActor* TargetActor) const
 
 bool APPCreatureBase::TryAttackTarget(AActor* TargetActor)
 {
-	if (!CanAttackTarget(TargetActor))
+	if (!CanAttackTarget(TargetActor) || !CanSeeTarget(TargetActor))
 	{
 		return false;
 	}
@@ -286,6 +288,9 @@ void APPCreatureBase::StartAIUpdates()
 
 void APPCreatureBase::StopAIUpdates()
 {
+	ClearTargetMemory();
+	FleeSource.Reset();
+	if (NoiseEmitter) NoiseEmitter->ClearNoise();
 	if (GetWorld())
 	{
 		GetWorldTimerManager().ClearTimer(AIUpdateTimerHandle);
@@ -422,27 +427,11 @@ bool APPCreatureBase::IsValidThreatActor_Implementation(AActor* PotentialThreat)
 
 bool APPCreatureBase::CanDetectThreat(AActor* PotentialThreat, EPPThreatDetectionType& OutDetectionType) const
 {
-	OutDetectionType = EPPThreatDetectionType::None;
-	if (!PotentialThreat)
-	{
-		return false;
-	}
-
-	const float DistanceSquared = FVector::DistSquared(GetActorLocation(), PotentialThreat->GetActorLocation());
-
-	if (bUseSoundThreats && DistanceSquared <= FMath::Square(SoundThreatRadius))
-	{
-		OutDetectionType = EPPThreatDetectionType::Sound;
-		return true;
-	}
-
-	if (bUseSightThreats && DistanceSquared <= FMath::Square(SightThreatRadius) && IsThreatInForwardCone(PotentialThreat))
-	{
-		OutDetectionType = EPPThreatDetectionType::Sight;
-		return true;
-	}
-
-	return false;
+	FPPThreatObservation Observation;
+	const bool bDetected = ObserveTarget(PotentialThreat, Observation);
+	OutDetectionType = Observation.bSeen ? EPPThreatDetectionType::Sight
+		: Observation.bHeard ? EPPThreatDetectionType::Sound : EPPThreatDetectionType::None;
+	return bDetected;
 }
 
 FVector APPCreatureBase::GetDirectionAwayFromActor(AActor* ThreatActor) const
@@ -452,7 +441,17 @@ FVector APPCreatureBase::GetDirectionAwayFromActor(AActor* ThreatActor) const
 		return GetActorForwardVector();
 	}
 
-	FVector AwayDirection = GetActorLocation() - ThreatActor->GetActorLocation();
+	FPPThreatObservation Observation;
+	if (ObserveTarget(ThreatActor, Observation))
+	{
+		LastThreatPosition = Observation.Location;
+		FleeSource = ThreatActor;
+	}
+	else if (FleeSource != ThreatActor)
+	{
+		return GetActorForwardVector();
+	}
+	FVector AwayDirection = GetActorLocation() - LastThreatPosition;
 	AwayDirection.Z = 0.0f;
 	if (!AwayDirection.Normalize())
 	{
@@ -676,6 +675,7 @@ void APPCreatureBase::EnterFleeState(AActor* ThreatActor)
 void APPCreatureBase::EnterRoamState()
 {
 	CurrentThreatActor = nullptr;
+	FleeSource.Reset();
 	SetCreatureMoveSpeed(WalkSpeed);
 }
 

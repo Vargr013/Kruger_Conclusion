@@ -1,4 +1,5 @@
 #include "ABaseCharacter.h"
+#include "Data/PPNoiseEmitterComponent.h"
 #include "Actors/PPRestPoint.h"
 #include "Data/PPHealthComponent.h"
 #include "EngineUtils.h"
@@ -11,6 +12,7 @@ ABaseCharacter::ABaseCharacter()
 {
 	PrimaryActorTick.bCanEverTick = true; // Impacts performance, runs code every frame for this actor
     HealthComponent = CreateDefaultSubobject<UPPHealthComponent>(TEXT("HealthComponent"));
+	NoiseEmitter = CreateDefaultSubobject<UPPNoiseEmitterComponent>(TEXT("NoiseEmitter"));
 
     // Camera Setup
     SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));

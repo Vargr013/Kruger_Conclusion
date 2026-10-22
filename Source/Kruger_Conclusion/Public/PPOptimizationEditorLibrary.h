@@ -14,5 +14,8 @@ public:
 #if WITH_EDITOR
 	UFUNCTION(BlueprintCallable, Category="Poaching Patrol|Optimisation")
 	static bool ReplaceFoliageTypeInEditor(const FString& OldAssetPath, const FString& NewAssetPath);
+
+	UFUNCTION(BlueprintCallable, Category="Poaching Patrol|Vegetation")
+	static bool SamplePatrolGround(FVector Position, FHitResult& Ground);
 #endif
 };

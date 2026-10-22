@@ -18,6 +18,7 @@ class KRUGER_CONCLUSION_API APPPoacherCharacter : public APPCreatureBase, public
 
 public:
 	APPPoacherCharacter();
+	virtual void StopAIUpdates() override;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Poacher|Encounter") bool bTutorialEncounter = false;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Poacher|Encounter") bool bStartEncounterInactive = false;
 	UPROPERTY(BlueprintAssignable, Category="Poacher|Encounter") FPPPoacherStateChanged OnPoacherStateChanged;
