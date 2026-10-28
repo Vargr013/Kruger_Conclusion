@@ -65,16 +65,22 @@ protected:
 	float AttackWindupDuration = 0.6f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Poacher|Hunting", meta=(ClampMin="0.0"))
-	float HuntingMoveSpeed = 550.0f;
+	float HuntingMoveSpeed = 650.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Poacher|Hunting", meta=(ClampMin="1.0"))
+	float HuntingLeashDistance = 6000.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Poacher|Hunting", meta=(ClampMin="1.0"))
+	float HuntingDuration = 45.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Poacher|Hunting", meta=(ClampMin="1.0"))
 	float AnimalAttackReach = 150.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Poacher|Hunting", meta=(ClampMin="0.1"))
-	float AnimalAttackWindup = 1.0f;
+	float AnimalAttackWindup = 0.4f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Poacher|Hunting", meta=(ClampMin="0.1"))
-	float AnimalAttackCooldown = 2.0f;
+	float AnimalAttackCooldown = 1.25f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Poacher|Hunting", meta=(ClampMin="1.0"))
 	float AnimalAttackDamage = 25.0f;
@@ -301,7 +307,7 @@ public:
 protected:
 	void UpdateIdleLocalWander(float CurrentTime);
 	bool UpdateAnimalHunt(float CurrentTime);
-	bool IsAnimalWithinReach(const APPAnimalCharacter* Animal) const;
+	bool IsAnimalWithinReach(const APPAnimalCharacter* Animal, float Reach) const;
 	void UpdatePlayerCombat(AActor* PlayerActor, float CurrentTime);
 	bool CanDetectPlayerForCombat(AActor* PlayerActor) const;
 	bool HasClearLineOfSightTo(AActor* TargetActor) const;

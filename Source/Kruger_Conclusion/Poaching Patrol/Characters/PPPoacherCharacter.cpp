@@ -78,6 +78,7 @@ void APPPoacherCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 void APPPoacherCharacter::StopAIUpdates()
 {
 	CancelPlayerAttack();
+	CancelAnimalHunt();
 	Super::StopAIUpdates();
 }
 
@@ -285,7 +286,7 @@ void APPPoacherCharacter::CancelAnimalHunt()
 	RefreshPoacherMoveSpeed();
 }
 
-bool APPPoacherCharacter::IsAnimalWithinReach(const APPAnimalCharacter* Animal) const
+bool APPPoacherCharacter::IsAnimalWithinReach(const APPAnimalCharacter* Animal, float Reach) const
 {
 	if (!IsValid(Animal))
 	{
@@ -297,7 +298,7 @@ bool APPPoacherCharacter::IsAnimalWithinReach(const APPAnimalCharacter* Animal) 
 	const float Gap = FMath::Max(0.0f, FVector::Dist2D(GetActorLocation(), Animal->GetActorLocation())
 		- Ours->GetScaledCapsuleRadius() - Theirs->GetScaledCapsuleRadius());
 	const float HeightGap = FMath::Abs(GetActorLocation().Z - Animal->GetActorLocation().Z);
-	return Gap <= AnimalAttackReach && HeightGap <= Ours->GetScaledCapsuleHalfHeight() + Theirs->GetScaledCapsuleHalfHeight();
+	return Gap <= Reach && HeightGap <= Ours->GetScaledCapsuleHalfHeight() + Theirs->GetScaledCapsuleHalfHeight();
 }
 
 bool APPPoacherCharacter::UpdateAnimalHunt(float CurrentTime)
@@ -314,13 +315,23 @@ bool APPPoacherCharacter::UpdateAnimalHunt(float CurrentTime)
 		HuntingTarget = Animal;
 		HuntingStartedTime = CurrentTime;
 	}
+	SetCreatureMoveSpeed(GetAdjustedPoacherMoveSpeed(HuntingMoveSpeed));
 	FPPThreatObservation Observation;
 	const bool bObserved = ObserveTarget(Animal, Observation);
 	if (bObserved) RememberObservation(Animal, Observation);
+	if (CurrentTime - HuntingStartedTime > HuntingDuration
+		|| FVector::DistSquared(HomeLocation, LastObservation.Location) > FMath::Square(HuntingLeashDistance))
+	{
+		RejectedHuntingTarget = Animal;
+		HuntingRetryTime = CurrentTime + 3.0f;
+		CancelAnimalHunt();
+		StopMovement();
+		return false;
+	}
 	if (!bObserved || !Observation.bSeen)
 	{
 		bAnimalAttackPending = false;
-		if (FollowRememberedTarget(CombatLeashDistance))
+		if (FollowRememberedTarget(HuntingLeashDistance))
 		{
 			SetPoacherState(IsSearchingLastLocation() ? EPPPoacherState::Searching : EPPPoacherState::Investigating);
 			return true;
@@ -330,28 +341,27 @@ bool APPPoacherCharacter::UpdateAnimalHunt(float CurrentTime)
 		StartDisguisedIdle();
 		return false;
 	}
-	if (CurrentTime - HuntingStartedTime > 20.0f || FVector::DistSquared(HomeLocation, Observation.Location) > FMath::Square(CombatLeashDistance))
-	{
-		RejectedHuntingTarget = Animal;
-		HuntingRetryTime = CurrentTime + 3.0f;
-		CancelAnimalHunt();
-		StopMovement();
-		return false;
-	}
 	CurrentTargetActor = Animal;
 	SetPoacherState(EPPPoacherState::DisguisedRoaming);
-	SetCreatureMoveSpeed(GetAdjustedPoacherMoveSpeed(HuntingMoveSpeed));
-	const bool bCanHit = IsAnimalWithinReach(Animal) && HasClearLineOfSightTo(Animal);
+	const bool bCanHit = IsAnimalWithinReach(Animal, AnimalAttackReach) && HasClearLineOfSightTo(Animal);
+	// Close the gap during preparation and recovery so fleeing animals cannot outrun every swing.
+	const float ClosingReach = FMath::Max(1.0f, AnimalAttackReach * 0.25f);
+	if (!bCanHit || !IsAnimalWithinReach(Animal, ClosingReach))
+	{
+		if (!MoveToLocation(Observation.Location, ClosingReach) && !bCanHit)
+		{
+			RejectedHuntingTarget = Animal;
+			HuntingRetryTime = CurrentTime + 3.0f;
+			CancelAnimalHunt();
+			return false;
+		}
+	}
+	else
+	{
+		StopMovement();
+	}
 	if (bAnimalAttackPending)
 	{
-		if (bCanHit)
-		{
-			StopMovement();
-		}
-		else
-		{
-			MoveToLocation(Observation.Location, FMath::Max(1.0f, AnimalAttackReach * 0.5f));
-		}
 		if (CurrentTime >= AnimalAttackResolveTime)
 		{
 			bAnimalAttackPending = false;
@@ -363,20 +373,7 @@ bool APPPoacherCharacter::UpdateAnimalHunt(float CurrentTime)
 		}
 		return true;
 	}
-	if (!bCanHit)
-	{
-		const float Acceptance = FMath::Max(1.0f, AnimalAttackReach * 0.5f);
-		if (!MoveToLocation(Observation.Location, Acceptance))
-		{
-			RejectedHuntingTarget = Animal;
-			HuntingRetryTime = CurrentTime + 3.0f;
-			CancelAnimalHunt();
-			return false;
-		}
-		return true;
-	}
-	StopMovement();
-	if (CurrentTime >= AnimalAttackReadyTime)
+	if (bCanHit && CurrentTime >= AnimalAttackReadyTime)
 	{
 		bAnimalAttackPending = true;
 		AnimalAttackResolveTime = CurrentTime + FMath::Max(0.1f, AnimalAttackWindup);
@@ -426,7 +423,9 @@ void APPPoacherCharacter::EnterRoamState()
 
 void APPPoacherCharacter::SetPoacherState(EPPPoacherState NewState)
 {
-	if (NewState != EPPPoacherState::DisguisedRoaming && NewState != EPPPoacherState::Alert)
+	const bool bTrackingHuntedAnimal = HuntingTarget.IsValid() && RememberedTarget.Get() == HuntingTarget.Get()
+		&& (NewState == EPPPoacherState::Investigating || NewState == EPPPoacherState::Searching);
+	if (NewState != EPPPoacherState::DisguisedRoaming && NewState != EPPPoacherState::Alert && !bTrackingHuntedAnimal)
 	{
 		CancelAnimalHunt();
 	}
@@ -1068,6 +1067,11 @@ void APPPoacherCharacter::RefreshPoacherMoveSpeed()
 	if (CurrentPoacherState == EPPPoacherState::Fleeing || CurrentPoacherState == EPPPoacherState::Escaped)
 	{
 		SetCreatureMoveSpeed(GetAdjustedPoacherMoveSpeed(FleeSpeed));
+		return;
+	}
+	if (HuntingTarget.IsValid())
+	{
+		SetCreatureMoveSpeed(GetAdjustedPoacherMoveSpeed(HuntingMoveSpeed));
 		return;
 	}
 	if (CurrentPoacherState == EPPPoacherState::EngagingPlayer
