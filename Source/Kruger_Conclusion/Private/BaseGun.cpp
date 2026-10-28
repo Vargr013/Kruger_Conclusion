@@ -8,6 +8,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "DrawDebugHelpers.h"
 #include "GameFramework/Pawn.h"
+#include "GameFramework/PlayerController.h"
 
 namespace
 {
@@ -150,23 +151,39 @@ bool ABaseGun::FireProjectile()
 
 void ABaseGun::FireRaycast()
 {
-    FVector Start = MuzzleLocation->GetComponentLocation();
-
-    // Get the forward direction the muzzle is facing.
-    FVector ForwardVector = MuzzleLocation->GetForwardVector();
-    FVector End = Start + (ForwardVector * SprayRange);
-
-    FHitResult HitResult;
+    const FVector Start = MuzzleLocation->GetComponentLocation();
     FCollisionQueryParams Params;
     Params.AddIgnoredActor(this);
     Params.AddIgnoredActor(GetOwner()); // Doesn't spray self.
+    Params.AddIgnoredActor(GetInstigator());
+
+    FVector AimPoint = Start + MuzzleLocation->GetForwardVector() * SprayRange;
+    if (const APlayerController* PlayerController = Cast<APlayerController>(GetWeaponController(this)))
+    {
+        FVector ViewLocation;
+        FRotator ViewRotation;
+        PlayerController->GetPlayerViewPoint(ViewLocation, ViewRotation);
+
+        // Aim through the centered crosshair rather than parallel to the offset muzzle.
+        const float AimDistance = SprayRange + FVector::Distance(ViewLocation, Start);
+        AimPoint = ViewLocation + ViewRotation.Vector() * AimDistance;
+        FHitResult AimHit;
+        if (GetWorld()->LineTraceSingleByChannel(AimHit, ViewLocation, AimPoint, ECC_Visibility, Params))
+        {
+            AimPoint = AimHit.ImpactPoint;
+        }
+    }
+
+    // Keep the existing range measured from the muzzle and let nearby cover block the spray.
+    const FVector End = Start + (AimPoint - Start).GetSafeNormal() * SprayRange;
 
     // Perform the Raycast (Line trace) looking for the Visibility channel.
-    bool bHit = GetWorld()->LineTraceSingleByChannel(HitResult, Start, End, ECC_Visibility, Params);
+    FHitResult HitResult;
+    const bool bHit = GetWorld()->LineTraceSingleByChannel(HitResult, Start, End, ECC_Visibility, Params);
 
     // This draws the spray line in-game. Green if it hit something, orange if it didn't.
     FColor LineColor = bHit ? FColor::Green : FColor::Orange;
-    DrawDebugLine(GetWorld(), Start, End, LineColor, false, 0.5f, 0, 2.0f);
+    DrawDebugLine(GetWorld(), Start, bHit ? HitResult.ImpactPoint : End, LineColor, false, 0.5f, 0, 2.0f);
 
     if (bHit && HitResult.GetActor())
     {
