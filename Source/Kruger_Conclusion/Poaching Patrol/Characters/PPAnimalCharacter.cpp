@@ -79,6 +79,8 @@ void APPAnimalCharacter::OnConstruction(const FTransform& Transform)
 
 void APPAnimalCharacter::UpdateCreatureAI()
 {
+	const UEnvironmentLevelSubsystem* Rules = GetWorld() ? GetWorld()->GetSubsystem<UEnvironmentLevelSubsystem>() : nullptr;
+	if (Rules && Rules->IsPatrolSetupPending()) return;
 	if (bPoached)
 	{
 		return;

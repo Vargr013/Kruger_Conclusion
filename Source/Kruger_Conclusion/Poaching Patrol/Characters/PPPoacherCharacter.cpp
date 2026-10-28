@@ -139,6 +139,7 @@ void APPPoacherCharacter::UpdateCreatureAI()
 {
 	if (!bEncounterActive) return;
 	const UEnvironmentLevelSubsystem* Rules = GetWorld() ? GetWorld()->GetSubsystem<UEnvironmentLevelSubsystem>() : nullptr;
+	if (Rules && Rules->IsPatrolSetupPending()) return;
 	if (IsActorHealthDepleted(this) || (Rules && Rules->HasRoundEnded()))
 	{
 		ClearTargetMemory();

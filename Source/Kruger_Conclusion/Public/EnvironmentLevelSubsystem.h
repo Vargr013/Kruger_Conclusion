@@ -10,6 +10,7 @@ class APPTutorialDirector;
 class APPAnimalCharacter;
 class APPPoacherCharacter;
 class APPCreatureBase;
+class APPSpawnDirector;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnLevelStateChangedSignature);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPPRoundStateChangedSignature, FPPRoundSnapshot, Snapshot);
@@ -37,6 +38,7 @@ public:
 	bool IsTutorialMode() const;
 	APPTutorialDirector* GetTutorialDirector() const { return TutorialDirector.Get(); }
 	bool HasPatrolStarted() const { return bPatrolStarted; }
+	bool IsPatrolSetupPending() const { return SpawnDirector.IsValid() && !bPatrolStarted && !IsTutorialMode(); }
 	float GetPatrolSecondsRemaining() const;
 	virtual void Deinitialize() override;
 
@@ -102,6 +104,7 @@ public:
 
 private:
 	TWeakObjectPtr<APPTutorialDirector> TutorialDirector;
+	TWeakObjectPtr<APPSpawnDirector> SpawnDirector;
 	void ResetRoundState();
 	void ScanPlacedActors();
 	void BroadcastStateChanged();

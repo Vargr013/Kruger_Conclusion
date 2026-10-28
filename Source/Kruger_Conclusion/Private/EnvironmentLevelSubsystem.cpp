@@ -1,5 +1,7 @@
 #include "EnvironmentLevelSubsystem.h"
 #include "Actors/PPTutorialDirector.h"
+#include "Actors/PPSpawnDirector.h"
+#include "Kismet/GameplayStatics.h"
 
 #include "Characters/PPAnimalCharacter.h"
 #include "Characters/PPCreatureBase.h"
@@ -35,6 +37,11 @@ void UEnvironmentLevelSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 		}
 	}
 	ScanPlacedActors();
+	for (TActorIterator<APPSpawnDirector> It(&InWorld); It; ++It)
+	{
+		SpawnDirector = *It;
+		break;
+	}
 	BroadcastStateChanged();
 }
 
@@ -183,6 +190,7 @@ void UEnvironmentLevelSubsystem::StartPatrol()
 	{
 		return;
 	}
+	if (SpawnDirector.IsValid() && !SpawnDirector->PreparePatrol(UGameplayStatics::GetPlayerPawn(GetWorld(), 0))) return;
 	// I used world time so pausing and restraint did not use patrol time.
 	bPatrolStarted = true;
 	PatrolEndTime = GetWorld()->GetTimeSeconds() + FMath::Max(1.0f, PatrolDurationSeconds);
@@ -358,6 +366,15 @@ TArray<FPPObjectiveState> UEnvironmentLevelSubsystem::GetObjectivesForPlayer(AAc
 {
 	const FPPRoundSnapshot Snapshot = GetRoundSnapshot();
 	TArray<FPPObjectiveState> Objectives;
+	if (SpawnDirector.IsValid() && SpawnDirector->HasFailed())
+	{
+		FPPObjectiveState Setup;
+		Setup.Identifier = TEXT("PatrolSetup");
+		Setup.Title = FText::FromString(TEXT("Patrol could not start"));
+		Setup.Detail = FText::FromString(TEXT("Return to the main menu and try again."));
+		Objectives.Add(Setup);
+		return Objectives;
+	}
 
 	FPPObjectiveState Primary;
 	Primary.Identifier = Snapshot.bQuotaMet && Snapshot.ActivePoachers > 0 ? TEXT("ResolveRemaining") : TEXT("ArrestQuota");

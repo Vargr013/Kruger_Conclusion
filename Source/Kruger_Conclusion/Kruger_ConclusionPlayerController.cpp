@@ -380,7 +380,12 @@ void AKruger_ConclusionPlayerController::ReplayPoachingPatrolDay()
 {
 	if (UGameInstance* GameInstance = GetGameInstance())
 	{
-		GameInstance->GetSubsystem<UPPGameFlowSubsystem>()->RequestReplayBypass();
+		UPPGameFlowSubsystem* Flow = GameInstance->GetSubsystem<UPPGameFlowSubsystem>();
+		if (const UEnvironmentLevelSubsystem* Rules = GetWorld()->GetSubsystem<UEnvironmentLevelSubsystem>())
+		{
+			Flow->RequestPatrolMode(Rules->IsTutorialMode());
+		}
+		Flow->RequestReplayBypass();
 	}
 	ReloadCurrentPatrolLevel();
 }

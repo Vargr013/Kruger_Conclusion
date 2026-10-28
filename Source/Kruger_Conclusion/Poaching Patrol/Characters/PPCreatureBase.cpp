@@ -672,6 +672,18 @@ void APPCreatureBase::EnterFleeState(AActor* ThreatActor)
 	SetCreatureMoveSpeed(FleeSpeed);
 }
 
+void APPCreatureBase::ResetRoamingHome()
+{
+	StopMovement();
+	ClearTargetMemory();
+	HomeLocation = GetActorLocation();
+	CurrentMoveTarget = HomeLocation;
+	CurrentThreatActor = nullptr;
+	FleeSource.Reset();
+	ConsecutiveMoveFailures = 0;
+	LastMoveRequestTime = -1000.0f;
+}
+
 void APPCreatureBase::EnterRoamState()
 {
 	CurrentThreatActor = nullptr;

@@ -214,6 +214,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Creature|AI")
 	virtual void StartAIUpdates();
 
+	/** Used only during initial patrol placement, before normal AI resumes. */
+	void ResetRoamingHome();
+
 	UFUNCTION(BlueprintCallable, Category="Creature|AI")
 	virtual void StopAIUpdates();
 
