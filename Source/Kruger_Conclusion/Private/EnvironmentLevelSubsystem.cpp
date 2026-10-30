@@ -366,6 +366,15 @@ TArray<FPPObjectiveState> UEnvironmentLevelSubsystem::GetObjectivesForPlayer(AAc
 {
 	const FPPRoundSnapshot Snapshot = GetRoundSnapshot();
 	TArray<FPPObjectiveState> Objectives;
+	if (SpawnDirector.IsValid() && SpawnDirector->IsWaitingForWorld())
+	{
+		FPPObjectiveState Setup;
+		Setup.Identifier = TEXT("PatrolPreparing");
+		Setup.Title = FText::FromString(TEXT("Preparing patrol"));
+		Setup.Detail = FText::FromString(TEXT("Please wait while the reserve loads."));
+		Objectives.Add(Setup);
+		return Objectives;
+	}
 	if (SpawnDirector.IsValid() && SpawnDirector->HasFailed())
 	{
 		FPPObjectiveState Setup;

@@ -1,11 +1,13 @@
 #include "Actors/PPSpawnDirector.h"
 
 #include "Actors/PPArrestZone.h"
+#include "Actors/PPAnimalHerd.h"
 #include "Characters/PPAnimalCharacter.h"
 #include "Characters/ARangerCharacter.h"
 #include "Characters/PPPoacherCharacter.h"
 #include "Components/BoxComponent.h"
 #include "Components/CapsuleComponent.h"
+#include "Components/WorldPartitionStreamingSourceComponent.h"
 #include "DrawDebugHelpers.h"
 #include "EngineUtils.h"
 #include "EnvironmentLevelSubsystem.h"
@@ -15,6 +17,7 @@
 #include "NavigationPath.h"
 #include "NavigationSystem.h"
 #include "Kismet/GameplayStatics.h"
+#include "WorldPartition/WorldPartitionSubsystem.h"
 
 namespace
 {
@@ -49,6 +52,17 @@ APPSpawnDirector::APPSpawnDirector()
 	SpawnBounds->SetBoxExtent(FVector(20000, 20000, 5000));
 	SpawnBounds->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	SpawnBounds->SetCanEverAffectNavigation(false);
+	PopulationStreamingSource = CreateDefaultSubobject<UWorldPartitionStreamingSourceComponent>(TEXT("PopulationStreamingSource"));
+	PopulationStreamingSource->DisableStreamingSource();
+	FPPAnimalSpawnProfile Elephants;
+	Elephants.Species = FGameplayTag::RequestGameplayTag(TEXT("Elephant"), false);
+	AnimalProfiles.Add(Elephants);
+	FPPAnimalSpawnProfile Lions;
+	Lions.Species = FGameplayTag::RequestGameplayTag(TEXT("Lion"), false);
+	Lions.bPredator = true; Lions.bHerding = false;
+	Lions.MinGroupSize = Lions.MaxGroupSize = 1;
+	Lions.PlayerSafeDistance = 8000; Lions.CampSafeDistance = 6000; Lions.GroupSpacing = 4000;
+	AnimalProfiles.Add(Lions);
 #if WITH_EDITORONLY_DATA
 	bIsSpatiallyLoaded = false;
 #endif
@@ -81,47 +95,20 @@ bool APPSpawnDirector::ValidateCandidate(APPPoacherCharacter* Poacher, const FVe
 	const FVector& PlayerLocation, const TArray<APPPoacherCharacter*>& Roster,
 	const TArray<FPPSpawnPlacement>& Planned, FVector& OutLocation, FName& Reason) const
 {
-	Reason = TEXT("OutsideArea");
-	if (!IsInsidePlayableArea(RawLocation, BoundaryInset)) return false;
+	if (!ProjectCreatureLocation(Poacher, RawLocation, OutLocation, Reason)) return false;
 	UNavigationSystemV1* Navigation = UNavigationSystemV1::GetCurrent(GetWorld());
-	if (!Navigation) { Reason = TEXT("NoNavigation"); return false; }
-	FCollisionQueryParams TraceParams(SCENE_QUERY_STAT(PPSpawnGround), false);
-	for (APPPoacherCharacter* Existing : Roster) TraceParams.AddIgnoredActor(Existing);
-	const FBox Bounds = SpawnBounds->Bounds.GetBox();
-	FHitResult Ground;
-	const FVector Top(RawLocation.X, RawLocation.Y, Bounds.Max.Z);
-	const FVector Bottom(RawLocation.X, RawLocation.Y, Bounds.Min.Z);
-	Reason = TEXT("UnsafeGround");
-	if (!GetWorld()->LineTraceSingleByObjectType(Ground, Top, Bottom,
-		FCollisionObjectQueryParams(ECC_WorldStatic), TraceParams)
-		|| !Poacher->GetCharacterMovement()->IsWalkable(Ground)) return false;
-	if (Ground.GetActor() && (Ground.GetActor()->ActorHasTag(TEXT("PPNoSpawn"))
-		|| Ground.GetActor()->ActorHasTag(TEXT("Water")))) return false;
-	FNavLocation NavLocation;
 	const FNavAgentProperties& Props = Poacher->GetNavAgentPropertiesRef();
-	Reason = TEXT("OffNavigation");
-	if (!Navigation->ProjectPointToNavigation(Ground.ImpactPoint, NavLocation, FVector(100, 100, 200), &Props)) return false;
-	if (!GetWorld()->LineTraceSingleByObjectType(Ground, NavLocation.Location + FVector(0, 0, 200),
-		NavLocation.Location - FVector(0, 0, 250), FCollisionObjectQueryParams(ECC_WorldStatic), TraceParams)
-		|| !Poacher->GetCharacterMovement()->IsWalkable(Ground)) return false;
-	if (FMath::Abs(Ground.ImpactPoint.Z - NavLocation.Location.Z) > FMath::Max(50.0f, Poacher->GetCharacterMovement()->MaxStepHeight)
-		|| (Ground.GetActor() && (Ground.GetActor()->ActorHasTag(TEXT("PPNoSpawn")) || Ground.GetActor()->ActorHasTag(TEXT("Water"))))) return false;
-	const UCapsuleComponent* Capsule = Poacher->GetCapsuleComponent();
-	OutLocation = Ground.ImpactPoint + FVector(0, 0, Capsule->GetScaledCapsuleHalfHeight() + 3.0f);
-	Reason = TEXT("OutsideArea");
-	if (!IsInsidePlayableArea(OutLocation, FMath::Max(BoundaryInset, Capsule->GetScaledCapsuleRadius()))) return false;
-	Reason = TEXT("ExcludedArea");
-	for (const AActor* Area : ExclusionAreas)
-	{
-		if (IsValid(Area) && Area->GetComponentsBoundingBox(true).ExpandBy(FVector(Capsule->GetScaledCapsuleRadius(),
-			Capsule->GetScaledCapsuleRadius(), Capsule->GetScaledCapsuleHalfHeight())).IsInsideOrOn(OutLocation)) return false;
-	}
+	const FVector NavPoint = OutLocation - FVector(0, 0, Poacher->GetCapsuleComponent()->GetScaledCapsuleHalfHeight());
 	Reason = TEXT("NearPlayer");
 	if (FVector::DistSquared2D(OutLocation, PlayerLocation) < FMath::Square(PlayerSafeDistance)) return false;
 	Reason = TEXT("NearAnimal");
 	for (TActorIterator<APPAnimalCharacter> It(GetWorld()); It; ++It)
 	{
-		if (!It->ActorHasTag(TEXT("PPTutorial")) && FVector::DistSquared2D(OutLocation, It->GetActorLocation()) < FMath::Square(AnimalSafeDistance)) return false;
+		if (It->ActorHasTag(TEXT("PPTutorial"))) continue;
+        FVector AnimalLocation = It->GetActorLocation();
+        if (const FPPAnimalSpawnPlacement* Placement = AnimalPlacements.FindByPredicate([&](const FPPAnimalSpawnPlacement& P) { return P.Animal == *It; })) AnimalLocation = Placement->Transform.GetLocation();
+        const float Separation = FMath::Max(AnimalSafeDistance, GetBodyRadius(Poacher) + GetBodyRadius(*It) + 100);
+        if (FVector::DistSquared2D(OutLocation, AnimalLocation) < FMath::Square(Separation)) return false;
 	}
 	Reason = TEXT("NearPoacher");
 	for (const FPPSpawnPlacement& Other : Planned)
@@ -134,10 +121,6 @@ bool APPSpawnDirector::ValidateCandidate(APPPoacherCharacter* Poacher, const FVe
 		if (Other != Poacher && !Planned.ContainsByPredicate([Other](const FPPSpawnPlacement& P) { return P.Poacher == Other; })
 			&& FVector::DistSquared2D(OutLocation, Other->GetActorLocation()) < FMath::Square(PoacherSpacing)) return false;
 	}
-	Reason = TEXT("BlockedCapsule");
-	if (GetWorld()->OverlapBlockingTestByChannel(OutLocation, FQuat::Identity, Capsule->GetCollisionObjectType(),
-		FCollisionShape::MakeCapsule(Capsule->GetScaledCapsuleRadius(), Capsule->GetScaledCapsuleHalfHeight()), TraceParams,
-		FCollisionResponseParams(Capsule->GetCollisionResponseToChannels()))) return false;
 	Reason = TEXT("NoEscortRoute");
 	bool bHasCampRoute = false;
 	for (TActorIterator<APPArrestZone> It(GetWorld()); It; ++It)
@@ -146,8 +129,8 @@ bool APPSpawnDirector::ValidateCandidate(APPPoacherCharacter* Poacher, const FVe
 		if (FVector::DistSquared2D(OutLocation, It->GetActorLocation()) < FMath::Square(CampSafeDistance)) { Reason = TEXT("NearCamp"); return false; }
 		FNavLocation Camp;
 		if (!Navigation->ProjectPointToNavigation(It->GetActorLocation(), Camp, FVector(200, 200, 500), &Props)) continue;
-		if (HasCompletePath(Navigation, Poacher, NavLocation.Location, Camp.Location, MaxEscortPathLength)
-			&& HasCompletePath(Navigation, Poacher, Camp.Location, NavLocation.Location, MaxEscortPathLength)) bHasCampRoute = true;
+		if (HasCompletePath(Navigation, Poacher, NavPoint, Camp.Location, MaxEscortPathLength)
+			&& HasCompletePath(Navigation, Poacher, Camp.Location, NavPoint, MaxEscortPathLength)) bHasCampRoute = true;
 	}
 	if (!bHasCampRoute) return false;
 	Reason = TEXT("NoPlayerRoute");
@@ -155,16 +138,16 @@ bool APPSpawnDirector::ValidateCandidate(APPPoacherCharacter* Poacher, const FVe
 	if (!PlayerAgent) PlayerAgent = GetDefault<ARangerCharacter>();
 	FNavLocation PlayerNav;
 	if (!Navigation->ProjectPointToNavigation(PlayerLocation, PlayerNav, FVector(200, 200, 500), &PlayerAgent->GetNavAgentPropertiesRef())
-		|| !HasCompletePath(Navigation, PlayerAgent, PlayerNav.Location, NavLocation.Location, MaxEscortPathLength)) return false;
+		|| !HasCompletePath(Navigation, PlayerAgent, PlayerNav.Location, NavPoint, MaxEscortPathLength)) return false;
 	Reason = TEXT("NoRoamingSpace");
 	int32 ReachableProbes = 0;
 	for (const FVector& Offset : {FVector(RoamProbeDistance, 0, 0), FVector(-RoamProbeDistance, 0, 0),
 		FVector(0, RoamProbeDistance, 0), FVector(0, -RoamProbeDistance, 0)})
 	{
 		FNavLocation Probe;
-		if (Navigation->ProjectPointToNavigation(NavLocation.Location + Offset, Probe, FVector(75, 75, 200), &Props)
+		if (Navigation->ProjectPointToNavigation(NavPoint + Offset, Probe, FVector(75, 75, 200), &Props)
 			&& IsInsidePlayableArea(Probe.Location, BoundaryInset)
-			&& HasCompletePath(Navigation, Poacher, NavLocation.Location, Probe.Location, RoamProbeDistance * 3)) ++ReachableProbes;
+			&& HasCompletePath(Navigation, Poacher, NavPoint, Probe.Location, RoamProbeDistance * 3)) ++ReachableProbes;
 	}
 	return ReachableProbes >= 2;
 }
@@ -175,11 +158,9 @@ void APPSpawnDirector::RecordRejection(const FVector& Location, FName Reason)
 	if (bDrawSpawnDebug) DrawDebugPoint(GetWorld(), Location, 8, FColor::Red, false, 15.0f);
 }
 
-bool APPSpawnDirector::BuildLayout(int32 Seed, const FVector& PlayerLocation, TArray<FPPSpawnPlacement>& OutPlacements)
+bool APPSpawnDirector::BuildPoacherLayout(int32 Seed, const FVector& PlayerLocation, TArray<FPPSpawnPlacement>& OutPlacements)
 {
 	OutPlacements.Reset();
-	Rejections.Reset();
-	LastError.Reset();
 	TArray<APPPoacherCharacter*> Roster;
 	for (TActorIterator<APPPoacherCharacter> It(GetWorld()); It; ++It)
 	{
@@ -243,6 +224,37 @@ bool APPSpawnDirector::BuildLayout(int32 Seed, const FVector& PlayerLocation, TA
 	return true;
 }
 
+bool APPSpawnDirector::BuildLayout(int32 Seed, const FVector& PlayerLocation, TArray<FPPSpawnPlacement>& OutPlacements)
+{
+	OutPlacements.Reset(); Rejections.Reset(); LastError.Reset();
+	bool bHasAnimals = false;
+	if (bRandomiseAnimals)
+		for (TActorIterator<APPAnimalCharacter> It(GetWorld()); It; ++It)
+			if (!It->ActorHasTag(TEXT("PPTutorial"))) { bHasAnimals = true; break; }
+	if (!bHasAnimals)
+	{
+		AnimalPlacements.Reset(); AnimalGroups.Reset();
+		return BuildPoacherLayout(Seed, PlayerLocation, OutPlacements);
+	}
+	for (int32 Attempt = 0; Attempt < FMath::Clamp(LayoutAttempts, 1, 8); ++Attempt)
+	{
+		LastError.Reset();
+		const uint32 AttemptSeed = HashCombineFast(GetTypeHash(Seed), GetTypeHash(Attempt));
+		if (BuildAnimalLayout(static_cast<int32>(HashCombineFast(AttemptSeed, 0xA11A1)), PlayerLocation)
+			&& BuildPoacherLayout(static_cast<int32>(HashCombineFast(AttemptSeed, 0xB0AC4)), PlayerLocation, OutPlacements)) return true;
+		UE_LOG(LogTemp, Verbose, TEXT("Patrol layout attempt %d seed=%d: %s"), Attempt + 1, Seed, *LastError);
+	}
+	return BuildAuthoredLayout(Seed, PlayerLocation, OutPlacements);
+}
+
+bool APPSpawnDirector::BuildAuthoredLayout(int32 Seed, const FVector& PlayerLocation, TArray<FPPSpawnPlacement>& OutPlacements)
+{
+	LastError.Reset();
+	if (BuildAnimalLayout(Seed, PlayerLocation, true) && BuildPoacherLayout(Seed, PlayerLocation, OutPlacements)) return true;
+	OutPlacements.Reset(); AnimalPlacements.Reset(); AnimalGroups.Reset();
+	return false;
+}
+
 bool APPSpawnDirector::PreviewLayout(int32 Seed)
 {
 	if (GetWorld()->IsGameWorld()) return false;
@@ -251,6 +263,7 @@ bool APPSpawnDirector::PreviewLayout(int32 Seed)
 	if (bDrawSpawnDebug)
 	{
 		for (const FPPSpawnPlacement& P : Placements) DrawDebugSphere(GetWorld(), P.Transform.GetLocation(), 100, 12, FColor::Green, false, 30);
+		for (const FPPAnimalSpawnPlacement& P : AnimalPlacements) DrawDebugSphere(GetWorld(), P.Transform.GetLocation(), GetBodyRadius(P.Animal), 12, FColor::Cyan, false, 30);
 	}
 	return bSuccess;
 }
@@ -260,14 +273,69 @@ bool APPSpawnDirector::PreparePatrol(AActor* Player)
 	if (bPreparationAttempted) return bPrepared;
 	const UEnvironmentLevelSubsystem* Rules = GetWorld()->GetSubsystem<UEnvironmentLevelSubsystem>();
 	if (!Player || (Rules && Rules->IsTutorialMode())) return false;
+	if (GetWorld()->GetGameInstance())
+	{
+		const auto* Navigation = UNavigationSystemV1::GetCurrent(GetWorld());
+		UWorldPartitionSubsystem* Partition = GetWorld()->GetSubsystem<UWorldPartitionSubsystem>();
+		if (Partition && GetWorld()->GetWorldPartition() && !bStreamingRequested)
+		{
+			FStreamingSourceShape Shape;
+			Shape.bUseGridLoadingRange = false;
+			Shape.Radius = SpawnBounds->GetScaledBoxExtent().Size2D();
+			PopulationStreamingSource->Shapes = {Shape};
+			PopulationStreamingSource->EnableStreamingSource();
+			bStreamingRequested = bWaitingForWorld = true;
+			return false;
+		}
+		bWaitingForWorld = GetWorld()->GetTimeSeconds() < 0.5f || !Navigation || !Navigation->GetDefaultNavDataInstance()
+			|| UNavigationSystemV1::IsNavigationBeingBuiltOrLocked(GetWorld()) || (Partition && !Partition->IsAllStreamingCompleted())
+			|| (bStreamingRequested && !PopulationStreamingSource->IsStreamingCompleted());
+		if (bWaitingForWorld) return false;
+	}
+	bWaitingForWorld = false;
 	bPreparationAttempted = true;
 	ActiveSeed = FixedSeed != 0 ? FixedSeed : static_cast<int32>(FPlatformTime::Cycles());
 	if (!BuildLayout(ActiveSeed, Player->GetActorLocation(), Placements))
 	{
 		UE_LOG(LogTemp, Error, TEXT("Patrol spawn setup failed (seed %d): %s"), ActiveSeed, *LastError);
+		for (const auto& Rejection : Rejections) UE_LOG(LogTemp, Display, TEXT("Spawn rejection %s: %d"), *Rejection.Key.ToString(), Rejection.Value);
 		return false;
 	}
 	// Validate every destination before moving anyone. Keep per-instance Blueprint configuration and roster identity.
+	TMap<int32, APPAnimalHerd*> PreparedHerds;
+	for (int32 GroupId = 0; GroupId < AnimalGroups.Num(); ++GroupId)
+	{
+		const auto& Profile = AnimalProfiles[AnimalGroups[GroupId].ProfileIndex];
+		if (!Profile.bHerding || Profile.bPredator) continue;
+		APPAnimalHerd* Herd = GetWorld()->SpawnActor<APPAnimalHerd>();
+		if (!Herd)
+		{
+			for (const auto& Prepared : PreparedHerds) Prepared.Value->Destroy();
+			LastError = TEXT("Could not initialise animal herds.");
+			UE_LOG(LogTemp, Error, TEXT("Patrol spawn setup failed: %s"), *LastError);
+			return false;
+		}
+		PreparedHerds.Add(GroupId, Herd);
+	}
+	for (const FPPAnimalSpawnPlacement& P : AnimalPlacements)
+	{
+		P.Animal->StopAIUpdates();
+		P.Animal->StopMovement();
+		P.Animal->SetActorLocationAndRotation(P.Transform.GetLocation(), P.Transform.GetRotation(), false, nullptr, ETeleportType::TeleportPhysics);
+		P.Animal->ResetRoamingHome();
+		P.Animal->StartIdle();
+	}
+	for (int32 GroupId = 0; GroupId < AnimalGroups.Num(); ++GroupId)
+	{
+		const FPPAnimalGroupPlan& Group = AnimalGroups[GroupId];
+		const FPPAnimalSpawnProfile& Profile = AnimalProfiles[Group.ProfileIndex];
+		if (!Profile.bHerding || Profile.bPredator) continue;
+		APPAnimalHerd* Herd = PreparedHerds[GroupId];
+		TArray<APPAnimalCharacter*> Members;
+		for (const FPPAnimalSpawnPlacement& P : AnimalPlacements) if (P.GroupId == GroupId) Members.Add(P.Animal);
+		Herd->Initialise(this, Group.Center, Profile, Members, HashCombineFast(GetTypeHash(ActiveSeed), GroupId));
+		Herds.Add(Herd);
+	}
 	for (const FPPSpawnPlacement& P : Placements)
 	{
 		P.Poacher->SetEncounterActive(false);
@@ -284,5 +352,7 @@ bool APPSpawnDirector::PreparePatrol(AActor* Player)
 			*P.Poacher->GetName(), *P.Transform.GetLocation().ToCompactString(), P.bUsedFallback);
 	}
 	bPrepared = true;
+	for (const FPPAnimalSpawnPlacement& P : AnimalPlacements) P.Animal->StartAIUpdates();
+	UE_LOG(LogTemp, Display, TEXT("Patrol animal seed=%d animals=%d herds=%d"), ActiveSeed, AnimalPlacements.Num(), Herds.Num());
 	return true;
 }

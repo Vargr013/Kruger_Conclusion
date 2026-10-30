@@ -8,6 +8,7 @@
 #include "Components/StaticMeshComponent.h"
 #include "EnvironmentLevelSubsystem.h"
 #include "Characters/PPPoacherCharacter.h"
+#include "Actors/PPAnimalHerd.h"
 
 namespace
 {
@@ -81,6 +82,7 @@ void APPAnimalCharacter::UpdateCreatureAI()
 {
 	const UEnvironmentLevelSubsystem* Rules = GetWorld() ? GetWorld()->GetSubsystem<UEnvironmentLevelSubsystem>() : nullptr;
 	if (Rules && Rules->IsPatrolSetupPending()) return;
+	if (Rules && Rules->HasRoundEnded()) { StopMovement(); StopAIUpdates(); return; }
 	if (bPoached)
 	{
 		return;
@@ -94,6 +96,12 @@ void APPAnimalCharacter::UpdateCreatureAI()
 
 	AActor* ThreatActor = FindBestThreatActor();
 	const float CurrentTime = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0f;
+	if (ThreatActor && Herd.IsValid())
+	{
+		FPPThreatObservation Observation;
+		if (ObserveTarget(ThreatActor, Observation)) Herd->ReportThreat(this, Observation.Location);
+	}
+	if (!ThreatActor && FleeFromHerdAlert(CurrentTime)) return;
 
 	if (CurrentAnimalState == EPPAnimalState::Fleeing)
 	{
@@ -122,6 +130,7 @@ void APPAnimalCharacter::UpdateCreatureAI()
 		return;
 	}
 
+	if (Herd.IsValid()) { UpdateHerdMovement(CurrentTime); return; }
 	if (CurrentAnimalState == EPPAnimalState::Idle)
 	{
 		if (CurrentTime >= IdleEndTime)
@@ -163,6 +172,7 @@ bool APPAnimalCharacter::IsValidThreatActor_Implementation(AActor* PotentialThre
 	{
 		return false;
 	}
+	if (Herd.IsValid() && OtherAnimal->GetHerd() == Herd.Get()) return false;
 
 	if (bIsPredator)
 	{
@@ -202,6 +212,7 @@ void APPAnimalCharacter::SetAnimalState(EPPAnimalState NewState)
 
 void APPAnimalCharacter::StartRoaming()
 {
+	if (Herd.IsValid()) { UpdateHerdMovement(GetWorld()->GetTimeSeconds()); return; }
 	EnterRoamState();
 	SetAnimalState(EPPAnimalState::Roaming);
 
@@ -259,6 +270,7 @@ void APPAnimalCharacter::StartIdle()
 
 void APPAnimalCharacter::UpdateIdleLocalWander(float CurrentTime)
 {
+	if (Herd.IsValid()) return;
 	if (CurrentTime < NextIdleLocalWanderTime)
 	{
 		return;
@@ -350,6 +362,7 @@ void APPAnimalCharacter::HandleHealthDepleted()
 	}
 
 	bPoached = true;
+	if (Herd.IsValid()) Herd->RemoveMember(this);
 	StopMovement();
 	StopAIUpdates();
 	SetActorEnableCollision(false);

@@ -9,6 +9,7 @@
 class AActor;
 class UStaticMesh;
 class UStaticMeshComponent;
+class APPAnimalHerd;
 
 UCLASS()
 class KRUGER_CONCLUSION_API APPAnimalCharacter : public APPCreatureBase
@@ -17,8 +18,17 @@ class KRUGER_CONCLUSION_API APPAnimalCharacter : public APPCreatureBase
 
 public:
 	APPAnimalCharacter();
+	void SetHerd(APPAnimalHerd* NewHerd);
+	UFUNCTION(BlueprintPure, Category="Animal|Herd") APPAnimalHerd* GetHerd() const;
+	void ReceiveHerdAlert(const FVector& LastKnownLocation, float UntilTime);
 
 protected:
+	UPROPERTY(Transient) TWeakObjectPtr<APPAnimalHerd> Herd;
+	FVector HerdThreatLocation = FVector::ZeroVector;
+	float HerdAlertUntil = -1000;
+	float NextHerdMoveTime = 0;
+	void UpdateHerdMovement(float Now);
+	bool FleeFromHerdAlert(float Now);
 	virtual void BeginPlay() override;
 	virtual void OnConstruction(const FTransform& Transform) override;
 	virtual void EndPlay(const EEndPlayReason::Type Reason) override;

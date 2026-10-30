@@ -3,9 +3,11 @@
 #include "EnvironmentLevelSubsystem.h"
 #include "GameFramework/DamageType.h"
 #include "Kismet/GameplayStatics.h"
+#include "Actors/PPAnimalHerd.h"
 
 void APPAnimalCharacter::EndPlay(const EEndPlayReason::Type Reason)
 {
+	if (Herd.IsValid()) Herd->RemoveMember(this);
 	CancelPredatorAttack();
 	UPPAudioSubsystem::StopPredator(this);
 	Super::EndPlay(Reason);

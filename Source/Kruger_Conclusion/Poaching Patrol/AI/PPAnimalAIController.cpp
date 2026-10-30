@@ -63,7 +63,7 @@ bool APPAnimalAIController::GetRandomWanderLocation(FVector& OutLocation, float 
 bool APPAnimalAIController::MoveToWanderLocation(float Radius)
 {
 	APPAnimalCharacter* Animal = GetAnimalCharacter();
-	if (!Animal || Animal->GetAnimalState() != EPPAnimalState::Roaming || Animal->HasThreat())
+	if (!Animal || Animal->GetHerd() || Animal->GetAnimalState() != EPPAnimalState::Roaming || Animal->HasThreat())
 	{
 		return false;
 	}
