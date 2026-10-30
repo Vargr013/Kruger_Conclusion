@@ -43,6 +43,37 @@ bool FPPAnimalPopulationPartitionTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FPPAnimalHerbivoreThreatTest, "KrugerConclusion.PoachingPatrol.Animals.HerbivoreThreats",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FPPAnimalHerbivoreThreatTest::RunTest(const FString& Parameters)
+{
+	UWorld* World = UWorld::CreateWorld(EWorldType::Game, false);
+	GEngine->CreateNewWorldContext(EWorldType::Game).SetCurrentWorld(World);
+	World->InitializeActorsForPlay(FURL());
+	TArray<APPAnimalCharacter*> Herbivores;
+	for (const TCHAR* Species : {TEXT("Elephant"), TEXT("Zebra"), TEXT("Rhino")})
+	{
+		APPAnimalCharacter* Animal = World->SpawnActor<APPAnimalCharacter>();
+		const FGameplayTag Tag = FGameplayTag::RequestGameplayTag(Species);
+		TestTrue(TEXT("Each herbivore has a registered species tag"), Tag.IsValid());
+		*FindFProperty<FStructProperty>(APPAnimalCharacter::StaticClass(), TEXT("AnimalSpeciesTag"))->ContainerPtrToValuePtr<FGameplayTag>(Animal) = Tag;
+		Herbivores.Add(Animal);
+	}
+	APPAnimalCharacter* Lion = World->SpawnActor<APPAnimalCharacter>();
+	FindFProperty<FBoolProperty>(APPAnimalCharacter::StaticClass(), TEXT("bIsPredator"))->SetPropertyValue_InContainer(Lion, true);
+	APPPoacherCharacter* Poacher = World->SpawnActor<APPPoacherCharacter>();
+	for (APPAnimalCharacter* Animal : Herbivores)
+	{
+		for (APPAnimalCharacter* Other : Herbivores)
+			TestFalse(TEXT("Grazing species do not frighten each other"), Animal->IsValidThreatActor(Other));
+		TestTrue(TEXT("Lions remain a threat to every grazing species"), Animal->IsValidThreatActor(Lion));
+		TestTrue(TEXT("Poachers remain a threat to every grazing species"), Animal->IsValidThreatActor(Poacher));
+	}
+	World->EndPlay(EEndPlayReason::Quit); World->DestroyWorld(false); GEngine->DestroyWorldContext(World);
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FPPAnimalLayoutAndHerdTest, "KrugerConclusion.PoachingPatrol.Animals.LayoutAndHerdLifecycle",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 

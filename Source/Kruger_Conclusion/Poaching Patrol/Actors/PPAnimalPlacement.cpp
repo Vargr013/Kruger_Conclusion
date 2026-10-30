@@ -214,7 +214,15 @@ bool APPSpawnDirector::BuildAnimalLayout(int32 Seed, const FVector& PlayerLocati
 		if (FindAnimalProfile(Animal) == INDEX_NONE) { LastError = TEXT("An animal has no matching species spawn profile."); return false; }
 	FRandomStream Random(Seed);
 	const FVector Extent = SpawnBounds->GetUnscaledBoxExtent();
-	for (int32 ProfileIndex = 0; ProfileIndex < AnimalProfiles.Num(); ++ProfileIndex)
+	TArray<int32> ProfileOrder;
+	for (int32 Index = 0; Index < AnimalProfiles.Num(); ++Index) ProfileOrder.Add(Index);
+	// Reserve space for herds, then solitary herbivores, before placing predators.
+	ProfileOrder.StableSort([&](int32 A, int32 B)
+	{
+		const auto Rank = [](const FPPAnimalSpawnProfile& P) { return P.bPredator ? 2 : P.bHerding ? 0 : 1; };
+		return Rank(AnimalProfiles[A]) < Rank(AnimalProfiles[B]);
+	});
+	for (int32 ProfileIndex : ProfileOrder)
 	{
 		const FPPAnimalSpawnProfile& Profile = AnimalProfiles[ProfileIndex];
 		TArray<APPAnimalCharacter*> Species;

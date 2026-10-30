@@ -184,18 +184,8 @@ bool APPAnimalCharacter::IsValidThreatActor_Implementation(AActor* PotentialThre
 		return true;
 	}
 
-	const FGameplayTag OtherSpeciesTag = OtherAnimal->GetAnimalSpeciesTag();
-	const bool bSameSpecies = AnimalSpeciesTag.IsValid() && OtherSpeciesTag.IsValid() && AnimalSpeciesTag == OtherSpeciesTag;
-	if (bSameSpecies)
-	{
-		if (CanPrintDebugStatus())
-		{
-			DebugMessage(FString::Printf(TEXT("Ignoring same species animal: %s (%s)"), *GetNameSafe(PotentialThreat), *AnimalSpeciesTag.ToString()), FColor::Green, 1.0f);
-		}
-		return false;
-	}
-
-	return true;
+	// Elephants, zebras and rhinos share grazing areas without frightening each other.
+	return false;
 }
 
 void APPAnimalCharacter::SetAnimalState(EPPAnimalState NewState)

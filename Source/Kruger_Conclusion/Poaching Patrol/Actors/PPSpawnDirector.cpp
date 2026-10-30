@@ -63,6 +63,17 @@ APPSpawnDirector::APPSpawnDirector()
 	Lions.MinGroupSize = Lions.MaxGroupSize = 1;
 	Lions.PlayerSafeDistance = 8000; Lions.CampSafeDistance = 6000; Lions.GroupSpacing = 4000;
 	AnimalProfiles.Add(Lions);
+	FPPAnimalSpawnProfile Zebras;
+	Zebras.Species = FGameplayTag::RequestGameplayTag(TEXT("Zebra"), false);
+	Zebras.SpreadRadius = 1500; Zebras.MemberSpacing = 500; Zebras.GroupSpacing = 4500;
+	Zebras.RoamRadius = 3500; Zebras.RegroupDistance = 2500;
+	AnimalProfiles.Add(Zebras);
+	FPPAnimalSpawnProfile Rhinos;
+	Rhinos.Species = FGameplayTag::RequestGameplayTag(TEXT("Rhino"), false);
+	Rhinos.bHerding = false; Rhinos.MinGroupSize = Rhinos.MaxGroupSize = 1;
+	Rhinos.SpreadRadius = 1000; Rhinos.MemberSpacing = 650; Rhinos.GroupSpacing = 4500;
+	Rhinos.RoamRadius = 3500; Rhinos.RegroupDistance = 2500;
+	AnimalProfiles.Add(Rhinos);
 #if WITH_EDITORONLY_DATA
 	bIsSpatiallyLoaded = false;
 #endif
